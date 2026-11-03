@@ -767,6 +767,9 @@ internal actual object C {
   ): Int =
     mln_kw_mln_map_get_style_source(map, word(sourceId), word(completion), word(outDiagnostic))
 
+  actual fun mln_map_get_style_terrain_json(map: Long, completion: Long, outDiagnostic: Long): Int =
+    mln_kw_mln_map_get_style_terrain_json(map, word(completion), word(outDiagnostic))
+
   actual fun mln_map_get_style_transition_options(
     map: Long,
     completion: Long,
@@ -1356,6 +1359,19 @@ internal actual object C {
       map,
       word(sourceId),
       if (isVolatile) 1 else 0,
+      word(completion),
+      word(outDiagnostic),
+    )
+
+  actual fun mln_map_set_style_terrain_json(
+    map: Long,
+    terrainJson: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_kw_mln_map_set_style_terrain_json(
+      map,
+      word(terrainJson),
       word(completion),
       word(outDiagnostic),
     )
@@ -2701,6 +2717,11 @@ private fun mln_kw_mln_map_get_style_source(p0: Long, p1: Int, p2: Int, p3: Int)
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_get_style_source(p0, p1, p2, p3)",
   )
 
+private fun mln_kw_mln_map_get_style_terrain_json(p0: Long, p1: Int, p2: Int): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_get_style_terrain_json(p0, p1, p2)",
+  )
+
 private fun mln_kw_mln_map_get_style_transition_options(p0: Long, p1: Int, p2: Int): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_get_style_transition_options(p0, p1, p2)",
@@ -3105,6 +3126,11 @@ private fun mln_kw_mln_map_set_style_source_volatile(
 ): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_set_style_source_volatile(p0, p1, p2, p3, p4)",
+  )
+
+private fun mln_kw_mln_map_set_style_terrain_json(p0: Long, p1: Int, p2: Int, p3: Int): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_set_style_terrain_json(p0, p1, p2, p3)",
   )
 
 private fun mln_kw_mln_map_set_style_transition_options(p0: Long, p1: Int, p2: Int, p3: Int): Int =

@@ -3738,6 +3738,15 @@ external int mln_map_get_style_source(
 @Native<
   Int32 Function(mln_map, Pointer<mln_completion>, Pointer<mln_diagnostic>)
 >()
+external int mln_map_get_style_terrain_json(
+  int map,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(mln_map, Pointer<mln_completion>, Pointer<mln_diagnostic>)
+>()
 external int mln_map_get_style_transition_options(
   int map,
   Pointer<mln_completion> completion,
@@ -4530,6 +4539,21 @@ external int mln_map_set_style_source_volatile(
   int map,
   mln_buffer_view source_id,
   bool is_volatile,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(
+    mln_map,
+    mln_buffer_view,
+    Pointer<mln_completion>,
+    Pointer<mln_diagnostic>,
+  )
+>()
+external int mln_map_set_style_terrain_json(
+  int map,
+  mln_buffer_view terrain_json,
   Pointer<mln_completion> completion,
   Pointer<mln_diagnostic> out_diagnostic,
 );

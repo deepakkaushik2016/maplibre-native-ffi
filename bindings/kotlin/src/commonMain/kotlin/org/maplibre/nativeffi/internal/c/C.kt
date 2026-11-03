@@ -409,6 +409,8 @@ internal expect object C {
     outDiagnostic: Long,
   ): Int
 
+  fun mln_map_get_style_terrain_json(map: Long, completion: Long, outDiagnostic: Long): Int
+
   fun mln_map_get_style_transition_options(map: Long, completion: Long, outDiagnostic: Long): Int
 
   fun mln_map_get_style_url(map: Long, completion: Long, outDiagnostic: Long): Int
@@ -728,6 +730,13 @@ internal expect object C {
     map: Long,
     sourceId: Long,
     isVolatile: Boolean,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  fun mln_map_set_style_terrain_json(
+    map: Long,
+    terrainJson: Long,
     completion: Long,
     outDiagnostic: Long,
   ): Int

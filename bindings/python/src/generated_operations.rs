@@ -5685,6 +5685,23 @@ impl MapHandle {
         }
     }
     #[pyo3(signature = ())]
+    fn get_style_terrain_json(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let handle = self.input();
+        let convert = |py: Python<'_>, result: &sys::mln_completion_result| {
+            let value = completion_value::<sys::mln_buffer_view>(result)?;
+            generated_json(py, value)
+        };
+        unsafe {
+            call.complete(
+                |completion, diagnostic| {
+                    sys::mln_map_get_style_terrain_json(handle, completion, diagnostic)
+                },
+                convert,
+            )
+        }
+    }
+    #[pyo3(signature = ())]
     fn get_style_transition_options(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let mut call = GeneratedCall::new(py);
         let handle = self.input();
@@ -7287,6 +7304,48 @@ impl MapHandle {
                     handle,
                     source_id_value,
                     is_volatile,
+                    completion,
+                    diagnostic,
+                )
+            })
+        }
+    }
+    #[pyo3(signature = (terrain_json))]
+    fn set_style_terrain_json(
+        &self,
+        py: Python<'_>,
+        terrain_json: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let terrain_json_value = storage.json(terrain_json.clone(), false)?;
+        let handle = self.input();
+        unsafe {
+            call.command(|completion, diagnostic| {
+                sys::mln_map_set_style_terrain_json(
+                    handle,
+                    terrain_json_value,
+                    completion,
+                    diagnostic,
+                )
+            })
+        }
+    }
+    #[pyo3(signature = (terrain_json))]
+    fn _discard_set_style_terrain_json(
+        &self,
+        py: Python<'_>,
+        terrain_json: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let terrain_json_value = storage.json(terrain_json.clone(), false)?;
+        let handle = self.input();
+        unsafe {
+            call.discard(|completion, diagnostic| {
+                sys::mln_map_set_style_terrain_json(
+                    handle,
+                    terrain_json_value,
                     completion,
                     diagnostic,
                 )

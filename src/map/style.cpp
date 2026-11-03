@@ -4,6 +4,7 @@
 #include <atomic>
 #include <bit>
 #include <cassert>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -45,9 +46,10 @@
 #include <mln/style/conversion.hpp>
 #include <mln/style/conversion/geojson_options.hpp>  // IWYU pragma: keep
 #include <mln/style/conversion/json.hpp>
-#include <mln/style/conversion/layer.hpp>   // IWYU pragma: keep
-#include <mln/style/conversion/light.hpp>   // IWYU pragma: keep
-#include <mln/style/conversion/source.hpp>  // IWYU pragma: keep
+#include <mln/style/conversion/layer.hpp>    // IWYU pragma: keep
+#include <mln/style/conversion/light.hpp>    // IWYU pragma: keep
+#include <mln/style/conversion/source.hpp>   // IWYU pragma: keep
+#include <mln/style/conversion/terrain.hpp>  // IWYU pragma: keep
 #include <mln/style/conversion_impl.hpp>
 #include <mln/style/image.hpp>
 #include <mln/style/layer.hpp>
@@ -64,6 +66,7 @@
 #include <mln/style/sources/vector_source.hpp>
 #include <mln/style/style.hpp>
 #include <mln/style/style_property.hpp>
+#include <mln/style/terrain.hpp>
 #include <mln/style/transition_options.hpp>
 #include <mln/style/types.hpp>
 #include <mln/tile/tile_id.hpp>
@@ -2075,6 +2078,58 @@ auto map_set_style_light_json(MapObject& live, mln_buffer_view light_json)
     std::make_unique<mln::style::Light>(std::move(light->impl))
   );
   return MLN_STATUS_OK;
+}
+
+auto map_set_style_terrain_json(MapObject& live, mln_buffer_view terrain_json)
+  -> mln_status {
+  auto document = mln::JSDocument{};
+  if (!parse_json_document(terrain_json, "style terrain", document)) {
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  auto& style = map_native(live).getStyle();
+  if (document.IsNull()) {
+    style.setTerrain(nullptr);
+    return MLN_STATUS_OK;
+  }
+
+  auto error = mln::style::conversion::Error{};
+  auto terrain = mln::style::conversion::convert<mln::style::Terrain>(
+    mln::style::conversion::Convertible{
+      static_cast<const mln::JSValue*>(&document)
+    },
+    error
+  );
+  if (!terrain) {
+    set_style_conversion_error("style terrain", error);
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  // The style spec's range, which also keeps the JSON that reads it back valid.
+  const auto exaggeration = terrain->getExaggeration();
+  if (!std::isfinite(exaggeration) || exaggeration < 0.0F) {
+    set_thread_error(
+      "style terrain: exaggeration must be a finite number of at least 0"
+    );
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  style.setTerrain(std::make_unique<mln::style::Terrain>(std::move(*terrain)));
+  return MLN_STATUS_OK;
+}
+
+auto map_get_style_terrain_json(MapObject& live) -> std::string {
+  const auto* terrain = map_native(live).getStyle().getTerrain();
+  if (terrain == nullptr) {
+    return "null";
+  }
+  // The shortest text that reads back as the stored float, so 1.1 stays 1.1.
+  auto exaggeration = std::array<char, 32>{};
+  const auto written = std::to_chars(
+    exaggeration.data(), exaggeration.data() + exaggeration.size(),
+    terrain->getExaggeration()
+  );
+  return R"({"source":)" +
+         serialize_json_value(mln::Value{terrain->getSource()}) +
+         R"(,"exaggeration":)" + std::string{exaggeration.data(), written.ptr} +
+         "}";
 }
 
 auto map_set_style_light_property(

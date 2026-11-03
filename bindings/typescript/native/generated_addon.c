@@ -2723,6 +2723,37 @@ done:
   return mln_ts_end(call);
 }
 
+static napi_value mln_ts_export_mln_map_get_style_terrain_json(
+  napi_env env, napi_callback_info info
+) {
+  mln_ts_call call_state;
+  mln_ts_call* call = &call_state;
+  mln_map arg_map = 0;
+  mln_completion arg_completion;
+  const mln_completion* present_completion = NULL;
+  mln_diagnostic diagnostic;
+  mln_status status;
+  if (!mln_ts_begin(call, env, info, 2)) return NULL;
+  {
+    uint64_t number = 0;
+    if (!mln_ts_read_u64(call, call->argv[0], &number, "map")) goto done;
+    arg_map = (mln_map)number;
+  }
+  if (!mln_ts_read_completion(
+        call, call->argv[1], false, mln_ts_decode_buffer_view_json,
+        &arg_completion, &present_completion
+      ))
+    goto done;
+  diagnostic.size = sizeof diagnostic;
+  diagnostic.message[0] = '\0';
+  status =
+    mln_map_get_style_terrain_json(arg_map, present_completion, &diagnostic);
+  if (status == MLN_STATUS_OK) mln_ts_accept(call);
+  if (!mln_ts_check(call, status, &diagnostic)) goto done;
+done:
+  return mln_ts_end(call);
+}
+
 static napi_value mln_ts_export_mln_map_get_style_transition_options(
   napi_env env, napi_callback_info info
 ) {
@@ -4693,6 +4724,42 @@ static napi_value mln_ts_export_mln_map_set_style_source_volatile(
   diagnostic.message[0] = '\0';
   status = mln_map_set_style_source_volatile(
     arg_map, arg_source_id, arg_is_volatile, present_completion, &diagnostic
+  );
+  if (status == MLN_STATUS_OK) mln_ts_accept(call);
+  if (!mln_ts_check(call, status, &diagnostic)) goto done;
+done:
+  return mln_ts_end(call);
+}
+
+static napi_value mln_ts_export_mln_map_set_style_terrain_json(
+  napi_env env, napi_callback_info info
+) {
+  mln_ts_call call_state;
+  mln_ts_call* call = &call_state;
+  mln_map arg_map = 0;
+  mln_buffer_view arg_terrain_json = {0};
+  mln_completion arg_completion;
+  const mln_completion* present_completion = NULL;
+  mln_diagnostic diagnostic;
+  mln_status status;
+  if (!mln_ts_begin(call, env, info, 3)) return NULL;
+  {
+    uint64_t number = 0;
+    if (!mln_ts_read_u64(call, call->argv[0], &number, "map")) goto done;
+    arg_map = (mln_map)number;
+  }
+  if (!mln_ts_read_json_view(
+        call, call->argv[1], &arg_terrain_json, "terrainJson"
+      ))
+    goto done;
+  if (!mln_ts_read_completion(
+        call, call->argv[2], true, NULL, &arg_completion, &present_completion
+      ))
+    goto done;
+  diagnostic.size = sizeof diagnostic;
+  diagnostic.message[0] = '\0';
+  status = mln_map_set_style_terrain_json(
+    arg_map, arg_terrain_json, present_completion, &diagnostic
   );
   if (status == MLN_STATUS_OK) mln_ts_accept(call);
   if (!mln_ts_check(call, status, &diagnostic)) goto done;
@@ -7890,6 +7957,8 @@ static const mln_ts_export exports[] = {
   {"mln_map_get_style_light_property",
    mln_ts_export_mln_map_get_style_light_property},
   {"mln_map_get_style_source", mln_ts_export_mln_map_get_style_source},
+  {"mln_map_get_style_terrain_json",
+   mln_ts_export_mln_map_get_style_terrain_json},
   {"mln_map_get_style_transition_options",
    mln_ts_export_mln_map_get_style_transition_options},
   {"mln_map_get_style_url", mln_ts_export_mln_map_get_style_url},
@@ -7973,6 +8042,8 @@ static const mln_ts_export exports[] = {
    mln_ts_export_mln_map_set_style_light_property},
   {"mln_map_set_style_source_volatile",
    mln_ts_export_mln_map_set_style_source_volatile},
+  {"mln_map_set_style_terrain_json",
+   mln_ts_export_mln_map_set_style_terrain_json},
   {"mln_map_set_style_transition_options",
    mln_ts_export_mln_map_set_style_transition_options},
   {"mln_map_set_style_url", mln_ts_export_mln_map_set_style_url},

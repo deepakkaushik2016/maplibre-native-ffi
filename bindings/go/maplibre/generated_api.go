@@ -8008,6 +8008,18 @@ func (receiver *MapHandle) GetStyleSource(sourceID string) (*Future[*StyleSource
 	}, completionNullable(completionOf(copyStyleSourceInfo)))
 }
 
+// GetStyleTerrainJSON reads the
+// [terrain](https://maplibre.org/maplibre-style-spec/terrain/) of the map's
+// style as JSON, which is null when the style has no terrain.
+//
+// See mln_map_get_style_terrain_json in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html
+func (receiver *MapHandle) GetStyleTerrainJSON() (*Future[string], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_get_style_terrain_json(C.mln_map(raw), completion, diagnostic))
+	}, completionOf(copyViewText))
+}
+
 // GetStyleTransitionOptions reads the default transition of the map's style.
 //
 // See mln_map_get_style_transition_options in the C API reference:
@@ -8831,6 +8843,25 @@ func (receiver *MapHandle) SetStyleLightProperty(propertyName string, value stri
 func (receiver *MapHandle) SetStyleSourceVolatile(sourceID string, isVolatile bool) (*Future[CommandCompletion], error) {
 	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_map_set_style_source_volatile(C.mln_map(raw), bindingView(sourceID, arena), C.bool(isVolatile), completion, diagnostic))
+	}, completionCommand)
+}
+
+// SetStyleTerrainJSON replaces the
+// [terrain](https://maplibre.org/maplibre-style-spec/terrain/) of the map's
+// style, or removes it when terrainJSON is JSON null.
+//
+// The terrain can name a raster-dem source that the style doesn't have yet. The
+// map renders it once the source exists.
+//
+// See mln_map_set_style_terrain_json in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html
+//
+// Errors:
+//   - StatusInvalidState while the style isn't loaded, as
+//     MapHandle.SetStyleURL() describes.
+func (receiver *MapHandle) SetStyleTerrainJSON(terrainJSON string) (*Future[CommandCompletion], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_set_style_terrain_json(C.mln_map(raw), bindingView(terrainJSON, arena), completion, diagnostic))
 	}, completionCommand)
 }
 
@@ -10539,6 +10570,13 @@ func (view MapHandleDiscarding) SetStyleSourceVolatile(sourceID string, isVolati
 	receiver := view.owner
 	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_map_set_style_source_volatile(C.mln_map(raw), bindingView(sourceID, arena), C.bool(isVolatile), completion, diagnostic))
+	})
+}
+
+func (view MapHandleDiscarding) SetStyleTerrainJSON(terrainJSON string) error {
+	receiver := view.owner
+	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_set_style_terrain_json(C.mln_map(raw), bindingView(terrainJSON, arena), completion, diagnostic))
 	})
 }
 

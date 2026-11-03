@@ -754,6 +754,15 @@ int32_t mln_kw_mln_map_get_style_source(
   );
 }
 
+int32_t mln_kw_mln_map_get_style_terrain_json(
+  int64_t map, uintptr_t completion, uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_map_get_style_terrain_json(
+    (mln_map)map, (const mln_completion*)completion,
+    (mln_diagnostic*)out_diagnostic
+  );
+}
+
 int32_t mln_kw_mln_map_get_style_transition_options(
   int64_t map, uintptr_t completion, uintptr_t out_diagnostic
 ) {
@@ -1288,6 +1297,16 @@ int32_t mln_kw_mln_map_set_style_source_volatile(
     (mln_map)map, *(const mln_buffer_view*)(uintptr_t)source_id,
     (bool)is_volatile, (const mln_completion*)completion,
     (mln_diagnostic*)out_diagnostic
+  );
+}
+
+int32_t mln_kw_mln_map_set_style_terrain_json(
+  int64_t map, uintptr_t terrain_json, uintptr_t completion,
+  uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_map_set_style_terrain_json(
+    (mln_map)map, *(const mln_buffer_view*)(uintptr_t)terrain_json,
+    (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
   );
 }
 

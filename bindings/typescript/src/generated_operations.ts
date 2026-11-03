@@ -2471,6 +2471,20 @@ export class MapHandle extends Owner {
   }
 
   /**
+   * Reads the
+   * &#91;terrain&#93;(https://maplibre.org/maplibre-style-spec/terrain/) of the
+   * map's style as JSON, which is `null` when the style has no terrain.
+   *
+   * See `mln_map_get_style_terrain_json` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+   */
+  getStyleTerrainJson(): Promise<unknown> {
+    return query<unknown>((completion) =>
+      native.mln_map_get_style_terrain_json(this.id, completion),
+    );
+  }
+
+  /**
    * Reads the default transition of the map's style.
    *
    * See `mln_map_get_style_transition_options` in the
@@ -3395,6 +3409,28 @@ export class MapHandle extends Owner {
         isVolatile,
         completion,
       ),
+    );
+  }
+
+  /**
+   * Replaces the
+   * &#91;terrain&#93;(https://maplibre.org/maplibre-style-spec/terrain/) of the
+   * map's style, or removes it when `terrainJson` is JSON `null`.
+   *
+   * The terrain can name a `raster-dem` source that the style doesn't have yet.
+   * The map renders it once the source exists.
+   *
+   * See `mln_map_set_style_terrain_json` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+   *
+   * Errors:
+   *
+   * - `Status.invalidState` while the style isn't loaded, as
+   *   `MapHandle.setStyleUrl()` describes.
+   */
+  setStyleTerrainJson(terrainJson: unknown): Promise<CommandCompletion> {
+    return command((completion) =>
+      native.mln_map_set_style_terrain_json(this.id, terrainJson, completion),
     );
   }
 
@@ -4389,6 +4425,25 @@ export class MapHandleDiscarding {
       this.#owner.id,
       sourceId,
       isVolatile,
+      undefined,
+    );
+  }
+
+  /**
+   * Replaces the
+   * &#91;terrain&#93;(https://maplibre.org/maplibre-style-spec/terrain/) of the
+   * map's style, or removes it when `terrainJson` is JSON `null`.
+   *
+   * The terrain can name a `raster-dem` source that the style doesn't have yet.
+   * The map renders it once the source exists.
+   *
+   * See `mln_map_set_style_terrain_json` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+   */
+  setStyleTerrainJson(terrainJson: unknown): void {
+    native.mln_map_set_style_terrain_json(
+      this.#owner.id,
+      terrainJson,
       undefined,
     );
   }

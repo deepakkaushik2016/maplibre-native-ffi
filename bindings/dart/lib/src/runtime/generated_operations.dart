@@ -4641,6 +4641,14 @@ extension type MapHandleDiscarding._(MapHandle _owner) {
       nativeDiagnostic,
     ),
   );
+  void setStyleTerrainJson(Object? terrainJson) => _discard(
+    (arena, completion) => raw.mln_map_set_style_terrain_json(
+      _handle.raw,
+      _nativeJsonView(terrainJson, arena),
+      completion,
+      nativeDiagnostic,
+    ),
+  );
   void setStyleTransitionOptions(StyleTransitionOptions options) => _discard(
     (arena, completion) => raw.mln_map_set_style_transition_options(
       _handle.raw,
@@ -6114,6 +6122,20 @@ final class MapHandle implements Finalizable, _CallbackRootOwner {
     ),
   );
 
+  /// Reads the \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/)
+  /// of the map's style as JSON, which is `null` when the style has no terrain.
+  ///
+  /// See `mln_map_get_style_terrain_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  Future<Object?> getStyleTerrainJson() => _query(
+    _resultObjectOrNull,
+    (arena, completion) => raw.mln_map_get_style_terrain_json(
+      _handle.raw,
+      completion,
+      nativeDiagnostic,
+    ),
+  );
+
   /// Reads the default transition of the map's style.
   ///
   /// See `mln_map_get_style_transition_options` in the
@@ -7003,6 +7025,30 @@ final class MapHandle implements Finalizable, _CallbackRootOwner {
       nativeDiagnostic,
     ),
   );
+
+  /// Replaces the
+  /// \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/) of the
+  /// map's style, or removes it when `terrainJson` is JSON `null`.
+  ///
+  /// The terrain can name a `raster-dem` source that the style doesn't have
+  /// yet. The map renders it once the source exists.
+  ///
+  /// See `mln_map_set_style_terrain_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidState` while the style isn't loaded, as
+  ///   `MapHandle.setStyleUrl()` describes.
+  Future<CommandCompletion> setStyleTerrainJson(Object? terrainJson) =>
+      _command(
+        (arena, completion) => raw.mln_map_set_style_terrain_json(
+          _handle.raw,
+          _nativeJsonView(terrainJson, arena),
+          completion,
+          nativeDiagnostic,
+        ),
+      );
 
   /// Sets the default transition of the map's style.
   ///

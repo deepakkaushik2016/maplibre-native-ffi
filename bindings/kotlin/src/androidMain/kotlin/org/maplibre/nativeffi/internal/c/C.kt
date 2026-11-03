@@ -576,6 +576,13 @@ internal actual object C {
   ): Int
 
   @JvmStatic
+  actual external fun mln_map_get_style_terrain_json(
+    map: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
   actual external fun mln_map_get_style_transition_options(
     map: Long,
     completion: Long,
@@ -999,6 +1006,14 @@ internal actual object C {
     map: Long,
     sourceId: Long,
     isVolatile: Boolean,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
+  actual external fun mln_map_set_style_terrain_json(
+    map: Long,
+    terrainJson: Long,
     completion: Long,
     outDiagnostic: Long,
   ): Int

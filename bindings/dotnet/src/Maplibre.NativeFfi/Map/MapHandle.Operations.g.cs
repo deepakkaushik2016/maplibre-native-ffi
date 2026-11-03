@@ -1762,6 +1762,35 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     }
 
     /// <summary>
+    /// Reads the [terrain](https://maplibre.org/maplibre-style-spec/terrain/)
+    /// of the map's style as JSON, which is <c>null</c> when the style has no
+    /// terrain.
+    /// </summary>
+    /// <remarks>
+    /// See <c>mln_map_get_style_terrain_json</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html">C API reference</see>.
+    /// </remarks>
+    public Task<string> GetStyleTerrainJsonAsync()
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_map_get_style_terrain_json(
+            Handle,
+            NativeCompletion.Start<string>(
+                &nativeCompletion,
+                static nativeResult =>
+                    NativeCompletion.Single<mln_buffer_view, string>(
+                        nativeResult,
+                        ValueStructs.CopyUtf8View
+                    ),
+                out var nativePending
+            ),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Reads the default transition of the map's style.
     /// </summary>
     /// <remarks>
@@ -3018,6 +3047,36 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     }
 
     /// <summary>
+    /// Replaces the
+    /// [terrain](https://maplibre.org/maplibre-style-spec/terrain/) of the
+    /// map's style, or removes it when <c>terrainJson</c> is JSON <c>null</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The terrain can name a <c>raster-dem</c> source that the style
+    /// doesn't have yet. The map renders it once the source exists.</para>
+    /// <para>See <c>mln_map_set_style_terrain_json</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html">C API reference</see>.</para>
+    /// <para>Errors:</para>
+    /// <list type="bullet">
+    /// <item><description><c>Status.InvalidState</c> while the style isn't
+    /// loaded, as <c>MapHandle.SetStyleUrlAsync()</c>
+    /// describes.</description></item>
+    /// </list>
+    /// </remarks>
+    public Task<CommandCompletion> SetStyleTerrainJsonAsync(string terrainJson)
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_map_set_style_terrain_json(
+            Handle,
+            scope.Utf8(terrainJson),
+            NativeCompletion.StartCommand(&nativeCompletion, out var nativePending),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Sets the default transition of the map's style.
     /// </summary>
     /// <remarks>
@@ -3969,6 +4028,21 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
                     receiverHandle,
                     scope.Utf8(sourceId),
                     (byte)(isVolatile ? 1 : 0),
+                    null,
+                    Diagnostic
+                )
+            );
+            scope.Accept();
+        }
+
+        public void SetStyleTerrainJson(string terrainJson)
+        {
+            var receiverHandle = owner.Handle;
+            using var scope = new NativeCallScope(owner);
+            Check(
+                NativeMethods.mln_map_set_style_terrain_json(
+                    receiverHandle,
+                    scope.Utf8(terrainJson),
                     null,
                     Diagnostic
                 )

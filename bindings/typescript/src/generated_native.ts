@@ -405,6 +405,10 @@ export interface NativeOperations {
     sourceId: string,
     completion: NativeCompletion,
   ): void;
+  mln_map_get_style_terrain_json(
+    map: bigint,
+    completion: NativeCompletion,
+  ): void;
   mln_map_get_style_transition_options(
     map: bigint,
     completion: NativeCompletion,
@@ -661,6 +665,11 @@ export interface NativeOperations {
     map: bigint,
     sourceId: string,
     isVolatile: boolean,
+    completion: NativeCompletion | undefined,
+  ): void;
+  mln_map_set_style_terrain_json(
+    map: bigint,
+    terrainJson: unknown,
     completion: NativeCompletion | undefined,
   ): void;
   mln_map_set_style_transition_options(

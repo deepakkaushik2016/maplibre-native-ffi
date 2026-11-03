@@ -231,6 +231,14 @@ static gpointer mln_map_get_style_source_decode(
   return maplibre_native_ffi_style_source_info_from_native(result->value);
 }
 
+static gpointer mln_map_get_style_terrain_json_decode(
+  const mln_completion_result* result
+) {
+  if (result->value == NULL) return NULL;
+  const mln_buffer_view* view = result->value;
+  return maplibre_native_ffi_text_new(*view);
+}
+
 static gpointer mln_map_get_style_transition_options_decode(
   const mln_completion_result* result
 ) {
@@ -2323,6 +2331,32 @@ maplibre_native_ffi_map_get_style_source_finish(
   return g_task_propagate_pointer(G_TASK(result), error);
 }
 
+void maplibre_native_ffi_map_get_style_terrain_json_async(
+  MaplibreNativeFfiMap* self, GAsyncReadyCallback callback, gpointer user_data
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP(self));
+  MaplibreNativeFfiAsync async_;
+  maplibre_native_ffi_async_init(
+    &async_, self, maplibre_native_ffi_map_get_style_terrain_json_async,
+    callback, user_data, FALSE
+  );
+  if (!maplibre_native_ffi_async_begin(
+        &async_, mln_map_get_style_terrain_json_decode, g_free
+      ))
+    return;
+  mln_status status_ = mln_map_get_style_terrain_json(
+    self->handle, async_.completion_argument, &async_.diagnostic
+  );
+  maplibre_native_ffi_async_end(&async_, status_);
+}
+
+char* maplibre_native_ffi_map_get_style_terrain_json_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+) {
+  g_return_val_if_fail(g_task_is_valid(result, self), NULL);
+  return g_task_propagate_pointer(G_TASK(result), error);
+}
+
 void maplibre_native_ffi_map_get_style_transition_options_async(
   MaplibreNativeFfiMap* self, GAsyncReadyCallback callback, gpointer user_data
 ) {
@@ -3691,6 +3725,36 @@ void maplibre_native_ffi_map_set_style_source_volatile_async(
 
 MaplibreNativeFfiCommandCompletion*
 maplibre_native_ffi_map_set_style_source_volatile_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+) {
+  g_return_val_if_fail(g_task_is_valid(result, self), NULL);
+  return g_task_propagate_pointer(G_TASK(result), error);
+}
+
+void maplibre_native_ffi_map_set_style_terrain_json_async(
+  MaplibreNativeFfiMap* self, const char* terrain_json,
+  GAsyncReadyCallback callback, gpointer user_data
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP(self));
+  MaplibreNativeFfiAsync async_;
+  maplibre_native_ffi_async_init(
+    &async_, self, maplibre_native_ffi_map_set_style_terrain_json_async,
+    callback, user_data, TRUE
+  );
+  if (!maplibre_native_ffi_async_begin(
+        &async_, maplibre_native_ffi_command_decode,
+        (GDestroyNotify)maplibre_native_ffi_command_completion_free
+      ))
+    return;
+  mln_status status_ = mln_map_set_style_terrain_json(
+    self->handle, maplibre_native_ffi_text_view(terrain_json),
+    async_.completion_argument, &async_.diagnostic
+  );
+  maplibre_native_ffi_async_end(&async_, status_);
+}
+
+MaplibreNativeFfiCommandCompletion*
+maplibre_native_ffi_map_set_style_terrain_json_finish(
   MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
 ) {
   g_return_val_if_fail(g_task_is_valid(result, self), NULL);

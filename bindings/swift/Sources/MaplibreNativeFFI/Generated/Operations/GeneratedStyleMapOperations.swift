@@ -396,6 +396,21 @@ public extension MapHandle {
     ) }
   }
 
+  /// Reads the \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/)
+  /// of the map's style as JSON, which is `null` when the style has no terrain.
+  ///
+  /// See `mln_map_get_style_terrain_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  func getStyleTerrainJson() async throws -> String {
+    try await nativeStart(convert: { result in
+      try NativeCompletion.string(result)
+    }) { raw, _, completion, diagnostic in mln_map_get_style_terrain_json(
+      raw,
+      completion,
+      diagnostic
+    ) }
+  }
+
   /// Reads the default transition of the map's style.
   ///
   /// See `mln_map_get_style_transition_options` in the
@@ -1127,6 +1142,34 @@ public extension MapHandle {
     }
   }
 
+  /// Replaces the
+  /// \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/) of the
+  /// map's style, or removes it when `terrainJson` is JSON `null`.
+  ///
+  /// The terrain can name a `raster-dem` source that the style doesn't have
+  /// yet. The map renders it once the source exists.
+  ///
+  /// See `mln_map_set_style_terrain_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidState` while the style isn't loaded, as
+  ///   `MapHandle.setStyleUrl()` describes.
+  @discardableResult
+  func setStyleTerrainJson(_ bindingArg0: String) async throws
+    -> CommandCompletion
+  {
+    try await nativeCommand { raw, arena, completion, diagnostic in
+      mln_map_set_style_terrain_json(
+        raw,
+        arena.view(bindingArg0),
+        completion,
+        diagnostic
+      )
+    }
+  }
+
   /// Sets the default transition of the map's style.
   ///
   /// See `mln_map_set_style_transition_options` in the
@@ -1612,6 +1655,16 @@ public extension MapHandleDiscarding {
           diagnostic
         )
       }
+  }
+
+  func setStyleTerrainJson(_ bindingArg0: String) throws {
+    try owner
+      .nativeInvoke { raw, arena, diagnostic in mln_map_set_style_terrain_json(
+        raw,
+        arena.view(bindingArg0),
+        nil,
+        diagnostic
+      ) }
   }
 
   func setStyleTransitionOptions(_ bindingArg0: StyleTransitionOptions) throws {

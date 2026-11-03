@@ -1334,6 +1334,16 @@ class _MapHandleOperations(GeneratedOperations):
             lambda value: _maybe(StyleSourceInfo._from_native, value),
         )
 
+    def get_style_terrain_json(self) -> Future[Any]:
+        """Reads the
+        \\[terrain\\](https://maplibre.org/maplibre-style-spec/terrain/) of the
+        map's style as JSON, which is `null` when the style has no terrain.
+
+        See `mln_map_get_style_terrain_json` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+        """
+        return self._native.get_style_terrain_json()
+
     def get_style_transition_options(self) -> Future[StyleTransitionOptions]:
         """Reads the default transition of the map's style.
 
@@ -2005,6 +2015,24 @@ class _MapHandleOperations(GeneratedOperations):
           `MapHandle.set_style_url()` describes.
         """
         return self._native.set_style_source_volatile(source_id, is_volatile)
+
+    def set_style_terrain_json(self, terrain_json: Any) -> Future[CommandCompletion]:
+        """Replaces the
+        \\[terrain\\](https://maplibre.org/maplibre-style-spec/terrain/) of the
+        map's style, or removes it when `terrain_json` is JSON `null`.
+
+        The terrain can name a `raster-dem` source that the style doesn't
+        have yet. The map renders it once the source exists.
+
+        See `mln_map_set_style_terrain_json` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+
+        Errors:
+
+        - `Status.INVALID_STATE` while the style isn't loaded, as
+          `MapHandle.set_style_url()` describes.
+        """
+        return self._native.set_style_terrain_json(terrain_json)
 
     def set_style_transition_options(
         self, options: StyleTransitionOptions
@@ -4294,6 +4322,19 @@ class MapHandleDiscarding:
         [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
         """
         return self._native._discard_set_style_source_volatile(source_id, is_volatile)
+
+    def set_style_terrain_json(self, terrain_json: Any) -> None:
+        """Replaces the
+        \\[terrain\\](https://maplibre.org/maplibre-style-spec/terrain/) of the
+        map's style, or removes it when `terrain_json` is JSON `null`.
+
+        The terrain can name a `raster-dem` source that the style doesn't
+        have yet. The map renders it once the source exists.
+
+        See `mln_map_set_style_terrain_json` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+        """
+        return self._native._discard_set_style_terrain_json(terrain_json)
 
     def set_style_transition_options(self, options: StyleTransitionOptions) -> None:
         """Sets the default transition of the map's style.

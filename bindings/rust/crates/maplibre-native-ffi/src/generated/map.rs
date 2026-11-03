@@ -1685,6 +1685,22 @@ impl MapHandle {
         )
     }
 
+    /// Reads the \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/)
+    /// of the map's style as JSON, which is `null` when the style has no
+    /// terrain.
+    ///
+    /// See `mln_map_get_style_terrain_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    pub fn get_style_terrain_json(&self) -> Result<NativeFuture<String>> {
+        let call = self.inner.call();
+        call.complete(
+            |map, completion, out_diagnostic| unsafe {
+                sys::mln_map_get_style_terrain_json(map, completion, out_diagnostic)
+            },
+            completion::value::<sys::mln_buffer_view, _>,
+        )
+    }
+
     /// Reads the default transition of the map's style.
     ///
     /// See `mln_map_get_style_transition_options` in the
@@ -2686,6 +2702,31 @@ impl MapHandle {
                 completion,
                 out_diagnostic,
             )
+        })
+    }
+
+    /// Replaces the
+    /// \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/) of the
+    /// map's style, or removes it when `terrain_json` is JSON `null`.
+    ///
+    /// The terrain can name a `raster-dem` source that the style doesn't have
+    /// yet. The map renders it once the source exists.
+    ///
+    /// See `mln_map_set_style_terrain_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    ///
+    /// # Errors
+    ///
+    /// - `Status::InvalidState` while the style isn't loaded, as
+    ///   `MapHandle::set_style_url()` describes.
+    pub fn set_style_terrain_json(
+        &self,
+        terrain_json: &str,
+    ) -> Result<NativeFuture<CommandCompletion>> {
+        let mut call = self.inner.call();
+        let terrain_json = call.input(&terrain_json)?;
+        call.command(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_set_style_terrain_json(map, terrain_json, completion, out_diagnostic)
         })
     }
 
@@ -3818,6 +3859,23 @@ impl MapHandleDiscarding<'_> {
                 completion,
                 out_diagnostic,
             )
+        })
+    }
+
+    /// Replaces the
+    /// \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/) of the
+    /// map's style, or removes it when `terrain_json` is JSON `null`.
+    ///
+    /// The terrain can name a `raster-dem` source that the style doesn't have
+    /// yet. The map renders it once the source exists.
+    ///
+    /// See `mln_map_set_style_terrain_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    pub fn set_style_terrain_json(&self, terrain_json: &str) -> Result<()> {
+        let mut call = self.0.inner.call();
+        let terrain_json = call.input(&terrain_json)?;
+        call.discard(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_set_style_terrain_json(map, terrain_json, completion, out_diagnostic)
         })
     }
 

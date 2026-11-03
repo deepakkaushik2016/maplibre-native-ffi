@@ -2751,6 +2751,11 @@ unsafe extern "C" {
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;
+    pub fn mln_map_get_style_terrain_json(
+        map: mln_map,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
     pub fn mln_map_get_style_transition_options(
         map: mln_map,
         completion: *const mln_completion,
@@ -3083,6 +3088,12 @@ unsafe extern "C" {
         map: mln_map,
         source_id: mln_buffer_view,
         is_volatile: bool,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
+    pub fn mln_map_set_style_terrain_json(
+        map: mln_map,
+        terrain_json: mln_buffer_view,
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;

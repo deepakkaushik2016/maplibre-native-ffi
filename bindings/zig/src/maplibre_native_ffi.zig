@@ -1172,6 +1172,15 @@ pub const Map = struct {
         return call.submit("mln_map_get_style_source", .handle, self, call.orNull(call.value(OwnedValue(StyleSourceInfo), c.mln_style_source_info)), allocator, diagnostic, .{source_id});
     }
 
+    /// Reads the \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/) of
+    /// the map's style as JSON, which is `null` when the style has no terrain.
+    ///
+    /// See `mln_map_get_style_terrain_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    pub fn getStyleTerrainJson(self: Map, allocator: std.mem.Allocator, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(OwnedValue([]const u8)) {
+        return call.submit("mln_map_get_style_terrain_json", .handle, self, call.value(OwnedValue([]const u8), c.mln_buffer_view), allocator, diagnostic, .{});
+    }
+
     /// Reads the default transition of the map's style.
     ///
     /// See `mln_map_get_style_transition_options` in the
@@ -1751,6 +1760,23 @@ pub const Map = struct {
     ///   describes.
     pub fn setStyleSourceVolatile(self: Map, source_id: []const u8, is_volatile: bool, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
         return call.submit("mln_map_set_style_source_volatile", .handle, self, call.command, null, diagnostic, .{ source_id, is_volatile });
+    }
+
+    /// Replaces the \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/)
+    /// of the map's style, or removes it when `terrain_json` is JSON `null`.
+    ///
+    /// The terrain can name a `raster-dem` source that the style doesn't have yet.
+    /// The map renders it once the source exists.
+    ///
+    /// See `mln_map_set_style_terrain_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    ///
+    /// Errors:
+    ///
+    /// - `error.InvalidState` while the style isn't loaded, as `Map.setStyleUrl()`
+    ///   describes.
+    pub fn setStyleTerrainJson(self: Map, terrain_json: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
+        return call.submit("mln_map_set_style_terrain_json", .handle, self, call.command, null, diagnostic, .{terrain_json});
     }
 
     /// Sets the default transition of the map's style.
@@ -10104,6 +10130,11 @@ pub const MapDiscarding = struct {
     pub fn setStyleSourceVolatile(self: MapDiscarding, source_id: []const u8, is_volatile: bool, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
         const map = self.receiver;
         return call.discard("mln_map_set_style_source_volatile", .handle, map, null, diagnostic, .{ source_id, is_volatile });
+    }
+
+    pub fn setStyleTerrainJson(self: MapDiscarding, terrain_json: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
+        const map = self.receiver;
+        return call.discard("mln_map_set_style_terrain_json", .handle, map, null, diagnostic, .{terrain_json});
     }
 
     pub fn setStyleTransitionOptions(self: MapDiscarding, options: StyleTransitionOptions, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {

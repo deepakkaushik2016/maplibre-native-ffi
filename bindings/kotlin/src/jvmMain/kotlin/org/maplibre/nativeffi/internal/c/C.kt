@@ -514,6 +514,8 @@ internal actual object C {
       JAVA_LONG,
       JAVA_LONG,
     )
+  private val mln_map_get_style_terrain_json =
+    Ffm.downcall("mln_map_get_style_terrain_json", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG)
   private val mln_map_get_style_transition_options =
     Ffm.downcall("mln_map_get_style_transition_options", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG)
   private val mln_map_get_style_url =
@@ -915,6 +917,15 @@ internal actual object C {
       JAVA_LONG,
       mln_buffer_view,
       JAVA_BOOLEAN,
+      JAVA_LONG,
+      JAVA_LONG,
+    )
+  private val mln_map_set_style_terrain_json =
+    Ffm.downcall(
+      "mln_map_set_style_terrain_json",
+      JAVA_INT,
+      JAVA_LONG,
+      mln_buffer_view,
       JAVA_LONG,
       JAVA_LONG,
     )
@@ -2196,6 +2207,9 @@ internal actual object C {
       outDiagnostic,
     ) as Int
 
+  actual fun mln_map_get_style_terrain_json(map: Long, completion: Long, outDiagnostic: Long): Int =
+    mln_map_get_style_terrain_json.invokeExact(map, completion, outDiagnostic) as Int
+
   actual fun mln_map_get_style_transition_options(
     map: Long,
     completion: Long,
@@ -2801,6 +2815,19 @@ internal actual object C {
       map,
       Ffm.value(sourceId, mln_buffer_view),
       isVolatile,
+      completion,
+      outDiagnostic,
+    ) as Int
+
+  actual fun mln_map_set_style_terrain_json(
+    map: Long,
+    terrainJson: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_map_set_style_terrain_json.invokeExact(
+      map,
+      Ffm.value(terrainJson, mln_buffer_view),
       completion,
       outDiagnostic,
     ) as Int

@@ -1744,6 +1744,33 @@ maplibre_native_ffi_map_get_style_source_finish(
 );
 
 /**
+ * maplibre_native_ffi_map_get_style_terrain_json_async:
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Reads the \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/) of
+ * the map's style as JSON, which is `null` when the style has no terrain.
+ *
+ * See `mln_map_get_style_terrain_json` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+ */
+void maplibre_native_ffi_map_get_style_terrain_json_async(
+  MaplibreNativeFfiMap* self, GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_map_get_style_terrain_json_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_map_get_style_terrain_json_async` started.
+ *
+ * Returns: (transfer full): the text
+ */
+char* maplibre_native_ffi_map_get_style_terrain_json_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+);
+
+/**
  * maplibre_native_ffi_map_get_style_transition_options_async:
  * @callback: (scope async) (nullable): the callback to call when the call finishes
  * @user_data: the data to pass to `callback`
@@ -3292,6 +3319,46 @@ void maplibre_native_ffi_map_set_style_source_volatile_async(
  */
 MaplibreNativeFfiCommandCompletion*
 maplibre_native_ffi_map_set_style_source_volatile_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+);
+
+/**
+ * maplibre_native_ffi_map_set_style_terrain_json_async:
+ * @terrain_json: the UTF-8 text
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Replaces the \[terrain\](https://maplibre.org/maplibre-style-spec/terrain/)
+ * of the map's style, or removes it when `terrain_json` is JSON `null`.
+ *
+ * The terrain can name a `raster-dem` source that the style doesn't have yet.
+ * The map renders it once the source exists.
+ *
+ * See `mln_map_set_style_terrain_json` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+ *
+ * It fails with these errors:
+ *
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` while the style isn't loaded, as
+ *   `maplibre_native_ffi_map_set_style_url_async()` describes.
+ *
+ * Without `callback`, nothing reports whether the call succeeds.
+ */
+void maplibre_native_ffi_map_set_style_terrain_json_async(
+  MaplibreNativeFfiMap* self, const char* terrain_json,
+  GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_map_set_style_terrain_json_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_map_set_style_terrain_json_async` started.
+ *
+ * Returns: (transfer full): the command's completion, or %NULL with `error` set
+ */
+MaplibreNativeFfiCommandCompletion*
+maplibre_native_ffi_map_set_style_terrain_json_finish(
   MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
 );
 

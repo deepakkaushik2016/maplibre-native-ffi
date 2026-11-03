@@ -567,6 +567,13 @@ internal static unsafe partial class NativeMethods
     );
 
     [LibraryImport(LibraryName)]
+    internal static partial mln_status mln_map_get_style_terrain_json(
+        MlnMap map,
+        mln_completion* completion,
+        mln_diagnostic* out_diagnostic
+    );
+
+    [LibraryImport(LibraryName)]
     internal static partial mln_status mln_map_get_style_transition_options(
         MlnMap map,
         mln_completion* completion,
@@ -1003,6 +1010,14 @@ internal static unsafe partial class NativeMethods
         MlnMap map,
         mln_buffer_view source_id,
         byte is_volatile,
+        mln_completion* completion,
+        mln_diagnostic* out_diagnostic
+    );
+
+    [LibraryImport(LibraryName)]
+    internal static partial mln_status mln_map_set_style_terrain_json(
+        MlnMap map,
+        mln_buffer_view terrain_json,
         mln_completion* completion,
         mln_diagnostic* out_diagnostic
     );

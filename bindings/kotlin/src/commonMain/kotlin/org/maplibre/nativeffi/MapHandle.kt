@@ -899,6 +899,18 @@ private constructor(
     }
 
   /**
+   * Reads the &#91;terrain&#93;(https://maplibre.org/maplibre-style-spec/terrain/) of the map's
+   * style as JSON, which is `null` when the style has no terrain.
+   *
+   * See `mln_map_get_style_terrain_json` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+   */
+  public fun getStyleTerrainJson(): Completion<String> =
+    nativeSubmit(this, binding, { result -> readViewString(CompletionBridge.value(result)) }) {
+      check(C.mln_map_get_style_terrain_json(handle, completion, diagnostic))
+    }
+
+  /**
    * Reads the default transition of the map's style.
    *
    * See `mln_map_get_style_transition_options` in the
@@ -1850,6 +1862,25 @@ private constructor(
     }
 
   /**
+   * Replaces the &#91;terrain&#93;(https://maplibre.org/maplibre-style-spec/terrain/) of the map's
+   * style, or removes it when `terrainJson` is JSON `null`.
+   *
+   * The terrain can name a `raster-dem` source that the style doesn't have yet. The map renders it
+   * once the source exists.
+   *
+   * See `mln_map_set_style_terrain_json` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+   *
+   * Errors:
+   *
+   * - `Status.INVALID_STATE` while the style isn't loaded, as `MapHandle.setStyleUrl()` describes.
+   */
+  public fun setStyleTerrainJson(terrainJson: String): Completion<CommandCompletion> =
+    nativeCommand(this, binding) {
+      check(C.mln_map_set_style_terrain_json(handle, view(terrainJson), completion, diagnostic))
+    }
+
+  /**
    * Sets the default transition of the map's style.
    *
    * See `mln_map_set_style_transition_options` in the
@@ -2583,6 +2614,12 @@ public class MapDiscarding private constructor(@get:JvmSynthetic internal val ow
           diagnostic,
         ),
       )
+    }
+
+  /** [MapHandle.setStyleTerrainJson] without its completion. */
+  public fun setStyleTerrainJson(terrainJson: String): Unit =
+    nativeDiscard(owner, binding) {
+      check(C.mln_map_set_style_terrain_json(handle, view(terrainJson), completion, diagnostic))
     }
 
   /** [MapHandle.setStyleTransitionOptions] without its completion. */

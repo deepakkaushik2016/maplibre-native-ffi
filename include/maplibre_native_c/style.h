@@ -1083,6 +1083,32 @@ MLN_API mln_status mln_map_get_style_light_property(
 ) MLN_NOEXCEPT;
 
 /**
+ * Replaces the [terrain](https://maplibre.org/maplibre-style-spec/terrain/) of
+ * the map's style, or removes it when `terrain_json` is JSON `null`.
+ *
+ * The terrain can name a `raster-dem` source that the style doesn't have yet.
+ * The map renders it once the source exists.
+ *
+ * Completes with:
+ * - MLN_STATUS_INVALID_STATE while the style isn't loaded, as
+ *   mln_map_set_style_url() describes.
+ */
+MLN_BINDING("execution=command")
+MLN_API mln_status mln_map_set_style_terrain_json(
+  mln_map map, mln_buffer_view terrain_json MLN_BINDING("encoding=json"),
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
+ * Reads the [terrain](https://maplibre.org/maplibre-style-spec/terrain/) of
+ * the map's style as JSON, which is `null` when the style has no terrain.
+ */
+MLN_BINDING("execution=query;result=mln_buffer_view;encoding=json")
+MLN_API mln_status mln_map_get_style_terrain_json(
+  mln_map map, const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
  * Sets the default transition of the map's style.
  *
  * Completes with:
