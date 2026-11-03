@@ -1,0 +1,83 @@
+Reports terrain at exactly 0 m under the map center. The renderer started from
+a last reported height of 0 m, so it never reported sea-level ground, and a
+clamped center over it never learned of the ground: the clamp neither settled
+the center there nor lifted an eye under a cliff beside the sea. The height now
+starts unknown, and the first report waits for a loaded DEM tile under the
+center, so ground that has not loaded yet still does not read as sea level.
+Upstream: not proposed
+
+diff --git a/src/mln/renderer/renderer_impl.cpp b/src/mln/renderer/renderer_impl.cpp
+index e14706abb6..fb4bc0733d 100644
+--- a/src/mln/renderer/renderer_impl.cpp
++++ b/src/mln/renderer/renderer_impl.cpp
+@@ -747,8 +747,14 @@ void Renderer::Impl::render(const RenderTree& renderTree, const std::shared_ptr<
+     // DEM, so this is the channel; whether the camera acts on it is the map's call
+     // (Map::setCenterClampedToGround). Gated so a still map does not post a message a frame.
+     if (auto* terrain = orchestrator.getRenderTerrain()) {
+-        const double centerElevation = terrain->getElevationForLatLng(updateParameters->transformState.getLatLng());
+-        if (std::abs(centerElevation - lastReportedCenterElevation) > 0.25) {
++        const LatLng center = updateParameters->transformState.getLatLng();
++        const double centerElevation = terrain->getElevationForLatLng(center);
++        // getElevationForLatLng answers 0 m where no DEM tile covers the point, which is not sea
++        // level: the first report waits for a tile under the centre.
++        const bool changed = std::isnan(lastReportedCenterElevation)
++                                 ? terrain->findElevationForLatLng(center).has_value()
++                                 : std::abs(centerElevation - lastReportedCenterElevation) > 0.25;
++        if (changed) {
+             lastReportedCenterElevation = centerElevation;
+             observer->onTerrainCenterElevationChanged(centerElevation);
+         }
+diff --git a/src/mln/renderer/renderer_impl.hpp b/src/mln/renderer/renderer_impl.hpp
+index c04ba93fb2..a1f374824a 100644
+--- a/src/mln/renderer/renderer_impl.hpp
++++ b/src/mln/renderer/renderer_impl.hpp
+@@ -109,8 +109,9 @@ private:
+     // cover cannot spin forever.
+     int terrainCoverRetryFrames = 4;
+     /// Last terrain height reported under the map centre, so an unchanged surface does not
+-    /// post an observer message every frame.
+-    double lastReportedCenterElevation = 0.0;
++    /// post an observer message every frame. NaN until the first report, so ground at exactly
++    /// 0 m is reported too.
++    double lastReportedCenterElevation = std::numeric_limits<double>::quiet_NaN();
+     double lastReportedEyeElevation = std::numeric_limits<double>::quiet_NaN();
+     double lastReportedTargetElevation = std::numeric_limits<double>::quiet_NaN();
+ 
+diff --git a/test/renderer/terrain_camera.test.cpp b/test/renderer/terrain_camera.test.cpp
+index 9856372f4f..98d2cb3466 100644
+--- a/test/renderer/terrain_camera.test.cpp
++++ b/test/renderer/terrain_camera.test.cpp
+@@ -704,6 +704,33 @@ TEST(TerrainCamera, ClampDoesNotApplyAfterTerrainRemoval) {
+     EXPECT_NEAR(test.altitude(), 0.0, 0.001);
+ }
+ 
++// Ground at sea level is ground too: a clamped centre held above it comes down onto it. The
++// renderer started from a reported height of 0 m, so it never reported ground at exactly 0 m,
++// and the clamp never learned of it.
++TEST(TerrainCamera, ClampFindsGroundAtSeaLevel) {
++    TerrainCameraTest test;
++    test.tile = makeDEMTile(0.0);
++    test.map.jumpTo(CameraOptions().withCenterAltitude(500.0));
++    test.map.setCenterClampedToGround(true);
++
++    EXPECT_NEAR(test.renderAndGetAltitude(8), 0.0, 0.5);
++}
++
++// Until a DEM tile covers the centre, its ground is unknown rather than at sea level: a clamped
++// centre the app put at a height keeps it while the DEM is missing.
++TEST(TerrainCamera, ClampKeepsTheCentreWhileItsGroundIsUnknown) {
++    TerrainCameraTest test;
++    test.fileSource->tileResponse = [](const Resource&) {
++        Response res;
++        res.noContent = true;
++        return res;
++    };
++    test.map.jumpTo(CameraOptions().withCenterAltitude(500.0));
++    test.map.setCenterClampedToGround(true);
++
++    EXPECT_NEAR(test.renderAndGetAltitude(8), 500.0, 0.001);
++}
++
+ // A drape target is drawn into only by the source tiles that overlap its own tile, so the
+ // masks it draws follow those tiles and not every tile the source covers.
+ TEST(TerrainDrape, MasksAreDrawnOnlyForTilesOverlappingTheTarget) {
