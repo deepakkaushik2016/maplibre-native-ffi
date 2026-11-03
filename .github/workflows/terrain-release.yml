@@ -3,11 +3,33 @@
 # package that pins the release (bindings/dart/hook/native_release.json) and
 # names this repository's releases in `release_url` downloads them.
 #
+# The Dart package downloads only archives whose digests its committed pin
+# records, so a release publishes the archives that were pinned, never a
+# rebuild of them. A release goes in this order:
+#
+# 1. Build: run this workflow by hand (workflow_dispatch) on the commit to
+#    release, with the tag the release will have. It builds the archives,
+#    stamps them for that tag and commit, and uploads them as the
+#    `native-release` artifact, with the pin as `dart-native-release-pin`.
+# 2. Pin: download `dart-native-release-pin`, and commit it as
+#    bindings/dart/hook/native_release.json on top of the built commit.
+# 3. Tag: push the tag on the commit that holds the pin.
+# 4. Publish: the tag runs the publish job. It downloads `native-release` from
+#    the successful build run of the commit that the pin names, and refuses to
+#    publish unless those assets are exactly the ones the committed pin names,
+#    digest for digest. It then publishes those same files.
+#
 # The upstream release workflow publishes every preset and every binding
 # package, and runs only for `v*` tags, so it stays as it is.
 name: Terrain release
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release's tag, terrain-3d-*
+        required: true
+        type: string
   push:
     tags:
       - "terrain-3d-*"
@@ -22,6 +44,7 @@ concurrency:
 jobs:
   native:
     name: native / ${{ matrix.preset }}
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     strategy:
@@ -66,19 +89,22 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  publish:
-    name: Publish
+  assemble:
+    name: Assemble
     needs: native
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    permissions:
-      contents: write
     env:
       MISE_NO_HOOKS: "1"
       PUBLISH_SHA: ${{ github.sha }}
-      PUBLISH_TAG: ${{ github.ref_name }}
+      PUBLISH_TAG: ${{ inputs.tag }}
       RELEASE_DIR: build/packages/native/release
     steps:
+      - name: Check the tag
+        run: |
+          set -euo pipefail
+          [[ "$PUBLISH_TAG" == terrain-3d-* ]] ||
+            { echo "the tag must start with terrain-3d-"; exit 1; }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -94,11 +120,71 @@ jobs:
       # The presets are the matrix's, and the script refuses any other set.
       - name: Prepare assets
         run: >-
-          mise exec -- python3 tools/release/fork_release.py "$RELEASE_DIR"
-          "$PUBLISH_TAG" "0.0.0-${PUBLISH_TAG}" ios-arm64-metal
+          mise exec -- python3 tools/release/fork_release.py prepare
+          "$RELEASE_DIR" "$PUBLISH_TAG" "0.0.0-${PUBLISH_TAG}" ios-arm64-metal
           ios-simulator-arm64-metal macos-arm64-metal android-arm64-egl
           android-arm64-vulkan android-x64-egl android-x64-vulkan --dart-pin
           bindings/dart/hook/native_release.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-release
+          path: |
+            ${{ env.RELEASE_DIR }}/*.tar.gz
+            ${{ env.RELEASE_DIR }}/*.cdx.json
+            ${{ env.RELEASE_DIR }}/maplibre-native-c-artifacts.json
+            ${{ env.RELEASE_DIR }}/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dart-native-release-pin
+          path: bindings/dart/hook/native_release.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: write
+    env:
+      MISE_NO_HOOKS: "1"
+      PUBLISH_TAG: ${{ github.ref_name }}
+      RELEASE_DIR: build/packages/native/release
+      PIN: bindings/dart/hook/native_release.json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        with:
+          cache: false
+          install_args: python
+      # The pin names the commit its archives were built from, which the tag
+      # must contain. The build run of that commit holds the archives.
+      - name: Download the pinned build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          built="$(jq -r .commit "$PIN")"
+          git merge-base --is-ancestor "$built" HEAD ||
+            { echo "the pin's commit $built is not in $PUBLISH_TAG"; exit 1; }
+          run="$(gh run list --workflow terrain-release.yml \
+            --event workflow_dispatch --commit "$built" --status success \
+            --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          [[ -n "$run" ]] ||
+            { echo "no successful build run of $built"; exit 1; }
+          gh run download "$run" --name native-release --dir "$RELEASE_DIR"
+      - name: Check the assets against the pin
+        run: >-
+          mise exec -- python3 tools/release/fork_release.py verify
+          "$RELEASE_DIR" "$PUBLISH_TAG" "$PIN"
       - name: Upload the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -107,14 +193,7 @@ jobs:
 
           gh release create "$PUBLISH_TAG" --verify-tag --prerelease \
             --latest=false --title "$PUBLISH_TAG" \
-            --notes "Terrain native archives built from ${PUBLISH_SHA}." \
+            --notes "Terrain native archives built from $(jq -r .commit "$PIN")." \
             "$RELEASE_DIR"/*.tar.gz "$RELEASE_DIR"/*.cdx.json \
             "$RELEASE_DIR"/maplibre-native-c-artifacts.json \
             "$RELEASE_DIR"/SHA256SUMS
-      # The Dart package downloads only what its committed pin names, so a
-      # release whose archives differ from the pin needs this pin committed.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: dart-native-release-pin
-          path: bindings/dart/hook/native_release.json
-          if-no-files-found: error

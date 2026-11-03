@@ -34,6 +34,7 @@ class ForkReleaseTest(unittest.TestCase):
     def prepare(self, *extra: str) -> None:
         main(
             [
+                "prepare",
                 str(self.release_dir),
                 TAG,
                 VERSION,
@@ -97,6 +98,55 @@ class ForkReleaseTest(unittest.TestCase):
 
         with self.assertRaisesRegex(SystemExit, "unexpected"):
             self.prepare()
+
+    def verify(self, pin: pathlib.Path, tag: str = TAG) -> None:
+        main(["verify", str(self.release_dir), tag, str(pin)])
+
+    def pinned_release(self) -> pathlib.Path:
+        pin = self.root / "native_release.json"
+        self.prepare("--dart-pin", str(pin))
+        return pin
+
+    def test_verifies_the_assets_that_the_pin_names(self) -> None:
+        self.verify(self.pinned_release())
+
+    def test_refuses_an_archive_that_differs_from_the_pin(self) -> None:
+        pin = self.pinned_release()
+        with self.archive(self.presets[1]).open("ab") as archive:
+            archive.write(b"rebuilt")
+
+        with self.assertRaisesRegex(SystemExit, self.archive(self.presets[1]).name):
+            self.verify(pin)
+
+    def test_refuses_an_inventory_that_differs_from_the_pin(self) -> None:
+        pin = self.pinned_release()
+        with sbom_path(self.archive(self.presets[0])).open("a") as inventory:
+            inventory.write("\n")
+
+        with self.assertRaisesRegex(SystemExit, "cdx.json"):
+            self.verify(pin)
+
+    def test_refuses_an_archive_that_the_pin_leaves_out(self) -> None:
+        pin = self.pinned_release()
+        create_archive(self.archive("linux-gnu-arm64-egl"), "linux-gnu-arm64-egl")
+
+        with self.assertRaisesRegex(SystemExit, "linux-gnu-arm64-egl"):
+            self.verify(pin)
+
+    def test_refuses_a_pin_of_another_release(self) -> None:
+        pin = self.pinned_release()
+
+        with self.assertRaisesRegex(SystemExit, "terrain-3d-202611.2"):
+            self.verify(pin, "terrain-3d-202611.2")
+
+    def test_refuses_an_index_that_differs_from_the_pin(self) -> None:
+        pin = self.pinned_release()
+        pinned = json.loads(pin.read_text())
+        pinned["commit"] = "d" * 40
+        pin.write_text(json.dumps(pinned, indent=2) + "\n")
+
+        with self.assertRaisesRegex(SystemExit, ARTIFACTS_NAME):
+            self.verify(pin)
 
 
 if __name__ == "__main__":

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Prepares the native assets of a fork release that publishes some presets.
+"""Prepares, and verifies, the native assets of a fork release that publishes
+some presets.
 
 A fork ships the archives that its applications build with, under a tag of its
 own, so that a Dart package which names the fork's releases in `release_url`
 downloads them. Each archive is stamped and inventoried as an upstream release
 stamps it, and the artifact index lists them. The release holds no XCFramework
 or Zig package.
+
+`prepare` stamps the assets and can write the Dart pin. `verify` checks that
+assets are the ones a committed pin names, so that a release publishes only
+archives its pin can download.
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ from native_package_release import (
     publish_inventory,
     rewrite_archive,
     sbom_path,
+    sha256,
     write_checksums,
     write_pin,
 )
@@ -53,8 +59,45 @@ def prepare(
     return index
 
 
+def verify(release_dir: pathlib.Path, tag: str, pin: pathlib.Path) -> None:
+    """Exits unless `release_dir` holds exactly the assets of release `tag`
+    that `pin` names, each with the digest the pin records."""
+    pinned = json.loads(pin.read_text(encoding="utf-8"))
+    problems = []
+    if pinned["tag"] != tag:
+        problems.append(f"the pin names the release {pinned['tag']}, not {tag}")
+    index = release_dir / ARTIFACTS_NAME
+    if not index.is_file() or json.loads(index.read_text(encoding="utf-8")) != pinned:
+        problems.append(f"{ARTIFACTS_NAME} differs from the pin")
+    expected = {}
+    for artifact in pinned["artifacts"]:
+        expected[artifact["archive"]] = artifact["sha256"]
+        expected[artifact["sbom"]["file"]] = artifact["sbom"]["sha256"]
+    for name, digest in sorted(expected.items()):
+        path = release_dir / name
+        if not path.is_file():
+            problems.append(f"{name} is missing")
+        elif sha256(path) != digest:
+            problems.append(f"{name} differs from the pin")
+    for path in sorted(release_dir.glob("*.tar.gz")) + sorted(
+        release_dir.glob("*.cdx.json")
+    ):
+        if path.name not in expected:
+            problems.append(f"{path.name} is not in the pin")
+    if problems:
+        raise SystemExit(f"the release does not match its pin: {'; '.join(problems)}")
+
+
 def main(arguments: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser()
+    cli = argparse.ArgumentParser()
+    commands = cli.add_subparsers(dest="command", required=True)
+    checking = commands.add_parser(
+        "verify", help="Check the assets against a committed Dart pin"
+    )
+    checking.add_argument("release_dir", type=pathlib.Path)
+    checking.add_argument("tag")
+    checking.add_argument("pin", type=pathlib.Path)
+    parser = commands.add_parser("prepare", help="Stamp the assets of a release")
     parser.add_argument("release_dir", type=pathlib.Path)
     parser.add_argument("tag")
     parser.add_argument("version")
@@ -75,7 +118,10 @@ def main(arguments: list[str] | None = None) -> int:
         type=pathlib.Path,
         help="Also pin the release in this Dart package's build hook",
     )
-    args = parser.parse_args(arguments)
+    args = cli.parse_args(arguments)
+    if args.command == "verify":
+        verify(args.release_dir, args.tag, args.pin)
+        return 0
     if not args.sha:
         parser.error("--sha or PUBLISH_SHA is required")
     download_url = args.download_url
