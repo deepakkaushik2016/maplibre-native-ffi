@@ -4,7 +4,6 @@
 #include <atomic>
 #include <bit>
 #include <cassert>
-#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -21,7 +20,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
@@ -81,6 +79,7 @@
 #include <mln/util/projection.hpp>
 #include <mln/util/range.hpp>
 #include <mln/util/size.hpp>
+#include <mln/util/string.hpp>
 #include <mln/util/tileset.hpp>
 #include <mln/util/vectors.hpp>
 
@@ -2117,22 +2116,43 @@ auto map_set_style_terrain_json(MapObject& live, mln_buffer_view terrain_json)
   return MLN_STATUS_OK;
 }
 
+namespace {
+
+// The shortest number that reads back as `value`, so a stored 1.1F writes 1.1
+// rather than the double it widens to. std::to_chars would find it, but Apple's
+// libc++ offers its floating-point overloads only from iOS 16.3. Rounding to
+// ever more significant digits finds the same number, and the engine's double
+// formatter writes it without depending on the C locale.
+auto shortest_float_json(float value) -> std::string {
+  const auto widened = static_cast<double>(value);
+  if (!std::isfinite(widened)) {
+    return serialize_json_value(mln::Value{widened});
+  }
+  if (widened != 0.0) {
+    const auto magnitude =
+      static_cast<int>(std::floor(std::log10(std::abs(widened))));
+    for (auto digits = 1; digits < std::numeric_limits<float>::max_digits10;
+         ++digits) {
+      const auto scale = std::pow(10.0, digits - 1 - magnitude);
+      const auto rounded = std::round(widened * scale) / scale;
+      if (static_cast<float>(rounded) == value) {
+        return mln::util::toString(rounded);
+      }
+    }
+  }
+  return mln::util::toString(widened);
+}
+
+}  // namespace
+
 auto map_get_style_terrain_json(MapObject& live) -> std::string {
   const auto* terrain = map_native(live).getStyle().getTerrain();
   if (terrain == nullptr) {
     return "null";
   }
-  // The shortest text that reads back as the stored float, so 1.1 stays 1.1.
   // The setter keeps the value finite, but a style document's terrain isn't
   // checked, so this writes whatever the engine holds.
-  const auto value = terrain->getExaggeration();
-  auto buffer = std::array<char, 32>{};
-  const auto written =
-    std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
-  const auto exaggeration =
-    written.ec == std::errc{}
-      ? std::string{buffer.data(), written.ptr}
-      : serialize_json_value(mln::Value{static_cast<double>(value)});
+  const auto exaggeration = shortest_float_json(terrain->getExaggeration());
   return R"({"source":)" +
          serialize_json_value(mln::Value{terrain->getSource()}) +
          R"(,"exaggeration":)" + exaggeration + "}";

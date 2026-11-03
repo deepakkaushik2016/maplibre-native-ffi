@@ -550,6 +550,18 @@ static void the_style_terrain_round_trips_through_json(void) {
   // A rejected terrain leaves the one before it in place.
   EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":1.25}", map);
 
+  // The engine stores a float, which reads back as the number that set it.
+  MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(
+    map, MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":1.1}"),
+    &completion.descriptor, NULL
+  ));
+  EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":1.1}", map);
+  MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(
+    map, MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":2}"),
+    &completion.descriptor, NULL
+  ));
+  EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":2}", map);
+
   MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(
     map, MLN_BUFFER_LITERAL("null"), &completion.descriptor, NULL
   ));
