@@ -175,6 +175,8 @@ internal actual object C {
       JAVA_LONG,
       JAVA_LONG,
     )
+  private val mln_map_anchor_center_on_terrain =
+    Ffm.downcall("mln_map_anchor_center_on_terrain", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG)
   private val mln_map_apply_camera_delta =
     Ffm.downcall("mln_map_apply_camera_delta", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG, JAVA_LONG)
   private val mln_map_attach_android_hardware_buffer_ring =
@@ -947,6 +949,15 @@ internal actual object C {
       JAVA_LONG,
       JAVA_LONG,
     )
+  private val mln_map_set_terrain_options =
+    Ffm.downcall(
+      "mln_map_set_terrain_options",
+      JAVA_INT,
+      JAVA_LONG,
+      JAVA_LONG,
+      JAVA_LONG,
+      JAVA_LONG,
+    )
   private val mln_map_set_tile_options =
     Ffm.downcall("mln_map_set_tile_options", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG, JAVA_LONG)
   private val mln_map_set_viewport_options =
@@ -1676,6 +1687,12 @@ internal actual object C {
       completion,
       outDiagnostic,
     ) as Int
+
+  actual fun mln_map_anchor_center_on_terrain(
+    map: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int = mln_map_anchor_center_on_terrain.invokeExact(map, completion, outDiagnostic) as Int
 
   actual fun mln_map_apply_camera_delta(
     map: Long,
@@ -2852,6 +2869,13 @@ internal actual object C {
       completion,
       outDiagnostic,
     ) as Int
+
+  actual fun mln_map_set_terrain_options(
+    map: Long,
+    options: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int = mln_map_set_terrain_options.invokeExact(map, options, completion, outDiagnostic) as Int
 
   actual fun mln_map_set_tile_options(
     map: Long,

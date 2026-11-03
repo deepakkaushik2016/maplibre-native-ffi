@@ -217,6 +217,9 @@ napi_value mln_ts_read_map_projection_camera_result(
 napi_value mln_ts_read_map_snapshot(
   napi_env env, const mln_map_snapshot* source, size_t size
 );
+napi_value mln_ts_read_map_terrain_settings(
+  napi_env env, const mln_map_terrain_settings* source, size_t size
+);
 napi_value mln_ts_read_map_tile_settings(
   napi_env env, const mln_map_tile_settings* source, size_t size
 );
@@ -591,6 +594,10 @@ bool mln_ts_write_logical_size(
 );
 bool mln_ts_write_map_options(
   mln_ts_call* call, napi_value value, mln_map_options* out, const char* path
+);
+bool mln_ts_write_map_terrain_options(
+  mln_ts_call* call, napi_value value, mln_map_terrain_options* out,
+  const char* path
 );
 bool mln_ts_write_map_tile_options(
   mln_ts_call* call, napi_value value, mln_map_tile_options* out,

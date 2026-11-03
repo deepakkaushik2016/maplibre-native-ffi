@@ -241,6 +241,27 @@ private constructor(
     }
 
   /**
+   * Moves the camera's center onto the terrain under it, without moving the camera.
+   *
+   * The center slides along the line of sight to the ground, and the zoom rises by the distance
+   * saved, so the view stays the same. Rotating and pitching then turn around the ground being
+   * looked at. Call it when a gesture starts.
+   *
+   * The camera stays as it is when the style has no terrain, before a frame has rendered the ground
+   * under the center, when the pitch is so steep that the line of sight nearly grazes the ground,
+   * when the ground is at or behind the camera, and when the zoom limits or bounds would cut the
+   * move short. Afterwards the camera reports another center, zoom, and `center_altitude` for the
+   * same view.
+   *
+   * See `mln_map_anchor_center_on_terrain` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+   */
+  public fun anchorCenterOnTerrain(): Completion<CommandCompletion> =
+    nativeCommand(this, binding) {
+      check(C.mln_map_anchor_center_on_terrain(handle, completion, diagnostic))
+    }
+
+  /**
    * Moves the camera relative to where it is, as a gesture does.
    *
    * `delta` can pan the map's content by an offset on the screen, scale the zoom, and add to the
@@ -751,7 +772,7 @@ private constructor(
    */
   public fun getSnapshot(): MapSnapshot =
     nativeCall(this, binding) {
-      val out = sized(w(408, 408, 380), w(8, 8, 4))
+      val out = sized(w(416, 416, 388), w(8, 8, 4))
       check(C.mln_map_get_snapshot(handle, out, diagnostic))
       readMapSnapshot(out)
     }
@@ -1930,6 +1951,26 @@ private constructor(
     }
 
   /**
+   * Sets how the map loads its style's terrain, and whether the camera's center follows the ground.
+   *
+   * Settings that `options` doesn't set keep their current values.
+   *
+   * See `mln_map_set_terrain_options` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+   */
+  public fun setTerrainOptions(options: MapTerrainOptions): Completion<CommandCompletion> =
+    nativeCommand(this, binding) {
+      check(
+        C.mln_map_set_terrain_options(
+          handle,
+          writeMapTerrainOptions(options),
+          completion,
+          diagnostic,
+        ),
+      )
+    }
+
+  /**
    * Sets how the map chooses which tiles to load, and at what detail.
    *
    * Settings that `options` doesn't set keep their current values.
@@ -2105,6 +2146,12 @@ public class MapDiscarding private constructor(@get:JvmSynthetic internal val ow
           diagnostic,
         ),
       )
+    }
+
+  /** [MapHandle.anchorCenterOnTerrain] without its completion. */
+  public fun anchorCenterOnTerrain(): Unit =
+    nativeDiscard(owner, binding) {
+      check(C.mln_map_anchor_center_on_terrain(handle, completion, diagnostic))
     }
 
   /** [MapHandle.applyCameraDelta] without its completion. */
@@ -2639,6 +2686,19 @@ public class MapDiscarding private constructor(@get:JvmSynthetic internal val ow
   public fun setStyleUrl(url: String): Unit =
     nativeDiscard(owner, binding) {
       check(C.mln_map_set_style_url(handle, view(url), completion, diagnostic))
+    }
+
+  /** [MapHandle.setTerrainOptions] without its completion. */
+  public fun setTerrainOptions(options: MapTerrainOptions): Unit =
+    nativeDiscard(owner, binding) {
+      check(
+        C.mln_map_set_terrain_options(
+          handle,
+          writeMapTerrainOptions(options),
+          completion,
+          diagnostic,
+        ),
+      )
     }
 
   /** [MapHandle.setTileOptions] without its completion. */

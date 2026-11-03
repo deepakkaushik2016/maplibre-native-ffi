@@ -176,6 +176,9 @@ pub const MLN_MAP_MODE_TILE: mln_map_mode = 2;
 pub type mln_map_option_field = u32;
 pub const MLN_MAP_OPTION_EVENT_MASK: mln_map_option_field = 1;
 pub const MLN_MAP_OPTION_TILE_CACHE_ENABLED: mln_map_option_field = 2;
+pub type mln_map_terrain_option_field = u32;
+pub const MLN_MAP_TERRAIN_OPTION_LOAD_MODE: mln_map_terrain_option_field = 1;
+pub const MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND: mln_map_terrain_option_field = 2;
 pub type mln_map_tile_option_field = u32;
 pub const MLN_MAP_TILE_OPTION_PREFETCH_ZOOM_DELTA: mln_map_tile_option_field = 1;
 pub const MLN_MAP_TILE_OPTION_LOD_MIN_RADIUS: mln_map_tile_option_field = 2;
@@ -497,6 +500,10 @@ pub const MLN_STYLE_TRANSITION_OPTION_ENABLE_PLACEMENT_TRANSITIONS:
 pub type mln_style_vector_tile_encoding = u32;
 pub const MLN_STYLE_VECTOR_TILE_ENCODING_MVT: mln_style_vector_tile_encoding = 0;
 pub const MLN_STYLE_VECTOR_TILE_ENCODING_MLT: mln_style_vector_tile_encoding = 1;
+pub type mln_terrain_load_mode = u32;
+pub const MLN_TERRAIN_LOAD_MODE_QUALITY: mln_terrain_load_mode = 0;
+pub const MLN_TERRAIN_LOAD_MODE_BALANCED: mln_terrain_load_mode = 1;
+pub const MLN_TERRAIN_LOAD_MODE_PERFORMANCE: mln_terrain_load_mode = 2;
 pub type mln_tile_lod_mode = u32;
 pub const MLN_TILE_LOD_MODE_DEFAULT: mln_tile_lod_mode = 0;
 pub const MLN_TILE_LOD_MODE_DISTANCE: mln_tile_lod_mode = 1;
@@ -1074,6 +1081,21 @@ pub struct mln_map_snapshot {
     pub bounds: mln_camera_bounds,
     pub free_camera: mln_free_camera,
     pub view: mln_map_view,
+    pub terrain: mln_map_terrain_settings,
+}
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct mln_map_terrain_options {
+    pub size: u32,
+    pub fields: mln_map_terrain_option_fields,
+    pub load_mode: mln_terrain_load_mode,
+    pub center_clamped_to_ground: bool,
+}
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct mln_map_terrain_settings {
+    pub load_mode: mln_terrain_load_mode,
+    pub center_clamped_to_ground: bool,
 }
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -2187,6 +2209,7 @@ pub type mln_map_option_fields = u32;
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct mln_map_projection(pub u64);
+pub type mln_map_terrain_option_fields = u32;
 pub type mln_map_tile_option_fields = u32;
 pub type mln_map_viewport_option_fields = u32;
 pub type mln_momentum_decay_fields = u32;
@@ -2458,6 +2481,11 @@ unsafe extern "C" {
         map: mln_map,
         source_id: mln_buffer_view,
         source_json: mln_buffer_view,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
+    pub fn mln_map_anchor_center_on_terrain(
+        map: mln_map,
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;
@@ -3106,6 +3134,12 @@ unsafe extern "C" {
     pub fn mln_map_set_style_url(
         map: mln_map,
         url: mln_buffer_view,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
+    pub fn mln_map_set_terrain_options(
+        map: mln_map,
+        options: *const mln_map_terrain_options,
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;

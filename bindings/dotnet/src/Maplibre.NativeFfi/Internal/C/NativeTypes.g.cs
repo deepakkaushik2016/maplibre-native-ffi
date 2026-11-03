@@ -614,6 +614,21 @@ internal unsafe struct mln_map_snapshot
     public mln_camera_bounds bounds;
     public mln_free_camera free_camera;
     public mln_map_view view;
+    public mln_map_terrain_settings terrain;
+}
+
+internal unsafe struct mln_map_terrain_options
+{
+    public uint size;
+    public mln_map_terrain_option_field fields;
+    public mln_terrain_load_mode load_mode;
+    public byte center_clamped_to_ground;
+}
+
+internal unsafe struct mln_map_terrain_settings
+{
+    public mln_terrain_load_mode load_mode;
+    public byte center_clamped_to_ground;
 }
 
 internal unsafe struct mln_map_tile_options
@@ -1963,6 +1978,12 @@ internal enum mln_map_option_field : uint
     MLN_MAP_OPTION_TILE_CACHE_ENABLED = 2,
 }
 
+internal enum mln_map_terrain_option_field : uint
+{
+    MLN_MAP_TERRAIN_OPTION_LOAD_MODE = 1,
+    MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND = 2,
+}
+
 internal enum mln_map_tile_option_field : uint
 {
     MLN_MAP_TILE_OPTION_PREFETCH_ZOOM_DELTA = 1,
@@ -2441,6 +2462,13 @@ internal enum mln_style_vector_tile_encoding : uint
 {
     MLN_STYLE_VECTOR_TILE_ENCODING_MVT = 0,
     MLN_STYLE_VECTOR_TILE_ENCODING_MLT = 1,
+}
+
+internal enum mln_terrain_load_mode : uint
+{
+    MLN_TERRAIN_LOAD_MODE_QUALITY = 0,
+    MLN_TERRAIN_LOAD_MODE_BALANCED = 1,
+    MLN_TERRAIN_LOAD_MODE_PERFORMANCE = 2,
 }
 
 internal enum mln_tile_lod_mode : uint

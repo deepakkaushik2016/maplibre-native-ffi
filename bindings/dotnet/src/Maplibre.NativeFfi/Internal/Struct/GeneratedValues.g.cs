@@ -1115,7 +1115,34 @@ internal static unsafe class GeneratedValues
             CopyMapTileSettings(value.tile),
             CopyCameraBounds(value.bounds),
             CopyFreeCamera(value.free_camera),
-            CopyMapView(value.view)
+            CopyMapView(value.view),
+            CopyMapTerrainSettings(value.terrain)
+        );
+
+    internal static mln_map_terrain_options NativeMapTerrainOptions(MapTerrainOptions value)
+    {
+        var native = new mln_map_terrain_options();
+        native.fields = 0;
+        native.size = (uint)sizeof(mln_map_terrain_options);
+        native.fields |= Put(
+            value.LoadMode,
+            ref native.load_mode,
+            MLN_MAP_TERRAIN_OPTION_LOAD_MODE,
+            static present => (mln_terrain_load_mode)present
+        );
+        native.fields |= Put(
+            value.CenterClampedToGround,
+            ref native.center_clamped_to_ground,
+            MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND,
+            static present => (byte)(present ? 1 : 0)
+        );
+        return native;
+    }
+
+    internal static MapTerrainSettings CopyMapTerrainSettings(mln_map_terrain_settings value) =>
+        new(
+            (global::Maplibre.NativeFfi.TerrainLoadMode)value.load_mode,
+            value.center_clamped_to_ground != 0
         );
 
     internal static mln_map_tile_options NativeMapTileOptions(MapTileOptions value)

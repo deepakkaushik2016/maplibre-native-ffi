@@ -917,6 +917,36 @@ done:
   return mln_ts_end(call);
 }
 
+static napi_value mln_ts_export_mln_map_anchor_center_on_terrain(
+  napi_env env, napi_callback_info info
+) {
+  mln_ts_call call_state;
+  mln_ts_call* call = &call_state;
+  mln_map arg_map = 0;
+  mln_completion arg_completion;
+  const mln_completion* present_completion = NULL;
+  mln_diagnostic diagnostic;
+  mln_status status;
+  if (!mln_ts_begin(call, env, info, 2)) return NULL;
+  {
+    uint64_t number = 0;
+    if (!mln_ts_read_u64(call, call->argv[0], &number, "map")) goto done;
+    arg_map = (mln_map)number;
+  }
+  if (!mln_ts_read_completion(
+        call, call->argv[1], true, NULL, &arg_completion, &present_completion
+      ))
+    goto done;
+  diagnostic.size = sizeof diagnostic;
+  diagnostic.message[0] = '\0';
+  status =
+    mln_map_anchor_center_on_terrain(arg_map, present_completion, &diagnostic);
+  if (status == MLN_STATUS_OK) mln_ts_accept(call);
+  if (!mln_ts_check(call, status, &diagnostic)) goto done;
+done:
+  return mln_ts_end(call);
+}
+
 static napi_value mln_ts_export_mln_map_apply_camera_delta(
   napi_env env, napi_callback_info info
 ) {
@@ -4838,6 +4868,45 @@ done:
   return mln_ts_end(call);
 }
 
+static napi_value mln_ts_export_mln_map_set_terrain_options(
+  napi_env env, napi_callback_info info
+) {
+  mln_ts_call call_state;
+  mln_ts_call* call = &call_state;
+  mln_map arg_map = 0;
+  mln_map_terrain_options arg_options;
+  mln_completion arg_completion;
+  const mln_completion* present_completion = NULL;
+  mln_diagnostic diagnostic;
+  mln_status status;
+  if (!mln_ts_begin(call, env, info, 3)) return NULL;
+  {
+    uint64_t number = 0;
+    if (!mln_ts_read_u64(call, call->argv[0], &number, "map")) goto done;
+    arg_map = (mln_map)number;
+  }
+  memset(&arg_options, 0, sizeof arg_options);
+  arg_options.size = sizeof arg_options;
+  if (!mln_ts_read_record(call, call->argv[1], "options")) goto done;
+  if (!mln_ts_write_map_terrain_options(
+        call, call->argv[1], &arg_options, "options"
+      ))
+    goto done;
+  if (!mln_ts_read_completion(
+        call, call->argv[2], true, NULL, &arg_completion, &present_completion
+      ))
+    goto done;
+  diagnostic.size = sizeof diagnostic;
+  diagnostic.message[0] = '\0';
+  status = mln_map_set_terrain_options(
+    arg_map, &arg_options, present_completion, &diagnostic
+  );
+  if (status == MLN_STATUS_OK) mln_ts_accept(call);
+  if (!mln_ts_check(call, status, &diagnostic)) goto done;
+done:
+  return mln_ts_end(call);
+}
+
 static napi_value mln_ts_export_mln_map_set_tile_options(
   napi_env env, napi_callback_info info
 ) {
@@ -7893,6 +7962,8 @@ static const mln_ts_export exports[] = {
   {"mln_map_add_style_layer_json", mln_ts_export_mln_map_add_style_layer_json},
   {"mln_map_add_style_source_json",
    mln_ts_export_mln_map_add_style_source_json},
+  {"mln_map_anchor_center_on_terrain",
+   mln_ts_export_mln_map_anchor_center_on_terrain},
   {"mln_map_apply_camera_delta", mln_ts_export_mln_map_apply_camera_delta},
   {"mln_map_attach_android_hardware_buffer_ring",
    mln_ts_export_mln_map_attach_android_hardware_buffer_ring},
@@ -8047,6 +8118,7 @@ static const mln_ts_export exports[] = {
   {"mln_map_set_style_transition_options",
    mln_ts_export_mln_map_set_style_transition_options},
   {"mln_map_set_style_url", mln_ts_export_mln_map_set_style_url},
+  {"mln_map_set_terrain_options", mln_ts_export_mln_map_set_terrain_options},
   {"mln_map_set_tile_options", mln_ts_export_mln_map_set_tile_options},
   {"mln_map_set_viewport_options", mln_ts_export_mln_map_set_viewport_options},
   {"mln_map_update_camera", mln_ts_export_mln_map_update_camera},

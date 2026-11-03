@@ -393,6 +393,15 @@ static void use_distance_lod(mln_map map, update_state* state) {
   options.lod_mode = MLN_TILE_LOD_MODE_DISTANCE;
   set_tile_options(map, &options);
 }
+static void use_performance_terrain(mln_map map, update_state* state) {
+  (void)state;
+  mln_map_terrain_options options = {.size = sizeof(mln_map_terrain_options)};
+  options.fields = MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+  options.load_mode = MLN_TERRAIN_LOAD_MODE_PERFORMANCE;
+  MLN_TEST_AWAIT_OK(
+    mln_map_set_terrain_options(map, &options, &completion.descriptor, NULL)
+  );
+}
 static void set_layer_transition(mln_map map, update_state* state) {
   (void)state;
   set_property(map, "background-color-transition", "{\"duration\":123}");
@@ -450,6 +459,8 @@ static const update_row update_rows[] = {
   {"the prefetch delta unchanged", raise_prefetch_delta, false},
   {"the LOD mode changed", use_distance_lod, true},
   {"the LOD mode unchanged", use_distance_lod, false},
+  {"the terrain load mode changed", use_performance_terrain, true},
+  {"the terrain load mode unchanged", use_performance_terrain, false},
   {"a layer transition set", set_layer_transition, true},
   {"the style transition set", set_style_transition, true},
   {"feature state set", select_point, true},

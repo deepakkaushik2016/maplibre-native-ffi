@@ -2640,6 +2640,7 @@ pub struct MapSnapshot {
     pub bounds: CameraBounds,
     pub free_camera: FreeCamera,
     pub view: MapView,
+    pub terrain: MapTerrainSettings,
 }
 impl FromNative<sys::mln_map_snapshot> for MapSnapshot {
     unsafe fn from_native(raw: sys::mln_map_snapshot) -> Result<Self> {
@@ -2656,6 +2657,64 @@ impl FromNative<sys::mln_map_snapshot> for MapSnapshot {
             bounds: unsafe { from_native(raw.bounds) }?,
             free_camera: unsafe { from_native(raw.free_camera) }?,
             view: unsafe { from_native(raw.view) }?,
+            terrain: unsafe { from_native(raw.terrain) }?,
+        })
+    }
+}
+
+/// How the map loads its style's terrain, and how its camera keeps to it.
+///
+/// The options apply only while the style has terrain.
+///
+/// See `mln_map_terrain_options` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct MapTerrainOptions {
+    /// `TerrainLoadMode::Quality` by default.
+    pub load_mode: Option<TerrainLoadMode>,
+    /// Whether the camera's center follows the height of the terrain under it,
+    /// rather than staying at its `center_altitude`. Off by default.
+    ///
+    /// With it on, the camera also keeps its eye 10 m above the ground under
+    /// the eye. During a gesture, the center keeps the height it had when the
+    /// gesture started, and the gesture's end moves the center onto the ground
+    /// without moving the camera, as `MapHandle::anchor_center_on_terrain()`
+    /// does.
+    pub center_clamped_to_ground: Option<bool>,
+}
+impl ToNative<sys::mln_map_terrain_options> for MapTerrainOptions {
+    fn to_native(&self, arena: &mut InputArena) -> Result<sys::mln_map_terrain_options> {
+        let mut raw: sys::mln_map_terrain_options = unsafe { std::mem::zeroed() };
+        raw.size = std::mem::size_of::<sys::mln_map_terrain_options>() as _;
+        raw.fields = 0;
+        if let Some(item) = &self.load_mode {
+            raw.fields |= sys::MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+            raw.load_mode = to_native(&*item, arena)?;
+        }
+        if let Some(item) = &self.center_clamped_to_ground {
+            raw.fields |= sys::MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
+            raw.center_clamped_to_ground = *item;
+        }
+        Ok(raw)
+    }
+}
+
+/// All the settings for how a map loads its style's terrain.
+///
+/// Its members mean the same as those of `MapTerrainOptions`.
+///
+/// See `mln_map_terrain_settings` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct MapTerrainSettings {
+    pub load_mode: TerrainLoadMode,
+    pub center_clamped_to_ground: bool,
+}
+impl FromNative<sys::mln_map_terrain_settings> for MapTerrainSettings {
+    unsafe fn from_native(raw: sys::mln_map_terrain_settings) -> Result<Self> {
+        Ok(Self {
+            load_mode: TerrainLoadMode::from_raw(raw.load_mode),
+            center_clamped_to_ground: raw.center_clamped_to_ground,
         })
     }
 }
@@ -6368,6 +6427,31 @@ pub enum StyleVectorTileEncoding: u32 {
 impl Default for StyleVectorTileEncoding {
     fn default() -> Self {
         Self::Mvt
+    }
+}
+
+native_enum! {
+/// How a map loads 3D terrain: how much it builds in one frame, and how many
+/// terrain mesh tiles a frame may have.
+///
+/// See `mln_terrain_load_mode` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+pub enum TerrainLoadMode: u32 {
+    /// Builds every revealed tile in the frame that reveals it, and keeps up to
+    /// 64 mesh tiles. The sharpest, but a frame can stall on a burst of tiles.
+    Quality = 0,
+    /// Builds up to 32 new tiles and redraws up to 16 terrain textures a frame,
+    /// and keeps up to 48 mesh tiles.
+    Balanced = 1,
+    /// Builds up to 8 new tiles and redraws up to 4 terrain textures a frame,
+    /// and keeps up to 24 mesh tiles. The smoothest on a weak GPU, and the
+    /// shortest view distance.
+    Performance = 2,
+} Unknown
+}
+impl Default for TerrainLoadMode {
+    fn default() -> Self {
+        Self::Quality
     }
 }
 

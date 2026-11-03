@@ -257,6 +257,12 @@ internal actual object C {
       word(outDiagnostic),
     )
 
+  actual fun mln_map_anchor_center_on_terrain(
+    map: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int = mln_kw_mln_map_anchor_center_on_terrain(map, word(completion), word(outDiagnostic))
+
   actual fun mln_map_apply_camera_delta(
     map: Long,
     delta: Long,
@@ -1396,6 +1402,14 @@ internal actual object C {
     outDiagnostic: Long,
   ): Int = mln_kw_mln_map_set_style_url(map, word(url), word(completion), word(outDiagnostic))
 
+  actual fun mln_map_set_terrain_options(
+    map: Long,
+    options: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_kw_mln_map_set_terrain_options(map, word(options), word(completion), word(outDiagnostic))
+
   actual fun mln_map_set_tile_options(
     map: Long,
     options: Long,
@@ -2356,6 +2370,11 @@ private fun mln_kw_mln_map_add_style_source_json(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_add_style_source_json(p0, p1, p2, p3, p4)",
   )
 
+private fun mln_kw_mln_map_anchor_center_on_terrain(p0: Long, p1: Int, p2: Int): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_anchor_center_on_terrain(p0, p1, p2)",
+  )
+
 private fun mln_kw_mln_map_apply_camera_delta(p0: Long, p1: Int, p2: Int, p3: Int): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_apply_camera_delta(p0, p1, p2, p3)",
@@ -3141,6 +3160,11 @@ private fun mln_kw_mln_map_set_style_transition_options(p0: Long, p1: Int, p2: I
 private fun mln_kw_mln_map_set_style_url(p0: Long, p1: Int, p2: Int, p3: Int): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_set_style_url(p0, p1, p2, p3)",
+  )
+
+private fun mln_kw_mln_map_set_terrain_options(p0: Long, p1: Int, p2: Int, p3: Int): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_set_terrain_options(p0, p1, p2, p3)",
   )
 
 private fun mln_kw_mln_map_set_tile_options(p0: Long, p1: Int, p2: Int, p3: Int): Int =

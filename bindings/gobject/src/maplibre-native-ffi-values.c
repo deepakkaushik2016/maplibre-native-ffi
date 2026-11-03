@@ -9005,6 +9005,43 @@ MaplibreNativeFfiMapView* maplibre_native_ffi_map_view_from_native(
 }
 
 G_DEFINE_BOXED_TYPE(
+  MaplibreNativeFfiMapTerrainSettings, maplibre_native_ffi_map_terrain_settings,
+  maplibre_native_ffi_map_terrain_settings_copy,
+  maplibre_native_ffi_map_terrain_settings_free
+)
+
+MaplibreNativeFfiMapTerrainSettings*
+maplibre_native_ffi_map_terrain_settings_copy(
+  const MaplibreNativeFfiMapTerrainSettings* self
+) {
+  g_return_val_if_fail(self != NULL, NULL);
+  return g_memdup2(self, sizeof *self);
+}
+
+void maplibre_native_ffi_map_terrain_settings_free(
+  MaplibreNativeFfiMapTerrainSettings* self
+) {
+  g_free(self);
+}
+
+void maplibre_native_ffi_map_terrain_settings_read(
+  MaplibreNativeFfiMapTerrainSettings* out, const mln_map_terrain_settings* in
+) {
+  out->load_mode = (MaplibreNativeFfiTerrainLoadMode)(in->load_mode);
+  out->center_clamped_to_ground = (in->center_clamped_to_ground) ? TRUE : FALSE;
+}
+
+MaplibreNativeFfiMapTerrainSettings*
+maplibre_native_ffi_map_terrain_settings_from_native(
+  const mln_map_terrain_settings* in
+) {
+  MaplibreNativeFfiMapTerrainSettings* self =
+    g_new0(MaplibreNativeFfiMapTerrainSettings, 1);
+  maplibre_native_ffi_map_terrain_settings_read(self, in);
+  return self;
+}
+
+G_DEFINE_BOXED_TYPE(
   MaplibreNativeFfiMapSnapshot, maplibre_native_ffi_map_snapshot,
   maplibre_native_ffi_map_snapshot_copy, maplibre_native_ffi_map_snapshot_free
 )
@@ -9037,6 +9074,7 @@ void maplibre_native_ffi_map_snapshot_read(
   maplibre_native_ffi_camera_bounds_read(&out->bounds, &in->bounds);
   maplibre_native_ffi_free_camera_read(&out->free_camera, &in->free_camera);
   maplibre_native_ffi_map_view_read(&out->view, &in->view);
+  maplibre_native_ffi_map_terrain_settings_read(&out->terrain, &in->terrain);
 }
 
 MaplibreNativeFfiMapSnapshot* maplibre_native_ffi_map_snapshot_from_native(
@@ -9045,6 +9083,177 @@ MaplibreNativeFfiMapSnapshot* maplibre_native_ffi_map_snapshot_from_native(
   MaplibreNativeFfiMapSnapshot* self = g_new0(MaplibreNativeFfiMapSnapshot, 1);
   maplibre_native_ffi_map_snapshot_read(self, in);
   return self;
+}
+
+struct _MaplibreNativeFfiMapTerrainOptions {
+  GObject parent_instance;
+  guint64 fields;
+  MaplibreNativeFfiTerrainLoadMode load_mode;
+  gboolean center_clamped_to_ground;
+};
+
+enum {
+  MAP_TERRAIN_OPTIONS_PROP_0,
+  MAP_TERRAIN_OPTIONS_PROP_LOAD_MODE,
+  MAP_TERRAIN_OPTIONS_PROP_CENTER_CLAMPED_TO_GROUND,
+  MAP_TERRAIN_OPTIONS_N_PROPERTIES
+};
+
+static GParamSpec*
+  map_terrain_options_properties[MAP_TERRAIN_OPTIONS_N_PROPERTIES];
+
+G_DEFINE_FINAL_TYPE(
+  MaplibreNativeFfiMapTerrainOptions, maplibre_native_ffi_map_terrain_options,
+  G_TYPE_OBJECT
+)
+
+static void maplibre_native_ffi_map_terrain_options_get_property(
+  GObject* object, guint id, GValue* value, GParamSpec* pspec
+) {
+  MaplibreNativeFfiMapTerrainOptions* self =
+    MAPLIBRE_NATIVE_FFI_MAP_TERRAIN_OPTIONS(object);
+  switch (id) {
+    case MAP_TERRAIN_OPTIONS_PROP_LOAD_MODE:
+      g_value_set_enum(value, self->load_mode);
+      break;
+    case MAP_TERRAIN_OPTIONS_PROP_CENTER_CLAMPED_TO_GROUND:
+      g_value_set_boolean(value, self->center_clamped_to_ground);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, id, pspec);
+  }
+}
+
+static void maplibre_native_ffi_map_terrain_options_set_property(
+  GObject* object, guint id, const GValue* value, GParamSpec* pspec
+) {
+  MaplibreNativeFfiMapTerrainOptions* self =
+    MAPLIBRE_NATIVE_FFI_MAP_TERRAIN_OPTIONS(object);
+  switch (id) {
+    case MAP_TERRAIN_OPTIONS_PROP_LOAD_MODE:
+      maplibre_native_ffi_map_terrain_options_set_load_mode(
+        self, g_value_get_enum(value)
+      );
+      break;
+    case MAP_TERRAIN_OPTIONS_PROP_CENTER_CLAMPED_TO_GROUND:
+      maplibre_native_ffi_map_terrain_options_set_center_clamped_to_ground(
+        self, g_value_get_boolean(value)
+      );
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, id, pspec);
+  }
+}
+
+static void maplibre_native_ffi_map_terrain_options_class_init(
+  MaplibreNativeFfiMapTerrainOptionsClass* klass
+) {
+  GObjectClass* object_class = G_OBJECT_CLASS(klass);
+  object_class->get_property =
+    maplibre_native_ffi_map_terrain_options_get_property;
+  object_class->set_property =
+    maplibre_native_ffi_map_terrain_options_set_property;
+  map_terrain_options_properties[MAP_TERRAIN_OPTIONS_PROP_LOAD_MODE] =
+    g_param_spec_enum(
+      "load-mode", NULL, NULL, MAPLIBRE_NATIVE_FFI_TYPE_TERRAIN_LOAD_MODE, 0,
+      PROPERTY_FLAGS
+    );
+  map_terrain_options_properties
+    [MAP_TERRAIN_OPTIONS_PROP_CENTER_CLAMPED_TO_GROUND] = g_param_spec_boolean(
+      "center-clamped-to-ground", NULL, NULL, FALSE, PROPERTY_FLAGS
+    );
+  g_object_class_install_properties(
+    object_class, MAP_TERRAIN_OPTIONS_N_PROPERTIES,
+    map_terrain_options_properties
+  );
+}
+
+static void maplibre_native_ffi_map_terrain_options_init(
+  MaplibreNativeFfiMapTerrainOptions* self
+) {
+  (void)self;
+}
+
+MaplibreNativeFfiMapTerrainOptions* maplibre_native_ffi_map_terrain_options_new(
+  void
+) {
+  return g_object_new(MAPLIBRE_NATIVE_FFI_TYPE_MAP_TERRAIN_OPTIONS, NULL);
+}
+
+MaplibreNativeFfiTerrainLoadMode
+maplibre_native_ffi_map_terrain_options_get_load_mode(
+  MaplibreNativeFfiMapTerrainOptions* self
+) {
+  g_return_val_if_fail(
+    MAPLIBRE_NATIVE_FFI_IS_MAP_TERRAIN_OPTIONS(self),
+    (MaplibreNativeFfiTerrainLoadMode)0
+  );
+  return self->load_mode;
+}
+
+gboolean maplibre_native_ffi_map_terrain_options_has_load_mode(
+  MaplibreNativeFfiMapTerrainOptions* self
+) {
+  g_return_val_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP_TERRAIN_OPTIONS(self), FALSE);
+  return (self->fields & MLN_MAP_TERRAIN_OPTION_LOAD_MODE) != 0;
+}
+
+void maplibre_native_ffi_map_terrain_options_set_load_mode(
+  MaplibreNativeFfiMapTerrainOptions* self,
+  MaplibreNativeFfiTerrainLoadMode value
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP_TERRAIN_OPTIONS(self));
+  gboolean was_set = (self->fields & MLN_MAP_TERRAIN_OPTION_LOAD_MODE) != 0;
+  gboolean changed = self->load_mode != value;
+  self->load_mode = value;
+  self->fields |= MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+  if (changed || !was_set)
+    g_object_notify_by_pspec(
+      G_OBJECT(self),
+      map_terrain_options_properties[MAP_TERRAIN_OPTIONS_PROP_LOAD_MODE]
+    );
+}
+
+gboolean maplibre_native_ffi_map_terrain_options_get_center_clamped_to_ground(
+  MaplibreNativeFfiMapTerrainOptions* self
+) {
+  g_return_val_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP_TERRAIN_OPTIONS(self), FALSE);
+  return self->center_clamped_to_ground;
+}
+
+gboolean maplibre_native_ffi_map_terrain_options_has_center_clamped_to_ground(
+  MaplibreNativeFfiMapTerrainOptions* self
+) {
+  g_return_val_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP_TERRAIN_OPTIONS(self), FALSE);
+  return (self->fields & MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND) != 0;
+}
+
+void maplibre_native_ffi_map_terrain_options_set_center_clamped_to_ground(
+  MaplibreNativeFfiMapTerrainOptions* self, gboolean value
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP_TERRAIN_OPTIONS(self));
+  gboolean was_set =
+    (self->fields & MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND) != 0;
+  gboolean changed = self->center_clamped_to_ground != value;
+  self->center_clamped_to_ground = value;
+  self->fields |= MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
+  if (changed || !was_set)
+    g_object_notify_by_pspec(
+      G_OBJECT(self), map_terrain_options_properties
+                        [MAP_TERRAIN_OPTIONS_PROP_CENTER_CLAMPED_TO_GROUND]
+    );
+}
+
+void maplibre_native_ffi_map_terrain_options_to_native(
+  const MaplibreNativeFfiMapTerrainOptions* self, mln_map_terrain_options* out,
+  MaplibreNativeFfiCall* call
+) {
+  (void)call;
+  memset(out, 0, sizeof *out);
+  out->size = sizeof *out;
+  out->fields = (mln_map_terrain_option_fields)self->fields;
+  out->load_mode = (mln_terrain_load_mode)(self->load_mode);
+  out->center_clamped_to_ground = (self->center_clamped_to_ground) != FALSE;
 }
 
 struct _MaplibreNativeFfiMapTileOptions {

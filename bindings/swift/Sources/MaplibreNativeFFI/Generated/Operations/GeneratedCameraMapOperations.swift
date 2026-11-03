@@ -4,6 +4,34 @@ internal import MaplibreNativeC
 import Foundation
 
 public extension MapHandle {
+  /// Moves the camera's center onto the terrain under it, without moving the
+  /// camera.
+  ///
+  /// The center slides along the line of sight to the ground, and the zoom
+  /// rises by the distance saved, so the view stays the same. Rotating and
+  /// pitching then turn around the ground being looked at. Call it when a
+  /// gesture starts.
+  ///
+  /// The camera stays as it is when the style has no terrain, before a frame
+  /// has rendered the ground under the center, when the pitch is so steep that
+  /// the line of sight nearly grazes the ground, when the ground is at or
+  /// behind the camera, and when the zoom limits or bounds would cut the move
+  /// short. Afterwards the camera reports another center, zoom, and
+  /// `center_altitude` for the same view.
+  ///
+  /// See `mln_map_anchor_center_on_terrain` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+  @discardableResult
+  func anchorCenterOnTerrain() async throws -> CommandCompletion {
+    try await nativeCommand { raw, _, completion, diagnostic in
+      mln_map_anchor_center_on_terrain(
+        raw,
+        completion,
+        diagnostic
+      )
+    }
+  }
+
   /// Moves the camera relative to where it is, as a gesture does.
   ///
   /// `delta` can pan the map's content by an offset on the screen, scale the
@@ -430,6 +458,27 @@ public extension MapHandle {
     }
   }
 
+  /// Sets how the map loads its style's terrain, and whether the camera's
+  /// center follows the ground.
+  ///
+  /// Settings that `options` doesn't set keep their current values.
+  ///
+  /// See `mln_map_set_terrain_options` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+  @discardableResult
+  func setTerrainOptions(_ bindingArg0: MapTerrainOptions) async throws
+    -> CommandCompletion
+  {
+    try await nativeCommand { raw, arena, completion, diagnostic in
+      mln_map_set_terrain_options(
+        raw,
+        arena.store(bindingArg0.nativeValue()),
+        completion,
+        diagnostic
+      )
+    }
+  }
+
   /// Sets how the map chooses which tiles to load, and at what detail.
   ///
   /// Settings that `options` doesn't set keep their current values.
@@ -496,6 +545,15 @@ public extension MapHandle {
 }
 
 public extension MapHandleDiscarding {
+  func anchorCenterOnTerrain() throws {
+    try owner
+      .nativeInvoke { raw, _, diagnostic in mln_map_anchor_center_on_terrain(
+        raw,
+        nil,
+        diagnostic
+      ) }
+  }
+
   func applyCameraDelta(_ bindingArg0: CameraDelta) throws {
     try owner
       .nativeInvoke { raw, arena, diagnostic in try mln_map_apply_camera_delta(
@@ -632,6 +690,16 @@ public extension MapHandleDiscarding {
           diagnostic
         )
       }
+  }
+
+  func setTerrainOptions(_ bindingArg0: MapTerrainOptions) throws {
+    try owner
+      .nativeInvoke { raw, arena, diagnostic in mln_map_set_terrain_options(
+        raw,
+        arena.store(bindingArg0.nativeValue()),
+        nil,
+        diagnostic
+      ) }
   }
 
   func setTileOptions(_ bindingArg0: MapTileOptions) throws {

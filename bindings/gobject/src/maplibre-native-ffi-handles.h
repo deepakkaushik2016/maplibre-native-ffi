@@ -569,6 +569,47 @@ maplibre_native_ffi_map_add_style_source_json_finish(
 );
 
 /**
+ * maplibre_native_ffi_map_anchor_center_on_terrain_async:
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Moves the camera's center onto the terrain under it, without moving the
+ * camera.
+ *
+ * The center slides along the line of sight to the ground, and the zoom rises
+ * by the distance saved, so the view stays the same. Rotating and pitching then
+ * turn around the ground being looked at. Call it when a gesture starts.
+ *
+ * The camera stays as it is when the style has no terrain, before a frame has
+ * rendered the ground under the center, when the pitch is so steep that the
+ * line of sight nearly grazes the ground, when the ground is at or behind the
+ * camera, and when the zoom limits or bounds would cut the move short.
+ * Afterwards the camera reports another center, zoom, and `center_altitude` for
+ * the same view.
+ *
+ * See `mln_map_anchor_center_on_terrain` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+ *
+ * Without `callback`, nothing reports whether the call succeeds.
+ */
+void maplibre_native_ffi_map_anchor_center_on_terrain_async(
+  MaplibreNativeFfiMap* self, GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_map_anchor_center_on_terrain_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_map_anchor_center_on_terrain_async` started.
+ *
+ * Returns: (transfer full): the command's completion, or %NULL with `error` set
+ */
+MaplibreNativeFfiCommandCompletion*
+maplibre_native_ffi_map_anchor_center_on_terrain_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+);
+
+/**
  * maplibre_native_ffi_map_apply_camera_delta_async:
  * @callback: (scope async) (nullable): the callback to call when the call finishes
  * @user_data: the data to pass to `callback`
@@ -3442,6 +3483,39 @@ void maplibre_native_ffi_map_set_style_url_async(
  */
 MaplibreNativeFfiCommandCompletion*
 maplibre_native_ffi_map_set_style_url_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+);
+
+/**
+ * maplibre_native_ffi_map_set_terrain_options_async:
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Sets how the map loads its style's terrain, and whether the camera's center
+ * follows the ground.
+ *
+ * Settings that `options` doesn't set keep their current values.
+ *
+ * See `mln_map_set_terrain_options` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+ *
+ * Without `callback`, nothing reports whether the call succeeds.
+ */
+void maplibre_native_ffi_map_set_terrain_options_async(
+  MaplibreNativeFfiMap* self, MaplibreNativeFfiMapTerrainOptions* options,
+  GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_map_set_terrain_options_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_map_set_terrain_options_async` started.
+ *
+ * Returns: (transfer full): the command's completion, or %NULL with `error` set
+ */
+MaplibreNativeFfiCommandCompletion*
+maplibre_native_ffi_map_set_terrain_options_finish(
   MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
 );
 

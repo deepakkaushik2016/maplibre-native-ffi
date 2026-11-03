@@ -2089,6 +2089,40 @@ auto validate_tile_options(const mln_map_tile_options* options) -> mln_status {
   return MLN_STATUS_OK;
 }
 
+auto validate_terrain_options(const mln_map_terrain_options* options)
+  -> mln_status {
+  if (options == nullptr) {
+    mln::core::set_thread_error("terrain options must not be null");
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  if (options->size < sizeof(mln_map_terrain_options)) {
+    mln::core::set_thread_error("mln_map_terrain_options.size is too small");
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+
+  constexpr auto known_fields =
+    static_cast<uint32_t>(MLN_MAP_TERRAIN_OPTION_LOAD_MODE) |
+    MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
+  if ((options->fields & ~known_fields) != 0U) {
+    mln::core::set_thread_error(
+      "mln_map_terrain_options.fields contains unknown bits"
+    );
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  if ((options->fields & MLN_MAP_TERRAIN_OPTION_LOAD_MODE) != 0U) {
+    switch (options->load_mode) {
+      case MLN_TERRAIN_LOAD_MODE_QUALITY:
+      case MLN_TERRAIN_LOAD_MODE_BALANCED:
+      case MLN_TERRAIN_LOAD_MODE_PERFORMANCE:
+        break;
+      default:
+        mln::core::set_thread_error("load_mode is invalid");
+        return MLN_STATUS_INVALID_ARGUMENT;
+    }
+  }
+  return MLN_STATUS_OK;
+}
+
 auto validate_lat_lng(mln_lat_lng coordinate) -> mln_status {
   if (
     !std::isfinite(coordinate.latitude) || coordinate.latitude < -90.0 ||
@@ -2702,6 +2736,35 @@ auto from_native_tile_lod_mode(mln::TileLodMode mode) -> mln_tile_lod_mode {
   return MLN_TILE_LOD_MODE_DEFAULT;
 }
 
+auto to_native_terrain_load_mode(mln_terrain_load_mode mode)
+  -> mln::TerrainLoadMode {
+  switch (mode) {
+    case MLN_TERRAIN_LOAD_MODE_BALANCED:
+      return mln::TerrainLoadMode::Balanced;
+    case MLN_TERRAIN_LOAD_MODE_PERFORMANCE:
+      return mln::TerrainLoadMode::Performance;
+    case MLN_TERRAIN_LOAD_MODE_QUALITY:
+      return mln::TerrainLoadMode::Quality;
+    default:
+      assert(false);
+      return mln::TerrainLoadMode::Quality;
+  }
+}
+
+auto from_native_terrain_load_mode(mln::TerrainLoadMode mode)
+  -> mln_terrain_load_mode {
+  switch (mode) {
+    case mln::TerrainLoadMode::Balanced:
+      return MLN_TERRAIN_LOAD_MODE_BALANCED;
+    case mln::TerrainLoadMode::Performance:
+      return MLN_TERRAIN_LOAD_MODE_PERFORMANCE;
+    case mln::TerrainLoadMode::Quality:
+      return MLN_TERRAIN_LOAD_MODE_QUALITY;
+  }
+  assert(false);
+  return MLN_TERRAIN_LOAD_MODE_QUALITY;
+}
+
 auto to_native_lat_lng(mln_lat_lng coordinate) -> mln::LatLng {
   return mln::LatLng{coordinate.latitude, coordinate.longitude};
 }
@@ -2990,6 +3053,11 @@ auto validate_tile_options_input(const mln_map_tile_options* options)
   return validate_tile_options(options);
 }
 
+auto validate_terrain_options_input(const mln_map_terrain_options* options)
+  -> mln_status {
+  return validate_terrain_options(options);
+}
+
 auto validate_bound_options_input(const mln_bound_options* options)
   -> mln_status {
   return validate_bound_options(options);
@@ -3174,7 +3242,11 @@ auto publish_map_snapshot(MapObject& live) -> uint64_t {
     .free_camera = from_native_free_camera(live.map->getFreeCameraOptions()),
     .view = map_view_from_transform(
       live.map->getTransformState(), live.logical_extent.scale_factor
-    )
+    ),
+    .terrain =
+      {.load_mode =
+         from_native_terrain_load_mode(live.map->getTerrainLoadMode()),
+       .center_clamped_to_ground = live.map->getCenterClampedToGround()}
   };
   const auto generation = snapshot.generation;
   {
@@ -5846,6 +5918,34 @@ auto map_set_tile_options(MapObject& live, const mln_map_tile_options* options)
   if ((options->fields & MLN_MAP_TILE_OPTION_LOD_MODE) != 0U) {
     live.map->setTileLodMode(to_native_tile_lod_mode(options->lod_mode));
   }
+  return MLN_STATUS_OK;
+}
+
+auto map_set_terrain_options(
+  MapObject& live, const mln_map_terrain_options* options
+) -> mln_status {
+  const auto options_status = validate_terrain_options(options);
+  if (options_status != MLN_STATUS_OK) {
+    return options_status;
+  }
+
+  live.snapshot_config_dirty = true;
+  if ((options->fields & MLN_MAP_TERRAIN_OPTION_LOAD_MODE) != 0U) {
+    live.map->setTerrainLoadMode(
+      to_native_terrain_load_mode(options->load_mode)
+    );
+  }
+  if (
+    (options->fields & MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND) != 0U
+  ) {
+    live.map->setCenterClampedToGround(options->center_clamped_to_ground);
+  }
+  return MLN_STATUS_OK;
+}
+
+auto map_anchor_center_on_terrain(MapObject& live) -> mln_status {
+  live.snapshot_camera_dirty = true;
+  live.map->anchorCenterOnTerrain();
   return MLN_STATUS_OK;
 }
 

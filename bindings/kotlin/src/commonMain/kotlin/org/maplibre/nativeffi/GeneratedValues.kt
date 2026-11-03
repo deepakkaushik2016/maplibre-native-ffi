@@ -3156,6 +3156,64 @@ public class StyleVectorTileEncoding(@get:JvmName("getRawValue") public val rawV
 }
 
 /**
+ * How a map loads 3D terrain: how much it builds in one frame, and how many terrain mesh tiles a
+ * frame may have.
+ *
+ * Later versions may add values; an unknown one keeps its `rawValue`.
+ *
+ * See `mln_terrain_load_mode` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+public class TerrainLoadMode(@get:JvmName("getRawValue") public val rawValue: UInt) {
+  override fun toString(): String =
+    when (rawValue) {
+      0u -> "QUALITY"
+      1u -> "BALANCED"
+      2u -> "PERFORMANCE"
+      else -> "TerrainLoadMode($rawValue)"
+    }
+
+  override fun equals(other: Any?): Boolean = other is TerrainLoadMode && other.rawValue == rawValue
+
+  override fun hashCode(): Int = rawValue.hashCode()
+
+  public companion object {
+    /**
+     * Builds every revealed tile in the frame that reveals it, and keeps up to 64 mesh tiles. The
+     * sharpest, but a frame can stall on a burst of tiles.
+     */
+    @JvmField public val QUALITY: TerrainLoadMode = TerrainLoadMode(QUALITY_VALUE)
+    /** The `rawValue` of [QUALITY]. */
+    public const val QUALITY_VALUE: UInt = 0u
+    /**
+     * Builds up to 32 new tiles and redraws up to 16 terrain textures a frame, and keeps up to 48
+     * mesh tiles.
+     */
+    @JvmField public val BALANCED: TerrainLoadMode = TerrainLoadMode(BALANCED_VALUE)
+    /** The `rawValue` of [BALANCED]. */
+    public const val BALANCED_VALUE: UInt = 1u
+    /**
+     * Builds up to 8 new tiles and redraws up to 4 terrain textures a frame, and keeps up to 24
+     * mesh tiles. The smoothest on a weak GPU, and the shortest view distance.
+     */
+    @JvmField public val PERFORMANCE: TerrainLoadMode = TerrainLoadMode(PERFORMANCE_VALUE)
+    /** The `rawValue` of [PERFORMANCE]. */
+    public const val PERFORMANCE_VALUE: UInt = 2u
+
+    /** Returns the constant whose `rawValue` is [rawValue], or a new value that keeps it. */
+    @JvmStatic
+    @JvmName("of")
+    public fun of(rawValue: UInt): TerrainLoadMode =
+      when (rawValue) {
+        QUALITY_VALUE -> QUALITY
+        BALANCED_VALUE -> BALANCED
+        PERFORMANCE_VALUE -> PERFORMANCE
+        else -> TerrainLoadMode(rawValue)
+      }
+  }
+}
+
+/**
  * How the map picks the level of detail of its tiles.
  *
  * Later versions may add values; an unknown one keeps its `rawValue`.
@@ -6480,6 +6538,19 @@ public data class FreeCamera(
 )
 
 /**
+ * All the settings for how a map loads its style's terrain.
+ *
+ * Its members mean the same as those of `MapTerrainOptions`.
+ *
+ * See `mln_map_terrain_settings` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+public data class MapTerrainSettings(
+  public val loadMode: TerrainLoadMode,
+  public val centerClampedToGround: Boolean,
+)
+
+/**
  * A map's state, as `MapHandle.getSnapshot()` reads it.
  *
  * See `mln_map_snapshot` in the
@@ -6501,6 +6572,7 @@ public data class MapSnapshot(
   public val bounds: CameraBounds,
   public val freeCamera: FreeCamera,
   public val view: MapView,
+  public val terrain: MapTerrainSettings,
 ) {
   public companion object {
     /** Creates a value, for Java, which can't call the constructor. */
@@ -6519,6 +6591,7 @@ public data class MapSnapshot(
       bounds: CameraBounds,
       freeCamera: FreeCamera,
       view: MapView,
+      terrain: MapTerrainSettings,
     ): MapSnapshot =
       MapSnapshot(
         debugFlags = debugFlags,
@@ -6533,6 +6606,7 @@ public data class MapSnapshot(
         bounds = bounds,
         freeCamera = freeCamera,
         view = view,
+        terrain = terrain,
       )
   }
 }
@@ -6951,6 +7025,45 @@ public data class StyleImageOptions(
      * `withX` methods.
      */
     @JvmStatic @PublishedApi internal fun of(): StyleImageOptions = StyleImageOptions()
+  }
+}
+
+/**
+ * How the map loads its style's terrain, and how its camera keeps to it.
+ *
+ * The options apply only while the style has terrain.
+ *
+ * See `mln_map_terrain_options` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+public data class MapTerrainOptions(
+  /** `TerrainLoadMode.QUALITY` by default. */
+  public val loadMode: TerrainLoadMode? = null,
+  /**
+   * Whether the camera's center follows the height of the terrain under it, rather than staying at
+   * its `center_altitude`. Off by default.
+   *
+   * With it on, the camera also keeps its eye 10 m above the ground under the eye. During a
+   * gesture, the center keeps the height it had when the gesture started, and the gesture's end
+   * moves the center onto the ground without moving the camera, as
+   * `MapHandle.anchorCenterOnTerrain()` does.
+   */
+  public val centerClampedToGround: Boolean? = null,
+) {
+  @PublishedApi
+  internal fun withLoadMode(loadMode: TerrainLoadMode): MapTerrainOptions =
+    copy(loadMode = loadMode)
+
+  @PublishedApi
+  internal fun withCenterClampedToGround(centerClampedToGround: Boolean): MapTerrainOptions =
+    copy(centerClampedToGround = centerClampedToGround)
+
+  public companion object {
+    /**
+     * Creates a value from the members without defaults, for Java, which sets the others with the
+     * `withX` methods.
+     */
+    @JvmStatic @PublishedApi internal fun of(): MapTerrainOptions = MapTerrainOptions()
   }
 }
 

@@ -164,6 +164,43 @@ static void every_option_command_round_trips_through_the_snapshot(void) {
     tile.lod_mode = MLN_TILE_LOD_MODE_DEFAULT;
   }
 
+  // The terrain options apply without terrain; they take effect once the style
+  // has some.
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_TERRAIN_LOAD_MODE_QUALITY, snapshot.terrain.load_mode
+  );
+  TEST_ASSERT_FALSE(snapshot.terrain.center_clamped_to_ground);
+  const mln_terrain_load_mode load_modes[] = {
+    MLN_TERRAIN_LOAD_MODE_BALANCED, MLN_TERRAIN_LOAD_MODE_PERFORMANCE,
+    MLN_TERRAIN_LOAD_MODE_QUALITY
+  };
+  mln_map_terrain_options terrain = {.size = sizeof(mln_map_terrain_options)};
+  terrain.fields = MLN_MAP_TERRAIN_OPTION_LOAD_MODE |
+                   MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
+  terrain.center_clamped_to_ground = true;
+  for (size_t index = 0; index < sizeof(load_modes) / sizeof(*load_modes);
+       index += 1) {
+    terrain.load_mode = load_modes[index];
+    COMMIT(
+      "terrain options",
+      mln_map_set_terrain_options(map, &terrain, &completion.descriptor, NULL)
+    );
+    TEST_ASSERT_EQUAL_UINT32(terrain.load_mode, snapshot.terrain.load_mode);
+    TEST_ASSERT_TRUE(snapshot.terrain.center_clamped_to_ground);
+    // Later passes set the load mode alone, which keeps the clamp.
+    terrain.fields = MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+  }
+  terrain.fields = MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
+  terrain.center_clamped_to_ground = false;
+  COMMIT(
+    "terrain clamp off",
+    mln_map_set_terrain_options(map, &terrain, &completion.descriptor, NULL)
+  );
+  TEST_ASSERT_FALSE(snapshot.terrain.center_clamped_to_ground);
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_TERRAIN_LOAD_MODE_QUALITY, snapshot.terrain.load_mode
+  );
+
   mln_projection_mode_options mode = {
     .size = sizeof(mln_projection_mode_options)
   };
@@ -362,6 +399,36 @@ static const mln_test_validation_case tile_cases[] = {
    "lod_mode is invalid"},
 };
 
+static mln_status submit_terrain_row(
+  void* context, const void* descriptor, mln_diagnostic* diagnostic
+) {
+  const mln_completion discard = mln_test_discard_completion();
+  return mln_map_set_terrain_options(
+    *(const mln_map*)context, descriptor, &discard, diagnostic
+  );
+}
+
+static void terrain_undersized(void* descriptor) {
+  ((mln_map_terrain_options*)descriptor)->size -= 1;
+}
+static void terrain_unknown_field(void* descriptor) {
+  ((mln_map_terrain_options*)descriptor)->fields = UINT32_C(1) << 31;
+}
+static void terrain_bad_load_mode(void* descriptor) {
+  mln_map_terrain_options* options = descriptor;
+  options->fields = MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+  options->load_mode = MLN_TERRAIN_LOAD_MODE_PERFORMANCE + 1;
+}
+
+static const mln_test_validation_case terrain_cases[] = {
+  {"undersized", terrain_undersized, MLN_STATUS_INVALID_ARGUMENT,
+   "size is too small"},
+  {"unknown field", terrain_unknown_field, MLN_STATUS_INVALID_ARGUMENT,
+   "unknown bits"},
+  {"load mode out of range", terrain_bad_load_mode, MLN_STATUS_INVALID_ARGUMENT,
+   "load_mode is invalid"},
+};
+
 static mln_status submit_projection_mode_row(
   void* context, const void* descriptor, mln_diagnostic* diagnostic
 ) {
@@ -407,6 +474,13 @@ static void option_descriptors_reject_what_they_cannot_express(void) {
     tile_cases, sizeof(tile_cases) / sizeof(*tile_cases), &tile, sizeof(tile),
     submit_tile_row, &map
   );
+  const mln_map_terrain_options terrain = {
+    .size = sizeof(mln_map_terrain_options)
+  };
+  mln_test_run_validation_table(
+    terrain_cases, sizeof(terrain_cases) / sizeof(*terrain_cases), &terrain,
+    sizeof(terrain), submit_terrain_row, &map
+  );
   const mln_projection_mode_options mode = {
     .size = sizeof(mln_projection_mode_options)
   };
@@ -419,6 +493,10 @@ static void option_descriptors_reject_what_they_cannot_express(void) {
   mln_completion discard = mln_test_discard_completion();
   MLN_TEST_INVALID(mln_map_set_viewport_options(map, NULL, &discard, NULL));
   MLN_TEST_INVALID(mln_map_set_tile_options(map, NULL, &discard, NULL));
+  MLN_TEST_INVALID(mln_map_set_terrain_options(map, NULL, &discard, NULL));
+  MLN_TEST_INVALID(
+    mln_map_anchor_center_on_terrain(MLN_HANDLE_NULL, &discard, NULL)
+  );
   MLN_TEST_INVALID(mln_map_set_projection_mode(map, NULL, &discard, NULL));
   MLN_TEST_INVALID(mln_map_set_debug_flags(MLN_HANDLE_NULL, 0, &discard, NULL));
   MLN_TEST_INVALID(mln_map_set_rendering_stats_view_enabled(
@@ -440,6 +518,9 @@ static void option_descriptors_reject_what_they_cannot_express(void) {
     MLN_NORTH_ORIENTATION_UP, snapshot.view.viewport.north_orientation
   );
   TEST_ASSERT_EQUAL_UINT32(MLN_TILE_LOD_MODE_DEFAULT, snapshot.tile.lod_mode);
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_TERRAIN_LOAD_MODE_QUALITY, snapshot.terrain.load_mode
+  );
 
   mln_test_destroy_map(map);
   mln_test_destroy_runtime(runtime);

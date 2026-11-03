@@ -892,6 +892,25 @@ internal fun NativeArena.writeStyleTransitionOptions(value: StyleTransitionOptio
   allocate(w(32, 32, 28), w(8, 8, 4)).also { putStyleTransitionOptions(it, value) }
 
 @JvmSynthetic
+internal fun NativeArena.putMapTerrainOptions(target: Long, value: MapTerrainOptions) {
+  writeU32(target, 16.toUInt())
+  var fields = 0u
+  value.loadMode?.let {
+    fields = fields or 1u
+    writeU32(target + 8, it.rawValue)
+  }
+  value.centerClampedToGround?.let {
+    fields = fields or 2u
+    writeBool(target + 12, it)
+  }
+  writeU32(target + 4, fields)
+}
+
+@JvmSynthetic
+internal fun NativeArena.writeMapTerrainOptions(value: MapTerrainOptions): Long =
+  allocate(16, 4).also { putMapTerrainOptions(it, value) }
+
+@JvmSynthetic
 internal fun NativeArena.putMapTileOptions(target: Long, value: MapTileOptions) {
   writeU32(target, w(56, 56, 48).toUInt())
   var fields = 0u
@@ -1653,6 +1672,7 @@ internal fun readMapSnapshot(source: Long): MapSnapshot =
     bounds = readCameraBounds(source + w(88, 88, 76)),
     freeCamera = readFreeCamera(source + w(160, 160, 144)),
     view = readMapView(source + w(216, 216, 200)),
+    terrain = readMapTerrainSettings(source + w(408, 408, 380)),
   )
 
 @JvmSynthetic
@@ -2343,6 +2363,13 @@ internal fun readCameraBounds(source: Long): CameraBounds =
 @JvmSynthetic
 internal fun readFreeCamera(source: Long): FreeCamera =
   FreeCamera(position = readVec3(source), orientation = readQuaternion(source + 24))
+
+@JvmSynthetic
+internal fun readMapTerrainSettings(source: Long): MapTerrainSettings =
+  MapTerrainSettings(
+    loadMode = TerrainLoadMode.of(readU32(source)),
+    centerClampedToGround = readBool(source + 4),
+  )
 
 @JvmSynthetic
 internal fun readImageStretch(source: Long): ImageStretch =

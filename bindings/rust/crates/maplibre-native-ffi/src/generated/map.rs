@@ -223,6 +223,30 @@ impl MapHandle {
         })
     }
 
+    /// Moves the camera's center onto the terrain under it, without moving the
+    /// camera.
+    ///
+    /// The center slides along the line of sight to the ground, and the zoom
+    /// rises by the distance saved, so the view stays the same. Rotating and
+    /// pitching then turn around the ground being looked at. Call it when a
+    /// gesture starts.
+    ///
+    /// The camera stays as it is when the style has no terrain, before a frame
+    /// has rendered the ground under the center, when the pitch is so steep
+    /// that the line of sight nearly grazes the ground, when the ground is at
+    /// or behind the camera, and when the zoom limits or bounds would cut the
+    /// move short. Afterwards the camera reports another center, zoom, and
+    /// `center_altitude` for the same view.
+    ///
+    /// See `mln_map_anchor_center_on_terrain` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+    pub fn anchor_center_on_terrain(&self) -> Result<NativeFuture<CommandCompletion>> {
+        let call = self.inner.call();
+        call.command(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_anchor_center_on_terrain(map, completion, out_diagnostic)
+        })
+    }
+
     /// Moves the camera relative to where it is, as a gesture does.
     ///
     /// `delta` can pan the map's content by an offset on the screen, scale the
@@ -2779,6 +2803,24 @@ impl MapHandle {
         })
     }
 
+    /// Sets how the map loads its style's terrain, and whether the camera's
+    /// center follows the ground.
+    ///
+    /// Settings that `options` doesn't set keep their current values.
+    ///
+    /// See `mln_map_set_terrain_options` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+    pub fn set_terrain_options(
+        &self,
+        options: &MapTerrainOptions,
+    ) -> Result<NativeFuture<CommandCompletion>> {
+        let mut call = self.inner.call();
+        let options = call.reference(&options)?;
+        call.command(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_set_terrain_options(map, options, completion, out_diagnostic)
+        })
+    }
+
     /// Sets how the map chooses which tiles to load, and at what detail.
     ///
     /// Settings that `options` doesn't set keep their current values.
@@ -3003,6 +3045,30 @@ impl MapHandleDiscarding<'_> {
                 completion,
                 out_diagnostic,
             )
+        })
+    }
+
+    /// Moves the camera's center onto the terrain under it, without moving the
+    /// camera.
+    ///
+    /// The center slides along the line of sight to the ground, and the zoom
+    /// rises by the distance saved, so the view stays the same. Rotating and
+    /// pitching then turn around the ground being looked at. Call it when a
+    /// gesture starts.
+    ///
+    /// The camera stays as it is when the style has no terrain, before a frame
+    /// has rendered the ground under the center, when the pitch is so steep
+    /// that the line of sight nearly grazes the ground, when the ground is at
+    /// or behind the camera, and when the zoom limits or bounds would cut the
+    /// move short. Afterwards the camera reports another center, zoom, and
+    /// `center_altitude` for the same view.
+    ///
+    /// See `mln_map_anchor_center_on_terrain` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+    pub fn anchor_center_on_terrain(&self) -> Result<()> {
+        let call = self.0.inner.call();
+        call.discard(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_anchor_center_on_terrain(map, completion, out_diagnostic)
         })
     }
 
@@ -3909,6 +3975,21 @@ impl MapHandleDiscarding<'_> {
         let url = call.input(&url)?;
         call.discard(|map, completion, out_diagnostic| unsafe {
             sys::mln_map_set_style_url(map, url, completion, out_diagnostic)
+        })
+    }
+
+    /// Sets how the map loads its style's terrain, and whether the camera's
+    /// center follows the ground.
+    ///
+    /// Settings that `options` doesn't set keep their current values.
+    ///
+    /// See `mln_map_set_terrain_options` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+    pub fn set_terrain_options(&self, options: &MapTerrainOptions) -> Result<()> {
+        let mut call = self.0.inner.call();
+        let options = call.reference(&options)?;
+        call.discard(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_set_terrain_options(map, options, completion, out_diagnostic)
         })
     }
 

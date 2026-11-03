@@ -15,6 +15,7 @@ global using static Maplibre.NativeFfi.Internal.C.mln_frame_pacer_option_field;
 global using static Maplibre.NativeFfi.Internal.C.mln_free_camera_option_field;
 global using static Maplibre.NativeFfi.Internal.C.mln_geo_json_source_option_field;
 global using static Maplibre.NativeFfi.Internal.C.mln_map_option_field;
+global using static Maplibre.NativeFfi.Internal.C.mln_map_terrain_option_field;
 global using static Maplibre.NativeFfi.Internal.C.mln_map_tile_option_field;
 global using static Maplibre.NativeFfi.Internal.C.mln_map_viewport_option_field;
 global using static Maplibre.NativeFfi.Internal.C.mln_momentum_decay_field;

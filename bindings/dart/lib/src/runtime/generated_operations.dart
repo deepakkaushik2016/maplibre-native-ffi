@@ -1660,6 +1660,13 @@ FreeCamera _readFreeCamera(raw.mln_free_camera source) => FreeCamera(
   orientation: _readQuaternion(source.orientation),
 );
 
+MapTerrainSettings _readMapTerrainSettings(
+  raw.mln_map_terrain_settings source,
+) => MapTerrainSettings(
+  loadMode: TerrainLoadMode.fromRawValue(source.load_mode),
+  centerClampedToGround: source.center_clamped_to_ground,
+);
+
 MapSnapshot _readMapSnapshot(raw.mln_map_snapshot source) => MapSnapshot(
   debugFlags: MapDebugFlag.fromRawValue(source.debug_flags),
   generation: source.generation,
@@ -1673,6 +1680,7 @@ MapSnapshot _readMapSnapshot(raw.mln_map_snapshot source) => MapSnapshot(
   bounds: _readCameraBounds(source.bounds),
   freeCamera: _readFreeCamera(source.free_camera),
   view: _readMapView(source.view),
+  terrain: _readMapTerrainSettings(source.terrain),
 );
 
 Pointer<raw.mln_image_stretch> _writeImageStretch(
@@ -1970,6 +1978,24 @@ Pointer<raw.mln_style_image_options> _writeStyleImageOptions(
   if (value.keepUnused != null) {
     result.ref.fields |= raw.MLN_STYLE_IMAGE_OPTION_KEEP_UNUSED;
     result.ref.keep_unused = value.keepUnused!;
+  }
+  return result;
+}
+
+Pointer<raw.mln_map_terrain_options> _writeMapTerrainOptions(
+  MapTerrainOptions value,
+  Allocator arena, {
+  Pointer<raw.mln_map_terrain_options>? into,
+}) {
+  final result = into ?? arena<raw.mln_map_terrain_options>();
+  result.ref.size = sizeOf<raw.mln_map_terrain_options>();
+  if (value.loadMode != null) {
+    result.ref.fields |= raw.MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+    result.ref.load_mode = value.loadMode!.rawValue;
+  }
+  if (value.centerClampedToGround != null) {
+    result.ref.fields |= raw.MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
+    result.ref.center_clamped_to_ground = value.centerClampedToGround!;
   }
   return result;
 }
@@ -4188,6 +4214,13 @@ extension type MapHandleDiscarding._(MapHandle _owner) {
       nativeDiagnostic,
     ),
   );
+  void anchorCenterOnTerrain() => _discard(
+    (arena, completion) => raw.mln_map_anchor_center_on_terrain(
+      _handle.raw,
+      completion,
+      nativeDiagnostic,
+    ),
+  );
   void applyCameraDelta(CameraDelta delta) => _discard((arena, completion) {
     final registrations = _NativeRegistrations(_callbackRoots);
     return registrations.run(
@@ -4665,6 +4698,14 @@ extension type MapHandleDiscarding._(MapHandle _owner) {
       nativeDiagnostic,
     ),
   );
+  void setTerrainOptions(MapTerrainOptions options) => _discard(
+    (arena, completion) => raw.mln_map_set_terrain_options(
+      _handle.raw,
+      _writeMapTerrainOptions(options, arena),
+      completion,
+      nativeDiagnostic,
+    ),
+  );
   void setTileOptions(MapTileOptions options) => _discard(
     (arena, completion) => raw.mln_map_set_tile_options(
       _handle.raw,
@@ -4922,6 +4963,31 @@ final class MapHandle implements Finalizable, _CallbackRootOwner {
       _handle.raw,
       nativeStringView(sourceId, arena).value,
       _nativeJsonView(sourceJson, arena),
+      completion,
+      nativeDiagnostic,
+    ),
+  );
+
+  /// Moves the camera's center onto the terrain under it, without moving the
+  /// camera.
+  ///
+  /// The center slides along the line of sight to the ground, and the zoom
+  /// rises by the distance saved, so the view stays the same. Rotating and
+  /// pitching then turn around the ground being looked at. Call it when a
+  /// gesture starts.
+  ///
+  /// The camera stays as it is when the style has no terrain, before a frame
+  /// has rendered the ground under the center, when the pitch is so steep that
+  /// the line of sight nearly grazes the ground, when the ground is at or
+  /// behind the camera, and when the zoom limits or bounds would cut the move
+  /// short. Afterwards the camera reports another center, zoom, and
+  /// `center_altitude` for the same view.
+  ///
+  /// See `mln_map_anchor_center_on_terrain` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+  Future<CommandCompletion> anchorCenterOnTerrain() => _command(
+    (arena, completion) => raw.mln_map_anchor_center_on_terrain(
+      _handle.raw,
       completion,
       nativeDiagnostic,
     ),
@@ -7099,6 +7165,23 @@ final class MapHandle implements Finalizable, _CallbackRootOwner {
       nativeDiagnostic,
     ),
   );
+
+  /// Sets how the map loads its style's terrain, and whether the camera's
+  /// center follows the ground.
+  ///
+  /// Settings that `options` doesn't set keep their current values.
+  ///
+  /// See `mln_map_set_terrain_options` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+  Future<CommandCompletion> setTerrainOptions(MapTerrainOptions options) =>
+      _command(
+        (arena, completion) => raw.mln_map_set_terrain_options(
+          _handle.raw,
+          _writeMapTerrainOptions(options, arena),
+          completion,
+          nativeDiagnostic,
+        ),
+      );
 
   /// Sets how the map chooses which tiles to load, and at what detail.
   ///

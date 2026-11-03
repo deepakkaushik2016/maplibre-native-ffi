@@ -402,10 +402,21 @@ maplibre_native_ffi_map_view_from_native(const mln_map_view* in);
 G_GNUC_INTERNAL void maplibre_native_ffi_map_view_read(
   MaplibreNativeFfiMapView* out, const mln_map_view* in
 );
+G_GNUC_INTERNAL MaplibreNativeFfiMapTerrainSettings*
+maplibre_native_ffi_map_terrain_settings_from_native(
+  const mln_map_terrain_settings* in
+);
+G_GNUC_INTERNAL void maplibre_native_ffi_map_terrain_settings_read(
+  MaplibreNativeFfiMapTerrainSettings* out, const mln_map_terrain_settings* in
+);
 G_GNUC_INTERNAL MaplibreNativeFfiMapSnapshot*
 maplibre_native_ffi_map_snapshot_from_native(const mln_map_snapshot* in);
 G_GNUC_INTERNAL void maplibre_native_ffi_map_snapshot_read(
   MaplibreNativeFfiMapSnapshot* out, const mln_map_snapshot* in
+);
+G_GNUC_INTERNAL void maplibre_native_ffi_map_terrain_options_to_native(
+  const MaplibreNativeFfiMapTerrainOptions* self, mln_map_terrain_options* out,
+  MaplibreNativeFfiCall* call
 );
 G_GNUC_INTERNAL void maplibre_native_ffi_map_tile_options_to_native(
   const MaplibreNativeFfiMapTileOptions* self, mln_map_tile_options* out,

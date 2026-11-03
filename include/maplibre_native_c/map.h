@@ -175,6 +175,40 @@ typedef enum MLN_BINDING("kind=bitmask") mln_map_tile_option_field : uint32_t {
 /** A set of mln_map_tile_option_field bits. */
 typedef uint32_t mln_map_tile_option_fields;
 
+/**
+ * How a map loads 3D terrain: how much it builds in one frame, and how many
+ * terrain mesh tiles a frame may have.
+ */
+typedef enum mln_terrain_load_mode : uint32_t {
+  /**
+   * Builds every revealed tile in the frame that reveals it, and keeps up to
+   * 64 mesh tiles. The sharpest, but a frame can stall on a burst of tiles.
+   */
+  MLN_TERRAIN_LOAD_MODE_QUALITY = 0,
+  /**
+   * Builds up to 32 new tiles and redraws up to 16 terrain textures a frame,
+   * and keeps up to 48 mesh tiles.
+   */
+  MLN_TERRAIN_LOAD_MODE_BALANCED = 1,
+  /**
+   * Builds up to 8 new tiles and redraws up to 4 terrain textures a frame, and
+   * keeps up to 24 mesh tiles. The smoothest on a weak GPU, and the shortest
+   * view distance.
+   */
+  MLN_TERRAIN_LOAD_MODE_PERFORMANCE = 2,
+} mln_terrain_load_mode;
+
+/** The fields that mln_map_terrain_options sets. */
+typedef enum MLN_BINDING(
+  "kind=bitmask"
+) mln_map_terrain_option_field : uint32_t {
+  MLN_MAP_TERRAIN_OPTION_LOAD_MODE = 1U << 0U,
+  MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND = 1U << 1U,
+} mln_map_terrain_option_field;
+
+/** A set of mln_map_terrain_option_field bits. */
+typedef uint32_t mln_map_terrain_option_fields;
+
 /** When a map renders. */
 typedef enum mln_map_mode : uint32_t {
   /** Renders whenever the map changes. */
@@ -1242,6 +1276,41 @@ typedef struct mln_map_tile_settings {
   mln_tile_lod_mode lod_mode;
 } mln_map_tile_settings;
 
+/**
+ * How the map loads its style's terrain, and how its camera keeps to it.
+ *
+ * The options apply only while the style has terrain.
+ */
+typedef struct mln_map_terrain_options {
+  uint32_t size;
+  mln_map_terrain_option_fields fields;
+  /** MLN_TERRAIN_LOAD_MODE_QUALITY by default. */
+  mln_terrain_load_mode load_mode
+    MLN_BINDING("mask=fields;bit=MLN_MAP_TERRAIN_OPTION_LOAD_MODE");
+  /**
+   * Whether the camera's center follows the height of the terrain under it,
+   * rather than staying at its `center_altitude`. Off by default.
+   *
+   * With it on, the camera also keeps its eye 10 m above the ground under the
+   * eye. During a gesture, the center keeps the height it had when the gesture
+   * started, and the gesture's end moves the center onto the ground without
+   * moving the camera, as mln_map_anchor_center_on_terrain() does.
+   */
+  bool center_clamped_to_ground MLN_BINDING(
+    "mask=fields;bit=MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND"
+  );
+} mln_map_terrain_options;
+
+/**
+ * All the settings for how a map loads its style's terrain.
+ *
+ * Its members mean the same as those of mln_map_terrain_options.
+ */
+typedef struct mln_map_terrain_settings {
+  mln_terrain_load_mode load_mode;
+  bool center_clamped_to_ground;
+} mln_map_terrain_settings;
+
 /** A map's state, as mln_map_get_snapshot() reads it. */
 typedef struct mln_map_snapshot {
   uint32_t size;
@@ -1260,6 +1329,7 @@ typedef struct mln_map_snapshot {
   mln_camera_bounds bounds;
   mln_free_camera free_camera;
   mln_map_view view;
+  mln_map_terrain_settings terrain;
 } mln_map_snapshot;
 
 /** A map's camera, with the snapshot generation that it matches. */

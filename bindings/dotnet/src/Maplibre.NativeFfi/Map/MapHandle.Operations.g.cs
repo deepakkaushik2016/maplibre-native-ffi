@@ -305,6 +305,36 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     }
 
     /// <summary>
+    /// Moves the camera's center onto the terrain under it, without moving the
+    /// camera.
+    /// </summary>
+    /// <remarks>
+    /// <para>The center slides along the line of sight to the ground, and the
+    /// zoom rises by the distance saved, so the view stays the same. Rotating
+    /// and pitching then turn around the ground being looked at. Call it when a
+    /// gesture starts.</para>
+    /// <para>The camera stays as it is when the style has no terrain, before a
+    /// frame has rendered the ground under the center, when the pitch is so
+    /// steep that the line of sight nearly grazes the ground, when the ground
+    /// is at or behind the camera, and when the zoom limits or bounds would cut
+    /// the move short. Afterwards the camera reports another center, zoom, and
+    /// <c>center_altitude</c> for the same view.</para>
+    /// <para>See <c>mln_map_anchor_center_on_terrain</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html">C API reference</see>.</para>
+    /// </remarks>
+    public Task<CommandCompletion> AnchorCenterOnTerrainAsync()
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_map_anchor_center_on_terrain(
+            Handle,
+            NativeCompletion.StartCommand(&nativeCompletion, out var nativePending),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Moves the camera relative to where it is, as a gesture does.
     /// </summary>
     /// <remarks>
@@ -3140,6 +3170,30 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     }
 
     /// <summary>
+    /// Sets how the map loads its style's terrain, and whether the camera's
+    /// center follows the ground.
+    /// </summary>
+    /// <remarks>
+    /// <para>Settings that <c>options</c> doesn't set keep their current
+    /// values.</para>
+    /// <para>See <c>mln_map_set_terrain_options</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html">C API reference</see>.</para>
+    /// </remarks>
+    public Task<CommandCompletion> SetTerrainOptionsAsync(MapTerrainOptions options)
+    {
+        using var scope = new NativeCallScope(this);
+        var nativeOptions = NativeMapTerrainOptions(options);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_map_set_terrain_options(
+            Handle,
+            &nativeOptions,
+            NativeCompletion.StartCommand(&nativeCompletion, out var nativePending),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Sets how the map chooses which tiles to load, and at what detail.
     /// </summary>
     /// <remarks>
@@ -3343,6 +3397,14 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
                     Diagnostic
                 )
             );
+            scope.Accept();
+        }
+
+        public void AnchorCenterOnTerrain()
+        {
+            var receiverHandle = owner.Handle;
+            using var scope = new NativeCallScope(owner);
+            Check(NativeMethods.mln_map_anchor_center_on_terrain(receiverHandle, null, Diagnostic));
             scope.Accept();
         }
 
@@ -4074,6 +4136,22 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
                 NativeMethods.mln_map_set_style_url(
                     receiverHandle,
                     scope.Utf8(url),
+                    null,
+                    Diagnostic
+                )
+            );
+            scope.Accept();
+        }
+
+        public void SetTerrainOptions(MapTerrainOptions options)
+        {
+            var receiverHandle = owner.Handle;
+            using var scope = new NativeCallScope(owner);
+            var nativeOptions = NativeMapTerrainOptions(options);
+            Check(
+                NativeMethods.mln_map_set_terrain_options(
+                    receiverHandle,
+                    &nativeOptions,
                     null,
                     Diagnostic
                 )

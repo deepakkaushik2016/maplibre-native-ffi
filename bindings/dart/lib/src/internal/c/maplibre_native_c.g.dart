@@ -801,6 +801,25 @@ final class mln_map_snapshot extends Struct {
   external mln_camera_bounds bounds;
   external mln_free_camera free_camera;
   external mln_map_view view;
+  external mln_map_terrain_settings terrain;
+}
+
+final class mln_map_terrain_options extends Struct {
+  @Uint32()
+  external int size;
+  @Uint32()
+  external int fields;
+  @Uint32()
+  external int load_mode;
+  @Bool()
+  external bool center_clamped_to_ground;
+}
+
+final class mln_map_terrain_settings extends Struct {
+  @Uint32()
+  external int load_mode;
+  @Bool()
+  external bool center_clamped_to_ground;
 }
 
 final class mln_map_tile_options extends Struct {
@@ -2285,6 +2304,10 @@ const MLN_MAP_MODE_TILE = 2;
 const MLN_MAP_OPTION_EVENT_MASK = 1;
 const MLN_MAP_OPTION_TILE_CACHE_ENABLED = 2;
 
+// mln_map_terrain_option_field
+const MLN_MAP_TERRAIN_OPTION_LOAD_MODE = 1;
+const MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND = 2;
+
 // mln_map_tile_option_field
 const MLN_MAP_TILE_OPTION_PREFETCH_ZOOM_DELTA = 1;
 const MLN_MAP_TILE_OPTION_LOD_MIN_RADIUS = 2;
@@ -2654,6 +2677,11 @@ const MLN_STYLE_TRANSITION_OPTION_ENABLE_PLACEMENT_TRANSITIONS = 4;
 // mln_style_vector_tile_encoding
 const MLN_STYLE_VECTOR_TILE_ENCODING_MVT = 0;
 const MLN_STYLE_VECTOR_TILE_ENCODING_MLT = 1;
+
+// mln_terrain_load_mode
+const MLN_TERRAIN_LOAD_MODE_QUALITY = 0;
+const MLN_TERRAIN_LOAD_MODE_BALANCED = 1;
+const MLN_TERRAIN_LOAD_MODE_PERFORMANCE = 2;
 
 // mln_tile_lod_mode
 const MLN_TILE_LOD_MODE_DEFAULT = 0;
@@ -3118,6 +3146,15 @@ external int mln_map_add_style_source_json(
   int map,
   mln_buffer_view source_id,
   mln_buffer_view source_json,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(mln_map, Pointer<mln_completion>, Pointer<mln_diagnostic>)
+>()
+external int mln_map_anchor_center_on_terrain(
+  int map,
   Pointer<mln_completion> completion,
   Pointer<mln_diagnostic> out_diagnostic,
 );
@@ -4584,6 +4621,21 @@ external int mln_map_set_style_transition_options(
 external int mln_map_set_style_url(
   int map,
   mln_buffer_view url,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(
+    mln_map,
+    Pointer<mln_map_terrain_options>,
+    Pointer<mln_completion>,
+    Pointer<mln_diagnostic>,
+  )
+>()
+external int mln_map_set_terrain_options(
+  int map,
+  Pointer<mln_map_terrain_options> options,
   Pointer<mln_completion> completion,
   Pointer<mln_diagnostic> out_diagnostic,
 );

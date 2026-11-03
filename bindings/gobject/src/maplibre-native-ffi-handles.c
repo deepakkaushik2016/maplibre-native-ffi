@@ -1055,6 +1055,34 @@ maplibre_native_ffi_map_add_style_source_json_finish(
   return g_task_propagate_pointer(G_TASK(result), error);
 }
 
+void maplibre_native_ffi_map_anchor_center_on_terrain_async(
+  MaplibreNativeFfiMap* self, GAsyncReadyCallback callback, gpointer user_data
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP(self));
+  MaplibreNativeFfiAsync async_;
+  maplibre_native_ffi_async_init(
+    &async_, self, maplibre_native_ffi_map_anchor_center_on_terrain_async,
+    callback, user_data, TRUE
+  );
+  if (!maplibre_native_ffi_async_begin(
+        &async_, maplibre_native_ffi_command_decode,
+        (GDestroyNotify)maplibre_native_ffi_command_completion_free
+      ))
+    return;
+  mln_status status_ = mln_map_anchor_center_on_terrain(
+    self->handle, async_.completion_argument, &async_.diagnostic
+  );
+  maplibre_native_ffi_async_end(&async_, status_);
+}
+
+MaplibreNativeFfiCommandCompletion*
+maplibre_native_ffi_map_anchor_center_on_terrain_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+) {
+  g_return_val_if_fail(g_task_is_valid(result, self), NULL);
+  return g_task_propagate_pointer(G_TASK(result), error);
+}
+
 void maplibre_native_ffi_map_apply_camera_delta_async(
   MaplibreNativeFfiMap* self, MaplibreNativeFfiCameraDelta* delta,
   GAsyncReadyCallback callback, gpointer user_data
@@ -3820,6 +3848,41 @@ void maplibre_native_ffi_map_set_style_url_async(
 
 MaplibreNativeFfiCommandCompletion*
 maplibre_native_ffi_map_set_style_url_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+) {
+  g_return_val_if_fail(g_task_is_valid(result, self), NULL);
+  return g_task_propagate_pointer(G_TASK(result), error);
+}
+
+void maplibre_native_ffi_map_set_terrain_options_async(
+  MaplibreNativeFfiMap* self, MaplibreNativeFfiMapTerrainOptions* options,
+  GAsyncReadyCallback callback, gpointer user_data
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP(self));
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_MAP_TERRAIN_OPTIONS(options));
+  MaplibreNativeFfiAsync async_;
+  maplibre_native_ffi_async_init(
+    &async_, self, maplibre_native_ffi_map_set_terrain_options_async, callback,
+    user_data, TRUE
+  );
+  mln_map_terrain_options options_native_;
+  maplibre_native_ffi_map_terrain_options_to_native(
+    options, &options_native_, &async_.call
+  );
+  if (!maplibre_native_ffi_async_begin(
+        &async_, maplibre_native_ffi_command_decode,
+        (GDestroyNotify)maplibre_native_ffi_command_completion_free
+      ))
+    return;
+  mln_status status_ = mln_map_set_terrain_options(
+    self->handle, &options_native_, async_.completion_argument,
+    &async_.diagnostic
+  );
+  maplibre_native_ffi_async_end(&async_, status_);
+}
+
+MaplibreNativeFfiCommandCompletion*
+maplibre_native_ffi_map_set_terrain_options_finish(
   MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
 ) {
   g_return_val_if_fail(g_task_is_valid(result, self), NULL);

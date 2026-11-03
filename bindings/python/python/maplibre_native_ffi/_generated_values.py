@@ -1010,6 +1010,19 @@ class StyleVectorTileEncoding(UnknownIntEnum):
     MLT = 1
 
 
+class TerrainLoadMode(UnknownIntEnum):
+    """How a map loads 3D terrain: how much it builds in one frame, and how many
+    terrain mesh tiles a frame may have.
+
+    See `mln_terrain_load_mode` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+    """
+
+    QUALITY = 0
+    BALANCED = 1
+    PERFORMANCE = 2
+
+
 class TileLodMode(UnknownIntEnum):
     """How the map picks the level of detail of its tiles.
 
@@ -2663,6 +2676,8 @@ class MapSnapshot:
 
     view: MapView
 
+    terrain: MapTerrainSettings
+
     @classmethod
     def _from_native(cls, raw):
         return cls(
@@ -2678,6 +2693,61 @@ class MapSnapshot:
             bounds=CameraBounds._from_native(raw["bounds"]),
             free_camera=FreeCamera._from_native(raw["free_camera"]),
             view=MapView._from_native(raw["view"]),
+            terrain=MapTerrainSettings._from_native(raw["terrain"]),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class MapTerrainOptions:
+    """How the map loads its style's terrain, and how its camera keeps to it.
+
+    The options apply only while the style has terrain.
+
+    See `mln_map_terrain_options` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+    """
+
+    load_mode: TerrainLoadMode | None = None
+    """`TerrainLoadMode.QUALITY` by default."""
+
+    center_clamped_to_ground: bool | None = None
+    """Whether the camera's center follows the height of the terrain under it,
+    rather than staying at its `center_altitude`. Off by default.
+
+    With it on, the camera also keeps its eye 10 m above the ground under the
+    eye. During a gesture, the center keeps the height it had when the
+    gesture started, and the gesture's end moves the center onto the ground
+    without moving the camera, as `MapHandle.anchor_center_on_terrain()`
+    does.
+    """
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(
+            load_mode=_maybe(TerrainLoadMode, raw["load_mode"]),
+            center_clamped_to_ground=raw["center_clamped_to_ground"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class MapTerrainSettings:
+    """All the settings for how a map loads its style's terrain.
+
+    Its members mean the same as those of `MapTerrainOptions`.
+
+    See `mln_map_terrain_settings` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+    """
+
+    load_mode: TerrainLoadMode
+
+    center_clamped_to_ground: bool
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(
+            load_mode=TerrainLoadMode(raw["load_mode"]),
+            center_clamped_to_ground=raw["center_clamped_to_ground"],
         )
 
 

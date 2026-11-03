@@ -1570,6 +1570,45 @@ export interface MapSnapshot {
   readonly bounds: CameraBounds;
   readonly freeCamera: FreeCamera;
   readonly view: MapView;
+  readonly terrain: MapTerrainSettings;
+}
+
+/**
+ * How the map loads its style's terrain, and how its camera keeps to it.
+ *
+ * The options apply only while the style has terrain.
+ *
+ * See `mln_map_terrain_options` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+export interface MapTerrainOptions {
+  /**
+   * `TerrainLoadMode.quality` by default.
+   */
+  loadMode?: TerrainLoadMode;
+  /**
+   * Whether the camera's center follows the height of the terrain under it,
+   * rather than staying at its `center_altitude`. Off by default.
+   *
+   * With it on, the camera also keeps its eye 10 m above the ground under the
+   * eye. During a gesture, the center keeps the height it had when the gesture
+   * started, and the gesture's end moves the center onto the ground without
+   * moving the camera, as `MapHandle.anchorCenterOnTerrain()` does.
+   */
+  centerClampedToGround?: boolean;
+}
+
+/**
+ * All the settings for how a map loads its style's terrain.
+ *
+ * Its members mean the same as those of `MapTerrainOptions`.
+ *
+ * See `mln_map_terrain_settings` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+export interface MapTerrainSettings {
+  readonly loadMode: TerrainLoadMode;
+  readonly centerClampedToGround: boolean;
 }
 
 /**
@@ -4031,6 +4070,36 @@ export const StyleVectorTileEncoding = {
 /** One of the StyleVectorTileEncoding values, or a value this binding does not know. */
 export type StyleVectorTileEncoding =
   | (typeof StyleVectorTileEncoding)[keyof typeof StyleVectorTileEncoding]
+  | (number & {});
+
+/**
+ * How a map loads 3D terrain: how much it builds in one frame, and how many
+ * terrain mesh tiles a frame may have.
+ *
+ * See `mln_terrain_load_mode` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+export const TerrainLoadMode = {
+  /**
+   * Builds every revealed tile in the frame that reveals it, and keeps up to 64
+   * mesh tiles. The sharpest, but a frame can stall on a burst of tiles.
+   */
+  quality: 0,
+  /**
+   * Builds up to 32 new tiles and redraws up to 16 terrain textures a frame,
+   * and keeps up to 48 mesh tiles.
+   */
+  balanced: 1,
+  /**
+   * Builds up to 8 new tiles and redraws up to 4 terrain textures a frame, and
+   * keeps up to 24 mesh tiles. The smoothest on a weak GPU, and the shortest
+   * view distance.
+   */
+  performance: 2,
+} as const;
+/** One of the TerrainLoadMode values, or a value this binding does not know. */
+export type TerrainLoadMode =
+  | (typeof TerrainLoadMode)[keyof typeof TerrainLoadMode]
   | (number & {});
 
 /**

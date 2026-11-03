@@ -1371,6 +1371,31 @@ napi_value mln_ts_read_map_snapshot(
         mln_ts_read_map_view(env, &(source->view), sizeof(source->view))
       ))
     return NULL;
+  if (!mln_ts_set(
+        env, result, "terrain",
+        mln_ts_read_map_terrain_settings(
+          env, &(source->terrain), sizeof(source->terrain)
+        )
+      ))
+    return NULL;
+  return result;
+}
+
+napi_value mln_ts_read_map_terrain_settings(
+  napi_env env, const mln_map_terrain_settings* source, size_t size
+) {
+  (void)size;
+  napi_value result = mln_ts_object(env);
+  if (result == NULL) return NULL;
+  if (!mln_ts_set(
+        env, result, "loadMode", mln_ts_number(env, (double)(source->load_mode))
+      ))
+    return NULL;
+  if (!mln_ts_set(
+        env, result, "centerClampedToGround",
+        mln_ts_bool(env, source->center_clamped_to_ground)
+      ))
+    return NULL;
   return result;
 }
 
@@ -5277,6 +5302,38 @@ bool mln_ts_write_map_options(
       out->tile_cache_enabled = flag;
     }
     out->fields |= MLN_MAP_OPTION_TILE_CACHE_ENABLED;
+  }
+  return true;
+}
+
+bool mln_ts_write_map_terrain_options(
+  mln_ts_call* call, napi_value value, mln_map_terrain_options* out,
+  const char* path
+) {
+  napi_value member;
+  char child[256];
+  (void)child;
+  if (!mln_ts_member(call, value, "loadMode", &member)) return false;
+  mln_ts_path(child, sizeof child, path, "loadMode");
+  if (!mln_ts_is_absent(call, member)) {
+    {
+      int64_t number = 0;
+      if (!mln_ts_read_int(call, member, 0LL, 4294967295LL, &number, child))
+        return false;
+      out->load_mode = (mln_terrain_load_mode)number;
+    }
+    out->fields |= MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+  }
+  if (!mln_ts_member(call, value, "centerClampedToGround", &member))
+    return false;
+  mln_ts_path(child, sizeof child, path, "centerClampedToGround");
+  if (!mln_ts_is_absent(call, member)) {
+    {
+      bool flag = false;
+      if (!mln_ts_read_bool(call, member, &flag, child)) return false;
+      out->center_clamped_to_ground = flag;
+    }
+    out->fields |= MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
   }
   return true;
 }

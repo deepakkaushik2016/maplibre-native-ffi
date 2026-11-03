@@ -225,6 +225,13 @@ internal actual object C {
   ): Int
 
   @JvmStatic
+  actual external fun mln_map_anchor_center_on_terrain(
+    map: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
   actual external fun mln_map_apply_camera_delta(
     map: Long,
     delta: Long,
@@ -1030,6 +1037,14 @@ internal actual object C {
   actual external fun mln_map_set_style_url(
     map: Long,
     url: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
+  actual external fun mln_map_set_terrain_options(
+    map: Long,
+    options: Long,
     completion: Long,
     outDiagnostic: Long,
   ): Int

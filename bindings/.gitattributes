@@ -67,6 +67,8 @@
 /dotnet/src/Maplibre.NativeFfi/Map/MapMode.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/MapOptions.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/MapSnapshot.g.cs linguist-generated=true
+/dotnet/src/Maplibre.NativeFfi/Map/MapTerrainOptions.g.cs linguist-generated=true
+/dotnet/src/Maplibre.NativeFfi/Map/MapTerrainSettings.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/MapTileOptions.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/MapTileSettings.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/MapView.g.cs linguist-generated=true
@@ -86,6 +88,7 @@
 /dotnet/src/Maplibre.NativeFfi/Map/ProjectionModeOptions.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/Quaternion.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/ScreenPoint.g.cs linguist-generated=true
+/dotnet/src/Maplibre.NativeFfi/Map/TerrainLoadMode.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/TileLodMode.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/UnitBezier.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Map/Vec3.g.cs linguist-generated=true

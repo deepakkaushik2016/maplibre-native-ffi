@@ -502,6 +502,10 @@ auto map_set_viewport_options(
 ) -> mln_status;
 auto map_set_tile_options(MapObject& live, const mln_map_tile_options* options)
   -> mln_status;
+auto map_set_terrain_options(
+  MapObject& live, const mln_map_terrain_options* options
+) -> mln_status;
+auto map_anchor_center_on_terrain(MapObject& live) -> mln_status;
 auto map_camera_for_lat_lng_bounds_start(
   mln_map map, mln_lat_lng_bounds bounds,
   const mln_camera_fit_options* fit_options, const mln_completion* completion
@@ -610,6 +614,8 @@ auto validate_debug_flags_input(uint32_t flags) -> mln_status;
 auto validate_viewport_options_input(const mln_map_viewport_options* options)
   -> mln_status;
 auto validate_tile_options_input(const mln_map_tile_options* options)
+  -> mln_status;
+auto validate_terrain_options_input(const mln_map_terrain_options* options)
   -> mln_status;
 auto validate_bound_options_input(const mln_bound_options* options)
   -> mln_status;

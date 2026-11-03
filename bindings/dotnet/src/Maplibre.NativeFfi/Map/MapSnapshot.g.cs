@@ -30,5 +30,6 @@ public readonly partial record struct MapSnapshot(
     MapTileSettings Tile,
     CameraBounds Bounds,
     FreeCamera FreeCamera,
-    MapView View
+    MapView View,
+    MapTerrainSettings Terrain
 );

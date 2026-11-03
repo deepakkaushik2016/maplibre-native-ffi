@@ -59,6 +59,36 @@ MLN_API mln_status mln_map_set_tile_options(
   mln_map map, const mln_map_tile_options* options,
   const mln_completion* completion, mln_diagnostic* out_diagnostic
 ) MLN_NOEXCEPT;
+/**
+ * Sets how the map loads its style's terrain, and whether the camera's center
+ * follows the ground.
+ *
+ * Settings that `options` doesn't set keep their current values.
+ */
+MLN_BINDING("execution=command")
+MLN_API mln_status mln_map_set_terrain_options(
+  mln_map map, const mln_map_terrain_options* options,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+/**
+ * Moves the camera's center onto the terrain under it, without moving the
+ * camera.
+ *
+ * The center slides along the line of sight to the ground, and the zoom rises
+ * by the distance saved, so the view stays the same. Rotating and pitching then
+ * turn around the ground being looked at. Call it when a gesture starts.
+ *
+ * The camera stays as it is when the style has no terrain, before a frame has
+ * rendered the ground under the center, when the pitch is so steep that the
+ * line of sight nearly grazes the ground, when the ground is at or behind the
+ * camera, and when the zoom limits or bounds would cut the move short.
+ * Afterwards the camera reports another center, zoom, and `center_altitude`
+ * for the same view.
+ */
+MLN_BINDING("execution=command")
+MLN_API mln_status mln_map_anchor_center_on_terrain(
+  mln_map map, const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
 
 /**
  * Moves the camera, at once or with an animation.

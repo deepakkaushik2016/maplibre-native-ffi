@@ -134,6 +134,8 @@ internal expect object C {
     outDiagnostic: Long,
   ): Int
 
+  fun mln_map_anchor_center_on_terrain(map: Long, completion: Long, outDiagnostic: Long): Int
+
   fun mln_map_apply_camera_delta(map: Long, delta: Long, completion: Long, outDiagnostic: Long): Int
 
   fun mln_map_attach_android_hardware_buffer_ring(
@@ -749,6 +751,13 @@ internal expect object C {
   ): Int
 
   fun mln_map_set_style_url(map: Long, url: Long, completion: Long, outDiagnostic: Long): Int
+
+  fun mln_map_set_terrain_options(
+    map: Long,
+    options: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
 
   fun mln_map_set_tile_options(map: Long, options: Long, completion: Long, outDiagnostic: Long): Int
 

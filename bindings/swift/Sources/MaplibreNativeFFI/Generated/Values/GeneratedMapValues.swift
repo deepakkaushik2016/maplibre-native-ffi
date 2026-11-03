@@ -1335,6 +1335,7 @@ public struct MapSnapshot: Equatable, Hashable, Sendable {
   public var bounds: CameraBounds
   public var freeCamera: FreeCamera
   public var view: MapView
+  public var terrain: MapTerrainSettings
   public init(
     debugFlags: MapDebugFlag = .init(rawValue: 0),
     generation: UInt64 = 0,
@@ -1347,7 +1348,8 @@ public struct MapSnapshot: Equatable, Hashable, Sendable {
     tile: MapTileSettings = .init(),
     bounds: CameraBounds = .init(),
     freeCamera: FreeCamera = .init(),
-    view: MapView = .init()
+    view: MapView = .init(),
+    terrain: MapTerrainSettings = .init()
   ) {
     self.debugFlags = debugFlags
     self.generation = generation
@@ -1361,6 +1363,7 @@ public struct MapSnapshot: Equatable, Hashable, Sendable {
     self.bounds = bounds
     self.freeCamera = freeCamera
     self.view = view
+    self.terrain = terrain
   }
 
   init(raw: mln_map_snapshot) {
@@ -1376,6 +1379,79 @@ public struct MapSnapshot: Equatable, Hashable, Sendable {
     bounds = CameraBounds(raw: raw.bounds)
     freeCamera = FreeCamera(raw: raw.free_camera)
     view = MapView(raw: raw.view)
+    terrain = MapTerrainSettings(raw: raw.terrain)
+  }
+}
+
+/// How the map loads its style's terrain, and how its camera keeps to it.
+///
+/// The options apply only while the style has terrain.
+///
+/// See `mln_map_terrain_options` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+public struct MapTerrainOptions: Equatable, Hashable, Sendable {
+  /// `TerrainLoadMode.quality` by default.
+  public var loadMode: TerrainLoadMode?
+  /// Whether the camera's center follows the height of the terrain under it,
+  /// rather than staying at its `center_altitude`. Off by default.
+  ///
+  /// With it on, the camera also keeps its eye 10 m above the ground under the
+  /// eye. During a gesture, the center keeps the height it had when the gesture
+  /// started, and the gesture's end moves the center onto the ground without
+  /// moving the camera, as `MapHandle.anchorCenterOnTerrain()` does.
+  public var centerClampedToGround: Bool?
+  public init(
+    loadMode: TerrainLoadMode? = nil,
+    centerClampedToGround: Bool? = nil
+  ) {
+    self.loadMode = loadMode
+    self.centerClampedToGround = centerClampedToGround
+  }
+
+  init(raw: mln_map_terrain_options) {
+    loadMode = raw.fields & MLN_MAP_TERRAIN_OPTION_LOAD_MODE
+      .rawValue != 0 ? TerrainLoadMode(rawValue: raw.load_mode.rawValue) : nil
+    centerClampedToGround = raw
+      .fields & MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND
+      .rawValue != 0 ? raw.center_clamped_to_ground : nil
+  }
+
+  func nativeValue() -> mln_map_terrain_options {
+    var raw = mln_map_terrain_options()
+    raw.fields = 0
+    raw.size = UInt32(MemoryLayout<mln_map_terrain_options>.size)
+    if let item = loadMode {
+      raw.fields |= MLN_MAP_TERRAIN_OPTION_LOAD_MODE.rawValue; raw
+        .load_mode = mln_terrain_load_mode(rawValue: item.rawValue)
+    }
+    if let item = centerClampedToGround {
+      raw.fields |= MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND
+        .rawValue; raw.center_clamped_to_ground = item
+    }
+    return raw
+  }
+}
+
+/// All the settings for how a map loads its style's terrain.
+///
+/// Its members mean the same as those of `MapTerrainOptions`.
+///
+/// See `mln_map_terrain_settings` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+public struct MapTerrainSettings: Equatable, Hashable, Sendable {
+  public var loadMode: TerrainLoadMode
+  public var centerClampedToGround: Bool
+  public init(
+    loadMode: TerrainLoadMode = .init(rawValue: 0),
+    centerClampedToGround: Bool = false
+  ) {
+    self.loadMode = loadMode
+    self.centerClampedToGround = centerClampedToGround
+  }
+
+  init(raw: mln_map_terrain_settings) {
+    loadMode = TerrainLoadMode(rawValue: raw.load_mode.rawValue)
+    centerClampedToGround = raw.center_clamped_to_ground
   }
 }
 
@@ -2281,6 +2357,39 @@ public struct ScreenPoint: Equatable, Hashable, Sendable {
     raw.x = x
     raw.y = y
     return raw
+  }
+}
+
+/// How a map loads 3D terrain: how much it builds in one frame, and how many
+/// terrain mesh tiles a frame may have.
+///
+/// See `mln_terrain_load_mode` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+public struct TerrainLoadMode: RawRepresentable, CustomStringConvertible,
+  NativeOpenValue, Equatable, Hashable, Sendable
+{
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) {
+    self.rawValue = rawValue
+  }
+
+  /// Builds every revealed tile in the frame that reveals it, and keeps up to
+  /// 64 mesh tiles. The sharpest, but a frame can stall on a burst of tiles.
+  public static let quality: TerrainLoadMode = .init(rawValue: 0)
+  /// Builds up to 32 new tiles and redraws up to 16 terrain textures a frame,
+  /// and keeps up to 48 mesh tiles.
+  public static let balanced: TerrainLoadMode = .init(rawValue: 1)
+  /// Builds up to 8 new tiles and redraws up to 4 terrain textures a frame, and
+  /// keeps up to 24 mesh tiles. The smoothest on a weak GPU, and the shortest
+  /// view distance.
+  public static let performance: TerrainLoadMode = .init(rawValue: 2)
+  public var description: String {
+    switch rawValue {
+    case 0: return "quality"
+    case 1: return "balanced"
+    case 2: return "performance"
+    default: return "TerrainLoadMode(\(rawValue))"
+    }
   }
 }
 

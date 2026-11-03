@@ -38,6 +38,7 @@ import type {
   MapOptions,
   MapProjectionCameraResult,
   MapSnapshot,
+  MapTerrainOptions,
   MapTileOptions,
   MapView,
   MapViewportOptions,
@@ -182,6 +183,10 @@ export interface NativeOperations {
     map: bigint,
     sourceId: string,
     sourceJson: unknown,
+    completion: NativeCompletion | undefined,
+  ): void;
+  mln_map_anchor_center_on_terrain(
+    map: bigint,
     completion: NativeCompletion | undefined,
   ): void;
   mln_map_apply_camera_delta(
@@ -680,6 +685,11 @@ export interface NativeOperations {
   mln_map_set_style_url(
     map: bigint,
     url: string,
+    completion: NativeCompletion | undefined,
+  ): void;
+  mln_map_set_terrain_options(
+    map: bigint,
+    options: MapTerrainOptions,
     completion: NativeCompletion | undefined,
   ): void;
   mln_map_set_tile_options(

@@ -349,6 +349,17 @@ internal actual object C {
       outDiagnostic.toCPointer(),
     )
 
+  actual fun mln_map_anchor_center_on_terrain(
+    map: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_map_anchor_center_on_terrain(
+      map.toULong(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
   actual fun mln_map_apply_camera_delta(
     map: Long,
     delta: Long,
@@ -1665,6 +1676,19 @@ internal actual object C {
     org.maplibre.nativeffi.internal.cinterop.mln_map_set_style_url(
       map.toULong(),
       url.toCPointer<mln_buffer_view>()!!.pointed.readValue(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
+  actual fun mln_map_set_terrain_options(
+    map: Long,
+    options: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_map_set_terrain_options(
+      map.toULong(),
+      options.toCPointer(),
       completion.toCPointer(),
       outDiagnostic.toCPointer(),
     )

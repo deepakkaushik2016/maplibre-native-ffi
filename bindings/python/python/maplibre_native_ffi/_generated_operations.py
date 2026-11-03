@@ -49,6 +49,7 @@ from ._generated_values import (
     MapOptions,
     MapProjectionCameraResult,
     MapSnapshot,
+    MapTerrainOptions,
     MapTileOptions,
     MapView,
     MapViewportOptions,
@@ -522,6 +523,27 @@ class _MapHandleOperations(GeneratedOperations):
           `MapHandle.set_style_url()` describes.
         """
         return self._native.add_style_source_json(source_id, source_json)
+
+    def anchor_center_on_terrain(self) -> Future[CommandCompletion]:
+        """Moves the camera's center onto the terrain under it, without moving
+        the camera.
+
+        The center slides along the line of sight to the ground, and the zoom
+        rises by the distance saved, so the view stays the same. Rotating and
+        pitching then turn around the ground being looked at. Call it when a
+        gesture starts.
+
+        The camera stays as it is when the style has no terrain, before a
+        frame has rendered the ground under the center, when the pitch is so
+        steep that the line of sight nearly grazes the ground, when the
+        ground is at or behind the camera, and when the zoom limits or bounds
+        would cut the move short. Afterwards the camera reports another
+        center, zoom, and `center_altitude` for the same view.
+
+        See `mln_map_anchor_center_on_terrain` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+        """
+        return self._native.anchor_center_on_terrain()
 
     def apply_camera_delta(self, delta: CameraDelta) -> Future[CommandCompletion]:
         """Moves the camera relative to where it is, as a gesture does.
@@ -2073,6 +2095,19 @@ class _MapHandleOperations(GeneratedOperations):
           document parses.
         """
         return self._native.set_style_url(url)
+
+    def set_terrain_options(
+        self, options: MapTerrainOptions
+    ) -> Future[CommandCompletion]:
+        """Sets how the map loads its style's terrain, and whether the camera's
+        center follows the ground.
+
+        Settings that `options` doesn't set keep their current values.
+
+        See `mln_map_set_terrain_options` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+        """
+        return self._native.set_terrain_options(options)
 
     def set_tile_options(self, options: MapTileOptions) -> Future[CommandCompletion]:
         """Sets how the map chooses which tiles to load, and at what detail.
@@ -3783,6 +3818,27 @@ class MapHandleDiscarding:
         """
         return self._native._discard_add_style_source_json(source_id, source_json)
 
+    def anchor_center_on_terrain(self) -> None:
+        """Moves the camera's center onto the terrain under it, without moving
+        the camera.
+
+        The center slides along the line of sight to the ground, and the zoom
+        rises by the distance saved, so the view stays the same. Rotating and
+        pitching then turn around the ground being looked at. Call it when a
+        gesture starts.
+
+        The camera stays as it is when the style has no terrain, before a
+        frame has rendered the ground under the center, when the pitch is so
+        steep that the line of sight nearly grazes the ground, when the
+        ground is at or behind the camera, and when the zoom limits or bounds
+        would cut the move short. Afterwards the camera reports another
+        center, zoom, and `center_altitude` for the same view.
+
+        See `mln_map_anchor_center_on_terrain` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+        """
+        return self._native._discard_anchor_center_on_terrain()
+
     def apply_camera_delta(self, delta: CameraDelta) -> None:
         """Moves the camera relative to where it is, as a gesture does.
 
@@ -4360,6 +4416,17 @@ class MapHandleDiscarding:
         [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
         """
         return self._native._discard_set_style_url(url)
+
+    def set_terrain_options(self, options: MapTerrainOptions) -> None:
+        """Sets how the map loads its style's terrain, and whether the camera's
+        center follows the ground.
+
+        Settings that `options` doesn't set keep their current values.
+
+        See `mln_map_set_terrain_options` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+        """
+        return self._native._discard_set_terrain_options(options)
 
     def set_tile_options(self, options: MapTileOptions) -> None:
         """Sets how the map chooses which tiles to load, and at what detail.

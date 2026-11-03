@@ -1594,6 +1594,39 @@ func (value StyleVectorTileEncoding) String() string {
 	return fmt.Sprintf("StyleVectorTileEncoding(%d)", value)
 }
 
+// TerrainLoadMode corresponds to mln_terrain_load_mode. How a map loads 3D
+// terrain: how much it builds in one frame, and how many terrain mesh tiles a
+// frame may have.
+//
+// See mln_terrain_load_mode in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html
+type TerrainLoadMode uint32
+
+const (
+	// Builds every revealed tile in the frame that reveals it, and keeps up to 64
+	// mesh tiles. The sharpest, but a frame can stall on a burst of tiles.
+	TerrainLoadModeQuality TerrainLoadMode = TerrainLoadMode(C.MLN_TERRAIN_LOAD_MODE_QUALITY)
+	// Builds up to 32 new tiles and redraws up to 16 terrain textures a frame, and
+	// keeps up to 48 mesh tiles.
+	TerrainLoadModeBalanced TerrainLoadMode = TerrainLoadMode(C.MLN_TERRAIN_LOAD_MODE_BALANCED)
+	// Builds up to 8 new tiles and redraws up to 4 terrain textures a frame, and
+	// keeps up to 24 mesh tiles. The smoothest on a weak GPU, and the shortest view
+	// distance.
+	TerrainLoadModePerformance TerrainLoadMode = TerrainLoadMode(C.MLN_TERRAIN_LOAD_MODE_PERFORMANCE)
+)
+
+func (value TerrainLoadMode) String() string {
+	switch value {
+	case 0:
+		return "TerrainLoadModeQuality"
+	case 1:
+		return "TerrainLoadModeBalanced"
+	case 2:
+		return "TerrainLoadModePerformance"
+	}
+	return fmt.Sprintf("TerrainLoadMode(%d)", value)
+}
+
 // TileLodMode corresponds to mln_tile_lod_mode. How the map picks the level of
 // detail of its tiles.
 //
@@ -3512,6 +3545,7 @@ type MapSnapshot struct {
 	Bounds                       CameraBounds
 	FreeCamera                   FreeCamera
 	View                         MapView
+	Terrain                      MapTerrainSettings
 }
 
 func copyMapSnapshot(raw C.mln_map_snapshot) MapSnapshot {
@@ -3528,6 +3562,55 @@ func copyMapSnapshot(raw C.mln_map_snapshot) MapSnapshot {
 	result.Bounds = copyCameraBounds(raw.bounds)
 	result.FreeCamera = copyFreeCamera(raw.free_camera)
 	result.View = copyMapView(raw.view)
+	result.Terrain = copyMapTerrainSettings(raw.terrain)
+	return result
+}
+
+// MapTerrainOptions corresponds to mln_map_terrain_options. How the map loads
+// its style's terrain, and how its camera keeps to it.
+//
+// The options apply only while the style has terrain.
+//
+// See mln_map_terrain_options in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html
+type MapTerrainOptions struct {
+	// TerrainLoadModeQuality by default.
+	LoadMode *TerrainLoadMode
+	// Whether the camera's center follows the height of the terrain under it,
+	// rather than staying at its center_altitude. Off by default.
+	//
+	// With it on, the camera also keeps its eye 10 m above the ground under the
+	// eye. During a gesture, the center keeps the height it had when the gesture
+	// started, and the gesture's end moves the center onto the ground without
+	// moving the camera, as MapHandle.AnchorCenterOnTerrain() does.
+	CenterClampedToGround *bool
+}
+
+func nativeMapTerrainOptions(input MapTerrainOptions, arena *bindingArena) C.mln_map_terrain_options {
+	raw := C.mln_map_terrain_options{}
+	raw.size = bindingCountLike(raw.size, int(unsafe.Sizeof(raw)))
+	raw.fields = 0
+	bindingMasked(&raw.fields, C.MLN_MAP_TERRAIN_OPTION_LOAD_MODE, &raw.load_mode, input.LoadMode, arena, bindingNumber[TerrainLoadMode, C.mln_terrain_load_mode])
+	bindingMasked(&raw.fields, C.MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND, &raw.center_clamped_to_ground, input.CenterClampedToGround, arena, bindingBool[bool, C.bool])
+	return raw
+}
+
+// MapTerrainSettings corresponds to mln_map_terrain_settings. All the settings
+// for how a map loads its style's terrain.
+//
+// Its members mean the same as those of MapTerrainOptions.
+//
+// See mln_map_terrain_settings in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html
+type MapTerrainSettings struct {
+	LoadMode              TerrainLoadMode
+	CenterClampedToGround bool
+}
+
+func copyMapTerrainSettings(raw C.mln_map_terrain_settings) MapTerrainSettings {
+	var result MapTerrainSettings
+	result.LoadMode = TerrainLoadMode(raw.load_mode)
+	result.CenterClampedToGround = bool(raw.center_clamped_to_ground)
 	return result
 }
 
@@ -7492,6 +7575,28 @@ func (receiver *MapHandle) AddStyleSourceJSON(sourceID string, sourceJSON string
 	}, completionCommand)
 }
 
+// AnchorCenterOnTerrain moves the camera's center onto the terrain under it,
+// without moving the camera.
+//
+// The center slides along the line of sight to the ground, and the zoom rises
+// by the distance saved, so the view stays the same. Rotating and pitching then
+// turn around the ground being looked at. Call it when a gesture starts.
+//
+// The camera stays as it is when the style has no terrain, before a frame has
+// rendered the ground under the center, when the pitch is so steep that the
+// line of sight nearly grazes the ground, when the ground is at or behind the
+// camera, and when the zoom limits or bounds would cut the move short.
+// Afterwards the camera reports another center, zoom, and center_altitude for
+// the same view.
+//
+// See mln_map_anchor_center_on_terrain in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html
+func (receiver *MapHandle) AnchorCenterOnTerrain() (*Future[CommandCompletion], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_anchor_center_on_terrain(C.mln_map(raw), completion, diagnostic))
+	}, completionCommand)
+}
+
 // ApplyCameraDelta moves the camera relative to where it is, as a gesture does.
 //
 // delta can pan the map's content by an offset on the screen, scale the zoom,
@@ -8905,6 +9010,19 @@ func (receiver *MapHandle) SetStyleURL(url string) (*Future[CommandCompletion], 
 	}, completionCommand)
 }
 
+// SetTerrainOptions sets how the map loads its style's terrain, and whether the
+// camera's center follows the ground.
+//
+// Settings that options doesn't set keep their current values.
+//
+// See mln_map_set_terrain_options in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html
+func (receiver *MapHandle) SetTerrainOptions(options MapTerrainOptions) (*Future[CommandCompletion], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_set_terrain_options(C.mln_map(raw), bindingStore(nativeMapTerrainOptions(options, arena), arena), completion, diagnostic))
+	}, completionCommand)
+}
+
 // SetTileOptions sets how the map chooses which tiles to load, and at what
 // detail.
 //
@@ -10265,6 +10383,13 @@ func (view MapHandleDiscarding) AddStyleSourceJSON(sourceID string, sourceJSON s
 	})
 }
 
+func (view MapHandleDiscarding) AnchorCenterOnTerrain() error {
+	receiver := view.owner
+	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_anchor_center_on_terrain(C.mln_map(raw), completion, diagnostic))
+	})
+}
+
 func (view MapHandleDiscarding) ApplyCameraDelta(delta CameraDelta) error {
 	receiver := view.owner
 	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
@@ -10591,6 +10716,13 @@ func (view MapHandleDiscarding) SetStyleURL(url string) error {
 	receiver := view.owner
 	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_map_set_style_url(C.mln_map(raw), bindingView(url, arena), completion, diagnostic))
+	})
+}
+
+func (view MapHandleDiscarding) SetTerrainOptions(options MapTerrainOptions) error {
+	receiver := view.owner
+	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_set_terrain_options(C.mln_map(raw), bindingStore(nativeMapTerrainOptions(options, arena), arena), completion, diagnostic))
 	})
 }
 

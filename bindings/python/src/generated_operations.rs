@@ -590,6 +590,23 @@ fn generated_copy_mln_map_snapshot(
         generated_copy_mln_free_camera(py, &value.free_camera)?,
     )?;
     dict.set_item("view", generated_copy_mln_map_view(py, &value.view)?)?;
+    dict.set_item(
+        "terrain",
+        generated_copy_mln_map_terrain_settings(py, &value.terrain)?,
+    )?;
+    Ok(dict.into_any().unbind())
+}
+
+fn generated_copy_mln_map_terrain_settings(
+    py: Python<'_>,
+    value: &sys::mln_map_terrain_settings,
+) -> PyResult<Py<PyAny>> {
+    let dict = PyDict::new(py);
+    dict.set_item("load_mode", generated_value(py, value.load_mode)?)?;
+    dict.set_item(
+        "center_clamped_to_ground",
+        generated_value(py, value.center_clamped_to_ground)?,
+    )?;
     Ok(dict.into_any().unbind())
 }
 
@@ -2503,6 +2520,25 @@ fn generated_input_mln_map_options<'py>(
     Ok(raw)
 }
 
+fn generated_input_mln_map_terrain_options<'py>(
+    value: &Bound<'py, PyAny>,
+    storage: &mut GeneratedInputStorage<'py>,
+) -> PyResult<sys::mln_map_terrain_options> {
+    let _ = storage;
+    let mut raw: sys::mln_map_terrain_options = unsafe { std::mem::zeroed() };
+    raw.size = std::mem::size_of::<sys::mln_map_terrain_options>() as _;
+    raw.fields = 0;
+    if let Some(field) = generated_present(value, "load_mode")? {
+        raw.load_mode = field.extract::<sys::mln_terrain_load_mode>()?;
+        raw.fields |= sys::MLN_MAP_TERRAIN_OPTION_LOAD_MODE;
+    }
+    if let Some(field) = generated_present(value, "center_clamped_to_ground")? {
+        raw.center_clamped_to_ground = field.extract::<bool>()?;
+        raw.fields |= sys::MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND;
+    }
+    Ok(raw)
+}
+
 fn generated_input_mln_map_tile_options<'py>(
     value: &Bound<'py, PyAny>,
     storage: &mut GeneratedInputStorage<'py>,
@@ -4351,6 +4387,26 @@ impl MapHandle {
                     completion,
                     diagnostic,
                 )
+            })
+        }
+    }
+    #[pyo3(signature = ())]
+    fn anchor_center_on_terrain(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let handle = self.input();
+        unsafe {
+            call.command(|completion, diagnostic| {
+                sys::mln_map_anchor_center_on_terrain(handle, completion, diagnostic)
+            })
+        }
+    }
+    #[pyo3(signature = ())]
+    fn _discard_anchor_center_on_terrain(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let handle = self.input();
+        unsafe {
+            call.discard(|completion, diagnostic| {
+                sys::mln_map_anchor_center_on_terrain(handle, completion, diagnostic)
             })
         }
     }
@@ -7421,6 +7477,38 @@ impl MapHandle {
         unsafe {
             call.discard(|completion, diagnostic| {
                 sys::mln_map_set_style_url(handle, url_value, completion, diagnostic)
+            })
+        }
+    }
+    #[pyo3(signature = (options))]
+    fn set_terrain_options(
+        &self,
+        py: Python<'_>,
+        options: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let options_value = generated_input_mln_map_terrain_options(&options.clone(), storage)?;
+        let handle = self.input();
+        unsafe {
+            call.command(|completion, diagnostic| {
+                sys::mln_map_set_terrain_options(handle, &options_value, completion, diagnostic)
+            })
+        }
+    }
+    #[pyo3(signature = (options))]
+    fn _discard_set_terrain_options(
+        &self,
+        py: Python<'_>,
+        options: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let options_value = generated_input_mln_map_terrain_options(&options.clone(), storage)?;
+        let handle = self.input();
+        unsafe {
+            call.discard(|completion, diagnostic| {
+                sys::mln_map_set_terrain_options(handle, &options_value, completion, diagnostic)
             })
         }
     }

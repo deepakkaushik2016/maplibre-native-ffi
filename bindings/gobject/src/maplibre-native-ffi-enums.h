@@ -1405,6 +1405,34 @@ GType maplibre_native_ffi_style_vector_tile_encoding_get_type(
   (maplibre_native_ffi_style_vector_tile_encoding_get_type())
 
 /**
+ * MaplibreNativeFfiTerrainLoadMode:
+ * @MAPLIBRE_NATIVE_FFI_TERRAIN_LOAD_MODE_QUALITY: Builds every revealed tile in
+ *   the frame that reveals it, and keeps up to 64 mesh tiles. The sharpest, but
+ *   a frame can stall on a burst of tiles.
+ * @MAPLIBRE_NATIVE_FFI_TERRAIN_LOAD_MODE_BALANCED: Builds up to 32 new tiles
+ *   and redraws up to 16 terrain textures a frame, and keeps up to 48 mesh
+ *   tiles.
+ * @MAPLIBRE_NATIVE_FFI_TERRAIN_LOAD_MODE_PERFORMANCE: Builds up to 8 new tiles
+ *   and redraws up to 4 terrain textures a frame, and keeps up to 24 mesh
+ *   tiles. The smoothest on a weak GPU, and the shortest view distance.
+ *
+ * How a map loads 3D terrain: how much it builds in one frame, and how many
+ * terrain mesh tiles a frame may have.
+ *
+ * See `mln_terrain_load_mode` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+typedef enum {
+  MAPLIBRE_NATIVE_FFI_TERRAIN_LOAD_MODE_QUALITY = 0,
+  MAPLIBRE_NATIVE_FFI_TERRAIN_LOAD_MODE_BALANCED = 1,
+  MAPLIBRE_NATIVE_FFI_TERRAIN_LOAD_MODE_PERFORMANCE = 2,
+} MaplibreNativeFfiTerrainLoadMode;
+
+GType maplibre_native_ffi_terrain_load_mode_get_type(void) G_GNUC_CONST;
+#define MAPLIBRE_NATIVE_FFI_TYPE_TERRAIN_LOAD_MODE \
+  (maplibre_native_ffi_terrain_load_mode_get_type())
+
+/**
  * MaplibreNativeFfiTileLodMode:
  * @MAPLIBRE_NATIVE_FFI_TILE_LOD_MODE_DEFAULT: Uses the most detail at the
  *   center of the screen.

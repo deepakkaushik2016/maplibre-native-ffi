@@ -19,6 +19,7 @@ LogicalExtent struct
 LogicalSize struct
 MapProjectionCameraResult struct
 MapSnapshot struct
+MapTerrainSettings struct
 MapTileSettings struct
 MapView struct
 MapViewport struct

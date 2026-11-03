@@ -224,6 +224,13 @@ internal static unsafe partial class NativeMethods
     );
 
     [LibraryImport(LibraryName)]
+    internal static partial mln_status mln_map_anchor_center_on_terrain(
+        MlnMap map,
+        mln_completion* completion,
+        mln_diagnostic* out_diagnostic
+    );
+
+    [LibraryImport(LibraryName)]
     internal static partial mln_status mln_map_apply_camera_delta(
         MlnMap map,
         mln_camera_delta* delta,
@@ -1034,6 +1041,14 @@ internal static unsafe partial class NativeMethods
     internal static partial mln_status mln_map_set_style_url(
         MlnMap map,
         mln_buffer_view url,
+        mln_completion* completion,
+        mln_diagnostic* out_diagnostic
+    );
+
+    [LibraryImport(LibraryName)]
+    internal static partial mln_status mln_map_set_terrain_options(
+        MlnMap map,
+        mln_map_terrain_options* options,
         mln_completion* completion,
         mln_diagnostic* out_diagnostic
     );

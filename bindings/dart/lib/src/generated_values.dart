@@ -1372,6 +1372,35 @@ final class StyleVectorTileEncoding extends _Enum {
   };
 }
 
+/// How a map loads 3D terrain: how much it builds in one frame, and how many
+/// terrain mesh tiles a frame may have.
+///
+/// See `mln_terrain_load_mode` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+final class TerrainLoadMode extends _Enum {
+  const TerrainLoadMode.fromRawValue(super.rawValue);
+
+  /// Builds every revealed tile in the frame that reveals it, and keeps up to
+  /// 64 mesh tiles. The sharpest, but a frame can stall on a burst of tiles.
+  static const quality = TerrainLoadMode.fromRawValue(0);
+
+  /// Builds up to 32 new tiles and redraws up to 16 terrain textures a frame,
+  /// and keeps up to 48 mesh tiles.
+  static const balanced = TerrainLoadMode.fromRawValue(1);
+
+  /// Builds up to 8 new tiles and redraws up to 4 terrain textures a frame, and
+  /// keeps up to 24 mesh tiles. The smoothest on a weak GPU, and the shortest
+  /// view distance.
+  static const performance = TerrainLoadMode.fromRawValue(2);
+  @override
+  String toString() => switch (rawValue) {
+    0 => 'TerrainLoadMode.quality',
+    1 => 'TerrainLoadMode.balanced',
+    2 => 'TerrainLoadMode.performance',
+    _ => 'TerrainLoadMode($rawValue)',
+  };
+}
+
 /// How the map picks the level of detail of its tiles.
 ///
 /// See `mln_tile_lod_mode` in the
@@ -4805,6 +4834,29 @@ final class FreeCamera extends _Value {
       _describe('FreeCamera', const ['position', 'orientation']);
 }
 
+/// All the settings for how a map loads its style's terrain.
+///
+/// Its members mean the same as those of `MapTerrainOptions`.
+///
+/// See `mln_map_terrain_settings` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+final class MapTerrainSettings extends _Value {
+  const MapTerrainSettings({
+    this.loadMode = const TerrainLoadMode.fromRawValue(0),
+    this.centerClampedToGround = false,
+  });
+  final TerrainLoadMode loadMode;
+  final bool centerClampedToGround;
+
+  @override
+  List<Object?> get _members => [loadMode, centerClampedToGround];
+  @override
+  String toString() => _describe('MapTerrainSettings', const [
+    'loadMode',
+    'centerClampedToGround',
+  ]);
+}
+
 /// A map's state, as `MapHandle.getSnapshot()` reads it.
 ///
 /// See `mln_map_snapshot` in the
@@ -4823,6 +4875,7 @@ final class MapSnapshot extends _Value {
     this.bounds = const CameraBounds(),
     this.freeCamera = const FreeCamera(),
     this.view = const MapView(),
+    this.terrain = const MapTerrainSettings(),
   });
   final MapDebugFlag debugFlags;
 
@@ -4842,6 +4895,7 @@ final class MapSnapshot extends _Value {
   final CameraBounds bounds;
   final FreeCamera freeCamera;
   final MapView view;
+  final MapTerrainSettings terrain;
 
   @override
   List<Object?> get _members => [
@@ -4857,6 +4911,7 @@ final class MapSnapshot extends _Value {
     bounds,
     freeCamera,
     view,
+    terrain,
   ];
   @override
   String toString() => _describe('MapSnapshot', const [
@@ -4872,6 +4927,7 @@ final class MapSnapshot extends _Value {
     'bounds',
     'freeCamera',
     'view',
+    'terrain',
   ]);
 }
 
@@ -5405,6 +5461,45 @@ final class StyleImageOptions extends _Value {
     'pixelRatio',
     'sdf',
     'keepUnused',
+  ]);
+}
+
+/// How the map loads its style's terrain, and how its camera keeps to it.
+///
+/// The options apply only while the style has terrain.
+///
+/// See `mln_map_terrain_options` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+final class MapTerrainOptions extends _Value {
+  const MapTerrainOptions({this.loadMode, this.centerClampedToGround});
+
+  /// `TerrainLoadMode.quality` by default.
+  final TerrainLoadMode? loadMode;
+
+  /// Whether the camera's center follows the height of the terrain under it,
+  /// rather than staying at its `center_altitude`. Off by default.
+  ///
+  /// With it on, the camera also keeps its eye 10 m above the ground under the
+  /// eye. During a gesture, the center keeps the height it had when the gesture
+  /// started, and the gesture's end moves the center onto the ground without
+  /// moving the camera, as `MapHandle.anchorCenterOnTerrain()` does.
+  final bool? centerClampedToGround;
+
+  /// A copy of this value with the given members replaced.
+  MapTerrainOptions copyWith({
+    TerrainLoadMode? loadMode,
+    bool? centerClampedToGround,
+  }) => MapTerrainOptions(
+    loadMode: loadMode ?? this.loadMode,
+    centerClampedToGround: centerClampedToGround ?? this.centerClampedToGround,
+  );
+
+  @override
+  List<Object?> get _members => [loadMode, centerClampedToGround];
+  @override
+  String toString() => _describe('MapTerrainOptions', const [
+    'loadMode',
+    'centerClampedToGround',
   ]);
 }
 

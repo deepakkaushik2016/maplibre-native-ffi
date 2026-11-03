@@ -143,6 +143,38 @@ auto mln_map_set_tile_options(
   });
 }
 
+auto mln_map_set_terrain_options(
+  mln_map map, const mln_map_terrain_options* options,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&] {
+    const auto validation = mln::core::validate_terrain_options_input(options);
+    if (validation != MLN_STATUS_OK) return validation;
+    const auto copied = *options;
+    return mln::core::submit_map_command(
+      map,
+      [copied](mln::core::MapObject& live) {
+        return mln::core::map_set_terrain_options(live, &copied);
+      },
+      completion
+    );
+  });
+}
+
+auto mln_map_anchor_center_on_terrain(
+  mln_map map, const mln_completion* completion, mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&] {
+    return mln::core::submit_map_command(
+      map,
+      [](mln::core::MapObject& live) {
+        return mln::core::map_anchor_center_on_terrain(live);
+      },
+      completion
+    );
+  });
+}
+
 auto mln_map_camera_for_lat_lng_bounds(
   mln_map map, mln_lat_lng_bounds bounds,
   const mln_camera_fit_options* fit_options, const mln_completion* completion,

@@ -40,6 +40,7 @@ import type {
   MapOptions,
   MapProjectionCameraResult,
   MapSnapshot,
+  MapTerrainOptions,
   MapTileOptions,
   MapView,
   MapViewportOptions,
@@ -1052,6 +1053,30 @@ export class MapHandle extends Owner {
         sourceJson,
         completion,
       ),
+    );
+  }
+
+  /**
+   * Moves the camera's center onto the terrain under it, without moving the
+   * camera.
+   *
+   * The center slides along the line of sight to the ground, and the zoom rises
+   * by the distance saved, so the view stays the same. Rotating and pitching
+   * then turn around the ground being looked at. Call it when a gesture starts.
+   *
+   * The camera stays as it is when the style has no terrain, before a frame has
+   * rendered the ground under the center, when the pitch is so steep that the
+   * line of sight nearly grazes the ground, when the ground is at or behind the
+   * camera, and when the zoom limits or bounds would cut the move short.
+   * Afterwards the camera reports another center, zoom, and `center_altitude`
+   * for the same view.
+   *
+   * See `mln_map_anchor_center_on_terrain` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+   */
+  anchorCenterOnTerrain(): Promise<CommandCompletion> {
+    return command((completion) =>
+      native.mln_map_anchor_center_on_terrain(this.id, completion),
     );
   }
 
@@ -3483,6 +3508,21 @@ export class MapHandle extends Owner {
   }
 
   /**
+   * Sets how the map loads its style's terrain, and whether the camera's center
+   * follows the ground.
+   *
+   * Settings that `options` doesn't set keep their current values.
+   *
+   * See `mln_map_set_terrain_options` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+   */
+  setTerrainOptions(options: MapTerrainOptions): Promise<CommandCompletion> {
+    return command((completion) =>
+      native.mln_map_set_terrain_options(this.id, options, completion),
+    );
+  }
+
+  /**
    * Sets how the map chooses which tiles to load, and at what detail.
    *
    * Settings that `options` doesn't set keep their current values.
@@ -3682,6 +3722,28 @@ export class MapHandleDiscarding {
       sourceJson,
       undefined,
     );
+  }
+
+  /**
+   * Moves the camera's center onto the terrain under it, without moving the
+   * camera.
+   *
+   * The center slides along the line of sight to the ground, and the zoom rises
+   * by the distance saved, so the view stays the same. Rotating and pitching
+   * then turn around the ground being looked at. Call it when a gesture starts.
+   *
+   * The camera stays as it is when the style has no terrain, before a frame has
+   * rendered the ground under the center, when the pitch is so steep that the
+   * line of sight nearly grazes the ground, when the ground is at or behind the
+   * camera, and when the zoom limits or bounds would cut the move short.
+   * Afterwards the camera reports another center, zoom, and `center_altitude`
+   * for the same view.
+   *
+   * See `mln_map_anchor_center_on_terrain` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+   */
+  anchorCenterOnTerrain(): void {
+    native.mln_map_anchor_center_on_terrain(this.#owner.id, undefined);
   }
 
   /**
@@ -4479,6 +4541,19 @@ export class MapHandleDiscarding {
    */
   setStyleUrl(url: string): void {
     native.mln_map_set_style_url(this.#owner.id, url, undefined);
+  }
+
+  /**
+   * Sets how the map loads its style's terrain, and whether the camera's center
+   * follows the ground.
+   *
+   * Settings that `options` doesn't set keep their current values.
+   *
+   * See `mln_map_set_terrain_options` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+   */
+  setTerrainOptions(options: MapTerrainOptions): void {
+    native.mln_map_set_terrain_options(this.#owner.id, options, undefined);
   }
 
   /**

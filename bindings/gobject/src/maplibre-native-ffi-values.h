@@ -237,6 +237,12 @@ G_DECLARE_FINAL_TYPE(
   MaplibreNativeFfiMapOptions, maplibre_native_ffi_map_options,
   MAPLIBRE_NATIVE_FFI, MAP_OPTIONS, GObject
 )
+#define MAPLIBRE_NATIVE_FFI_TYPE_MAP_TERRAIN_OPTIONS \
+  (maplibre_native_ffi_map_terrain_options_get_type())
+G_DECLARE_FINAL_TYPE(
+  MaplibreNativeFfiMapTerrainOptions, maplibre_native_ffi_map_terrain_options,
+  MAPLIBRE_NATIVE_FFI, MAP_TERRAIN_OPTIONS, GObject
+)
 #define MAPLIBRE_NATIVE_FFI_TYPE_MAP_TILE_OPTIONS \
   (maplibre_native_ffi_map_tile_options_get_type())
 G_DECLARE_FINAL_TYPE(
@@ -1056,6 +1062,23 @@ typedef struct {
 } MaplibreNativeFfiMapView;
 
 /**
+ * MaplibreNativeFfiMapTerrainSettings:
+ * @load_mode: load_mode
+ * @center_clamped_to_ground: center_clamped_to_ground
+ *
+ * All the settings for how a map loads its style's terrain.
+ *
+ * Its members mean the same as those of `MaplibreNativeFfiMapTerrainOptions`.
+ *
+ * See `mln_map_terrain_settings` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+typedef struct {
+  MaplibreNativeFfiTerrainLoadMode load_mode;
+  gboolean center_clamped_to_ground;
+} MaplibreNativeFfiMapTerrainSettings;
+
+/**
  * MaplibreNativeFfiMapSnapshot:
  * @debug_flags: debug_flags
  * @generation: Grows with each change to the map's state.
@@ -1071,6 +1094,7 @@ typedef struct {
  * @bounds: bounds
  * @free_camera: free_camera
  * @view: view
+ * @terrain: terrain
  *
  * A map's state, as `maplibre_native_ffi_map_get_snapshot()` reads it.
  *
@@ -1090,6 +1114,7 @@ typedef struct {
   MaplibreNativeFfiCameraBounds bounds;
   MaplibreNativeFfiFreeCamera free_camera;
   MaplibreNativeFfiMapView view;
+  MaplibreNativeFfiMapTerrainSettings terrain;
 } MaplibreNativeFfiMapSnapshot;
 
 /**
@@ -7368,6 +7393,37 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(
   MaplibreNativeFfiMapView, maplibre_native_ffi_map_view_free
 )
 
+GType maplibre_native_ffi_map_terrain_settings_get_type(void) G_GNUC_CONST;
+#define MAPLIBRE_NATIVE_FFI_TYPE_MAP_TERRAIN_SETTINGS \
+  (maplibre_native_ffi_map_terrain_settings_get_type())
+
+/**
+ * maplibre_native_ffi_map_terrain_settings_copy:
+ *
+ * Copies the value.
+ *
+ * Returns: (transfer full): the copy
+ */
+MaplibreNativeFfiMapTerrainSettings*
+maplibre_native_ffi_map_terrain_settings_copy(
+  const MaplibreNativeFfiMapTerrainSettings* self
+);
+
+/**
+ * maplibre_native_ffi_map_terrain_settings_free:
+ * @self: (transfer full) (nullable): the value
+ *
+ * Frees the value.
+ */
+void maplibre_native_ffi_map_terrain_settings_free(
+  MaplibreNativeFfiMapTerrainSettings* self
+);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(
+  MaplibreNativeFfiMapTerrainSettings,
+  maplibre_native_ffi_map_terrain_settings_free
+)
+
 GType maplibre_native_ffi_map_snapshot_get_type(void) G_GNUC_CONST;
 #define MAPLIBRE_NATIVE_FFI_TYPE_MAP_SNAPSHOT \
   (maplibre_native_ffi_map_snapshot_get_type())
@@ -7394,6 +7450,111 @@ void maplibre_native_ffi_map_snapshot_free(MaplibreNativeFfiMapSnapshot* self);
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(
   MaplibreNativeFfiMapSnapshot, maplibre_native_ffi_map_snapshot_free
 )
+
+/**
+ * MaplibreNativeFfiMapTerrainOptions:
+ *
+ * How the map loads its style's terrain, and how its camera keeps to it.
+ *
+ * The options apply only while the style has terrain.
+ *
+ * A member that a `has_` method reports on is unset until its property or
+ * setter sets it.
+ *
+ * See `mln_map_terrain_options` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+ */
+/**
+ * maplibre_native_ffi_map_terrain_options_new: (constructor)
+ *
+ * Creates a `MaplibreNativeFfiMapTerrainOptions` whose members are zero, empty, or unset.
+ *
+ * Returns: (transfer full): the new value
+ */
+MaplibreNativeFfiMapTerrainOptions* maplibre_native_ffi_map_terrain_options_new(
+  void
+);
+
+/**
+ * MaplibreNativeFfiMapTerrainOptions:load-mode: (setter set_load_mode) (getter get_load_mode)
+ *
+ * `MAPLIBRE_NATIVE_FFI_TERRAIN_LOAD_MODE_QUALITY` by default.
+ */
+/**
+ * maplibre_native_ffi_map_terrain_options_get_load_mode: (get-property load-mode)
+ *
+ * Gets `MaplibreNativeFfiMapTerrainOptions:load-mode`.
+ *
+ * Returns: the value
+ */
+MaplibreNativeFfiTerrainLoadMode
+maplibre_native_ffi_map_terrain_options_get_load_mode(
+  MaplibreNativeFfiMapTerrainOptions* self
+);
+
+/**
+ * maplibre_native_ffi_map_terrain_options_has_load_mode:
+ *
+ * Whether `MaplibreNativeFfiMapTerrainOptions:load-mode` is set.
+ *
+ * Returns: whether the member is set
+ */
+gboolean maplibre_native_ffi_map_terrain_options_has_load_mode(
+  MaplibreNativeFfiMapTerrainOptions* self
+);
+
+/**
+ * maplibre_native_ffi_map_terrain_options_set_load_mode: (set-property load-mode)
+ *
+ * Sets `MaplibreNativeFfiMapTerrainOptions:load-mode`.
+ */
+void maplibre_native_ffi_map_terrain_options_set_load_mode(
+  MaplibreNativeFfiMapTerrainOptions* self,
+  MaplibreNativeFfiTerrainLoadMode value
+);
+
+/**
+ * MaplibreNativeFfiMapTerrainOptions:center-clamped-to-ground: (setter set_center_clamped_to_ground) (getter get_center_clamped_to_ground)
+ *
+ * Whether the camera's center follows the height of the terrain under it,
+ * rather than staying at its `center_altitude`. Off by default.
+ *
+ * With it on, the camera also keeps its eye 10 m above the ground under the
+ * eye. During a gesture, the center keeps the height it had when the gesture
+ * started, and the gesture's end moves the center onto the ground without
+ * moving the camera, as
+ * `maplibre_native_ffi_map_anchor_center_on_terrain_async()` does.
+ */
+/**
+ * maplibre_native_ffi_map_terrain_options_get_center_clamped_to_ground: (get-property center-clamped-to-ground)
+ *
+ * Gets `MaplibreNativeFfiMapTerrainOptions:center-clamped-to-ground`.
+ *
+ * Returns: the value
+ */
+gboolean maplibre_native_ffi_map_terrain_options_get_center_clamped_to_ground(
+  MaplibreNativeFfiMapTerrainOptions* self
+);
+
+/**
+ * maplibre_native_ffi_map_terrain_options_has_center_clamped_to_ground:
+ *
+ * Whether `MaplibreNativeFfiMapTerrainOptions:center-clamped-to-ground` is set.
+ *
+ * Returns: whether the member is set
+ */
+gboolean maplibre_native_ffi_map_terrain_options_has_center_clamped_to_ground(
+  MaplibreNativeFfiMapTerrainOptions* self
+);
+
+/**
+ * maplibre_native_ffi_map_terrain_options_set_center_clamped_to_ground: (set-property center-clamped-to-ground)
+ *
+ * Sets `MaplibreNativeFfiMapTerrainOptions:center-clamped-to-ground`.
+ */
+void maplibre_native_ffi_map_terrain_options_set_center_clamped_to_ground(
+  MaplibreNativeFfiMapTerrainOptions* self, gboolean value
+);
 
 /**
  * MaplibreNativeFfiMapTileOptions:

@@ -311,6 +311,15 @@ int32_t mln_kw_mln_map_add_style_source_json(
   );
 }
 
+int32_t mln_kw_mln_map_anchor_center_on_terrain(
+  int64_t map, uintptr_t completion, uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_map_anchor_center_on_terrain(
+    (mln_map)map, (const mln_completion*)completion,
+    (mln_diagnostic*)out_diagnostic
+  );
+}
+
 int32_t mln_kw_mln_map_apply_camera_delta(
   int64_t map, uintptr_t delta, uintptr_t completion, uintptr_t out_diagnostic
 ) {
@@ -1324,6 +1333,15 @@ int32_t mln_kw_mln_map_set_style_url(
 ) {
   return (int32_t)mln_map_set_style_url(
     (mln_map)map, *(const mln_buffer_view*)(uintptr_t)url,
+    (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
+  );
+}
+
+int32_t mln_kw_mln_map_set_terrain_options(
+  int64_t map, uintptr_t options, uintptr_t completion, uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_map_set_terrain_options(
+    (mln_map)map, (const mln_map_terrain_options*)options,
     (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
   );
 }

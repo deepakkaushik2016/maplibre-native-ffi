@@ -346,6 +346,15 @@ static jint mln_map_add_style_source_json_jni(
   );
 }
 
+static jint mln_map_anchor_center_on_terrain_jni(
+  JNIEnv* env, jclass type, jlong map, jlong completion, jlong out_diagnostic
+) {
+  return (jint)mln_map_anchor_center_on_terrain(
+    (mln_map)map, MLN_JNI_POINTER(const mln_completion*, completion),
+    MLN_JNI_POINTER(mln_diagnostic*, out_diagnostic)
+  );
+}
+
 static jint mln_map_apply_camera_delta_jni(
   JNIEnv* env, jclass type, jlong map, jlong delta, jlong completion,
   jlong out_diagnostic
@@ -1484,6 +1493,17 @@ static jint mln_map_set_style_url_jni(
   );
 }
 
+static jint mln_map_set_terrain_options_jni(
+  JNIEnv* env, jclass type, jlong map, jlong options, jlong completion,
+  jlong out_diagnostic
+) {
+  return (jint)mln_map_set_terrain_options(
+    (mln_map)map, MLN_JNI_POINTER(const mln_map_terrain_options*, options),
+    MLN_JNI_POINTER(const mln_completion*, completion),
+    MLN_JNI_POINTER(mln_diagnostic*, out_diagnostic)
+  );
+}
+
 static jint mln_map_set_tile_options_jni(
   JNIEnv* env, jclass type, jlong map, jlong options, jlong completion,
   jlong out_diagnostic
@@ -2469,6 +2489,8 @@ const JNINativeMethod mln_jni_methods[] = {
    (void*)mln_map_add_style_layer_json_jni},
   {"mln_map_add_style_source_json", "(JJJJJ)I",
    (void*)mln_map_add_style_source_json_jni},
+  {"mln_map_anchor_center_on_terrain", "(JJJ)I",
+   (void*)mln_map_anchor_center_on_terrain_jni},
   {"mln_map_apply_camera_delta", "(JJJJ)I",
    (void*)mln_map_apply_camera_delta_jni},
   {"mln_map_attach_android_hardware_buffer_ring", "(JJJJJJJ)I",
@@ -2642,6 +2664,8 @@ const JNINativeMethod mln_jni_methods[] = {
   {"mln_map_set_style_transition_options", "(JJJJ)I",
    (void*)mln_map_set_style_transition_options_jni},
   {"mln_map_set_style_url", "(JJJJ)I", (void*)mln_map_set_style_url_jni},
+  {"mln_map_set_terrain_options", "(JJJJ)I",
+   (void*)mln_map_set_terrain_options_jni},
   {"mln_map_set_tile_options", "(JJJJ)I", (void*)mln_map_set_tile_options_jni},
   {"mln_map_set_viewport_options", "(JJJJ)I",
    (void*)mln_map_set_viewport_options_jni},
@@ -2870,6 +2894,8 @@ const JNINativeMethod mln_jni_critical_methods[] = {
    (void*)mln_map_add_style_layer_json_jni},
   {"mln_map_add_style_source_json", "(JJJJJ)I",
    (void*)mln_map_add_style_source_json_jni},
+  {"mln_map_anchor_center_on_terrain", "(JJJ)I",
+   (void*)mln_map_anchor_center_on_terrain_jni},
   {"mln_map_apply_camera_delta", "(JJJJ)I",
    (void*)mln_map_apply_camera_delta_jni},
   {"mln_map_attach_android_hardware_buffer_ring", "(JJJJJJJ)I",
@@ -3043,6 +3069,8 @@ const JNINativeMethod mln_jni_critical_methods[] = {
   {"mln_map_set_style_transition_options", "(JJJJ)I",
    (void*)mln_map_set_style_transition_options_jni},
   {"mln_map_set_style_url", "(JJJJ)I", (void*)mln_map_set_style_url_jni},
+  {"mln_map_set_terrain_options", "(JJJJ)I",
+   (void*)mln_map_set_terrain_options_jni},
   {"mln_map_set_tile_options", "(JJJJ)I", (void*)mln_map_set_tile_options_jni},
   {"mln_map_set_viewport_options", "(JJJJ)I",
    (void*)mln_map_set_viewport_options_jni},

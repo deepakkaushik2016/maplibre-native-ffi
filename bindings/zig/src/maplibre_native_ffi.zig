@@ -429,6 +429,26 @@ pub const Map = struct {
         return call.submit("mln_map_add_style_source_json", .handle, self, call.command, null, diagnostic, .{ source_id, source_json });
     }
 
+    /// Moves the camera's center onto the terrain under it, without moving the
+    /// camera.
+    ///
+    /// The center slides along the line of sight to the ground, and the zoom rises
+    /// by the distance saved, so the view stays the same. Rotating and pitching
+    /// then turn around the ground being looked at. Call it when a gesture starts.
+    ///
+    /// The camera stays as it is when the style has no terrain, before a frame has
+    /// rendered the ground under the center, when the pitch is so steep that the
+    /// line of sight nearly grazes the ground, when the ground is at or behind the
+    /// camera, and when the zoom limits or bounds would cut the move short.
+    /// Afterwards the camera reports another center, zoom, and `center_altitude`
+    /// for the same view.
+    ///
+    /// See `mln_map_anchor_center_on_terrain` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+    pub fn anchorCenterOnTerrain(self: Map, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
+        return call.submit("mln_map_anchor_center_on_terrain", .handle, self, call.command, null, diagnostic, .{});
+    }
+
     /// Moves the camera relative to where it is, as a gesture does.
     ///
     /// `delta` can pan the map's content by an offset on the screen, scale the
@@ -1815,6 +1835,17 @@ pub const Map = struct {
     ///   parses.
     pub fn setStyleUrl(self: Map, url: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
         return call.submit("mln_map_set_style_url", .handle, self, call.command, null, diagnostic, .{url});
+    }
+
+    /// Sets how the map loads its style's terrain, and whether the camera's center
+    /// follows the ground.
+    ///
+    /// Settings that `options` doesn't set keep their current values.
+    ///
+    /// See `mln_map_set_terrain_options` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/camera_8h.html).
+    pub fn setTerrainOptions(self: Map, options: MapTerrainOptions, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
+        return call.submit("mln_map_set_terrain_options", .handle, self, call.command, null, diagnostic, .{options});
     }
 
     /// Sets how the map chooses which tiles to load, and at what detail.
@@ -5466,6 +5497,7 @@ pub const MapSnapshot = struct {
     bounds: CameraBounds = .{},
     free_camera: FreeCamera = .{},
     view: MapView = .{},
+    terrain: MapTerrainSettings = .{},
     pub fn fromNative(raw: c.mln_map_snapshot) MapSnapshot {
         return .{
             .debug_flags = MapDebugFlag.fromNative(raw.debug_flags),
@@ -5480,6 +5512,57 @@ pub const MapSnapshot = struct {
             .bounds = CameraBounds.fromNative(raw.bounds),
             .free_camera = FreeCamera.fromNative(raw.free_camera),
             .view = MapView.fromNative(raw.view),
+            .terrain = MapTerrainSettings.fromNative(raw.terrain),
+        };
+    }
+};
+
+/// How the map loads its style's terrain, and how its camera keeps to it.
+///
+/// The options apply only while the style has terrain.
+///
+/// See `mln_map_terrain_options` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+pub const MapTerrainOptions = struct {
+    /// `TerrainLoadMode.quality` by default.
+    load_mode: ?TerrainLoadMode = null,
+    /// Whether the camera's center follows the height of the terrain under it,
+    /// rather than staying at its `center_altitude`. Off by default.
+    ///
+    /// With it on, the camera also keeps its eye 10 m above the ground under
+    /// the eye. During a gesture, the center keeps the height it had when the
+    /// gesture started, and the gesture's end moves the center onto the ground
+    /// without moving the camera, as `Map.anchorCenterOnTerrain()` does.
+    center_clamped_to_ground: ?bool = null,
+    pub fn toNative(self: MapTerrainOptions) c.mln_map_terrain_options {
+        var raw = std.mem.zeroes(c.mln_map_terrain_options);
+        raw.fields = 0;
+        raw.size = @sizeOf(c.mln_map_terrain_options);
+        marshal.present(&raw.fields, c.MLN_MAP_TERRAIN_OPTION_LOAD_MODE, &raw.load_mode, self.load_mode);
+        marshal.present(&raw.fields, c.MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND, &raw.center_clamped_to_ground, self.center_clamped_to_ground);
+        return raw;
+    }
+    pub fn fromNative(raw: c.mln_map_terrain_options) MapTerrainOptions {
+        return .{
+            .load_mode = if (raw.fields & c.MLN_MAP_TERRAIN_OPTION_LOAD_MODE != 0) TerrainLoadMode.fromNative(raw.load_mode) else null,
+            .center_clamped_to_ground = if (raw.fields & c.MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND != 0) raw.center_clamped_to_ground else null,
+        };
+    }
+};
+
+/// All the settings for how a map loads its style's terrain.
+///
+/// Its members mean the same as those of `MapTerrainOptions`.
+///
+/// See `mln_map_terrain_settings` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+pub const MapTerrainSettings = struct {
+    load_mode: TerrainLoadMode = .quality,
+    center_clamped_to_ground: bool = false,
+    pub fn fromNative(raw: c.mln_map_terrain_settings) MapTerrainSettings {
+        return .{
+            .load_mode = TerrainLoadMode.fromNative(raw.load_mode),
+            .center_clamped_to_ground = raw.center_clamped_to_ground,
         };
     }
 };
@@ -8867,6 +8950,27 @@ pub const StyleVectorTileEncoding = enum(u32) {
     pub const toNative = marshal.EnumMethods(@This()).toNative;
 };
 
+/// How a map loads 3D terrain: how much it builds in one frame, and how many
+/// terrain mesh tiles a frame may have.
+///
+/// See `mln_terrain_load_mode` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/map_8h.html).
+pub const TerrainLoadMode = enum(u32) {
+    /// Builds every revealed tile in the frame that reveals it, and keeps up to
+    /// 64 mesh tiles. The sharpest, but a frame can stall on a burst of tiles.
+    quality = 0,
+    /// Builds up to 32 new tiles and redraws up to 16 terrain textures a frame,
+    /// and keeps up to 48 mesh tiles.
+    balanced = 1,
+    /// Builds up to 8 new tiles and redraws up to 4 terrain textures a frame,
+    /// and keeps up to 24 mesh tiles. The smoothest on a weak GPU, and the
+    /// shortest view distance.
+    performance = 2,
+    _,
+    pub const fromNative = marshal.EnumMethods(@This()).fromNative;
+    pub const toNative = marshal.EnumMethods(@This()).toNative;
+};
+
 /// The layout of the pixels that `RenderSession.readTexture()` reads.
 ///
 /// See `mln_texture_image_info` in the
@@ -9912,6 +10016,11 @@ pub const MapDiscarding = struct {
         return call.discard("mln_map_add_style_source_json", .handle, map, null, diagnostic, .{ source_id, source_json });
     }
 
+    pub fn anchorCenterOnTerrain(self: MapDiscarding, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
+        const map = self.receiver;
+        return call.discard("mln_map_anchor_center_on_terrain", .handle, map, null, diagnostic, .{});
+    }
+
     pub fn applyCameraDelta(self: MapDiscarding, delta: CameraDelta, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
         const map = self.receiver;
         return call.discard("mln_map_apply_camera_delta", .handle, map, null, diagnostic, .{delta});
@@ -10145,6 +10254,11 @@ pub const MapDiscarding = struct {
     pub fn setStyleUrl(self: MapDiscarding, url: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
         const map = self.receiver;
         return call.discard("mln_map_set_style_url", .handle, map, null, diagnostic, .{url});
+    }
+
+    pub fn setTerrainOptions(self: MapDiscarding, options: MapTerrainOptions, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
+        const map = self.receiver;
+        return call.discard("mln_map_set_terrain_options", .handle, map, null, diagnostic, .{options});
     }
 
     pub fn setTileOptions(self: MapDiscarding, options: MapTileOptions, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
