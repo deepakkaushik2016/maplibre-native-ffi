@@ -10,6 +10,7 @@
 #include "support/map.h"
 #include "support/resources.h"
 #include "support/style.h"
+#include "support/terrain.h"
 #include "support/test_support.h"
 
 static bool source_exists(mln_map map, const char* id) {
@@ -581,22 +582,6 @@ static const uint8_t dem_png[] = {
   0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 };
 
-static void serve_dem_tile(
-  void* user_data, const mln_resource_request_info* request,
-  mln_resource_request handle
-) {
-  (void)user_data;
-  (void)request;
-  const mln_resource_response response = {
-    .size = sizeof(mln_resource_response),
-    .status = MLN_RESOURCE_RESPONSE_STATUS_OK,
-    .error_reason = MLN_RESOURCE_ERROR_REASON_NONE,
-    .bytes = dem_png,
-    .byte_count = sizeof(dem_png),
-  };
-  mln_test_request_answer(handle, &response);
-}
-
 // Appends formatted text at `*length` in `out`, which holds `capacity` bytes,
 // and fails the case when the text and its terminator don't fit.
 static void append_text(
@@ -686,10 +671,10 @@ static size_t count_changed_pixels(
 static void terrain_set_before_its_source_applies_once_the_source_arrives(
   void
 ) {
-  const mln_resource_provider provider = {
-    .size = sizeof(mln_resource_provider),
-    .callback = serve_dem_tile,
+  static const mln_test_dem_tile cone = {
+    .bytes = dem_png, .size = sizeof(dem_png)
   };
+  const mln_resource_provider provider = mln_test_dem_provider(&cone);
   mln_runtime runtime = mln_test_create_runtime();
   MLN_TEST_OK(mln_test_set_resource_provider(runtime, &provider));
   mln_map map = create_terrain_grid_map(runtime);

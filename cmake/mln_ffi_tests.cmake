@@ -413,6 +413,7 @@ function(mln_native_configure_suite target registry_dir)
       "${support_dir}/map.c"
       "${support_dir}/style.c"
       "${support_dir}/resources.c"
+      "${support_dir}/terrain.c"
       ${render_backend_files})
   # The browser has no sockets, so its transport runs against the runner's
   # routes instead of the loopback server.
