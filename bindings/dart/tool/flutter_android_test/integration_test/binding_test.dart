@@ -11,6 +11,9 @@ import '../../../test/lifecycle_test.dart' as lifecycle;
 import '../../../test/native_library_test.dart' as native_library;
 import '../../../test/render_test.dart' as render;
 import '../../../test/resource_transform_test.dart' as resource_transform;
+import '../../../test/style_terrain_test.dart' as style_terrain;
+import '../../../test/terrain_camera_test.dart' as terrain_camera;
+import '../../../test/terrain_elevation_test.dart' as terrain_elevation;
 import '../../../test/values_test.dart' as values;
 
 // Suites that collect garbage through the VM service or run standalone VM
@@ -28,6 +31,9 @@ void main() {
   lifecycle.main();
   resource_transform.main();
   render.main();
+  style_terrain.main();
+  terrain_camera.main();
+  terrain_elevation.main();
 }
 
 typedef _GetEnv =
