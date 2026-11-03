@@ -252,9 +252,10 @@ MLN_API mln_status mln_render_session_get_cluster_expansion_zoom(
  * 1000 m peak reads 2000 m. Divide by a nonzero exaggeration for the height of
  * the ground.
  *
- * The completion delivers no value when the style has no terrain, or when no
- * DEM tile that the session has loaded covers `point`, as before the tile
- * arrives. `point` needs a latitude within [-90, 90] and a finite longitude.
+ * The completion delivers no value when the style has no terrain, when no DEM
+ * tile that the session has loaded covers `point`, as before the tile arrives,
+ * or when the exaggeration lifts the height past what the engine's float holds.
+ * `point` needs a latitude within [-90, 90] and a finite longitude.
  *
  * Completes with:
  * - MLN_STATUS_INVALID_STATE when the session hasn't rendered a frame since it

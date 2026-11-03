@@ -138,6 +138,19 @@ static void the_height_is_the_terrain_the_last_frame_drew(void) {
   close_plateau_map(&view);
 }
 
+// The largest exaggeration a float holds lifts the plateau past what a float
+// can hold. A height that isn't a finite number of meters is no value.
+static void a_height_past_a_float_is_no_value(void) {
+  plateau_map view = {0};
+  open_plateau_map(&view, 1.0);
+  set_terrain(
+    view.map, "{\"source\":\"dem\",\"exaggeration\":3.4028234663852886e38}"
+  );
+  MLN_TEST_OK(mln_test_render_still_image(&view.fixture, view.map));
+  EXPECT_NO_ELEVATION(&view.fixture, on_the_plateau);
+  close_plateau_map(&view);
+}
+
 // A session creates its renderer for its first frame, so before that the
 // query fails as every other render session query does.
 static void a_session_that_never_rendered_has_no_renderer(void) {
@@ -214,6 +227,7 @@ static void malformed_queries_are_rejected_at_submission(void) {
 
 MLN_TEST_GROUP {
   RUN_TEST(the_height_is_the_terrain_the_last_frame_drew);
+  RUN_TEST(a_height_past_a_float_is_no_value);
   RUN_TEST(a_session_that_never_rendered_has_no_renderer);
   RUN_TEST(malformed_queries_are_rejected_at_submission);
 }

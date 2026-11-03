@@ -2906,6 +2906,11 @@ auto render_session_query_terrain_elevation(
   out_result = live->renderer->queryTerrainElevation(
     mln::LatLng{point.latitude, point.longitude}
   );
+  // A huge exaggeration can scale the ground past what the engine's float
+  // holds, and infinity is no height.
+  if (out_result && !std::isfinite(*out_result)) {
+    out_result.reset();
+  }
   return MLN_STATUS_OK;
 }
 

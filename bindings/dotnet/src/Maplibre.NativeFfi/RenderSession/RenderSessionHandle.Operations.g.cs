@@ -625,10 +625,11 @@ public sealed unsafe partial class RenderSessionHandle
     /// so it includes the style's terrain exaggeration: under an exaggeration
     /// of 2, a 1000 m peak reads 2000 m. Divide by a nonzero exaggeration for
     /// the height of the ground.</para>
-    /// <para>The completion delivers no value when the style has no terrain, or
+    /// <para>The completion delivers no value when the style has no terrain,
     /// when no DEM tile that the session has loaded covers <c>point</c>, as
-    /// before the tile arrives. <c>point</c> needs a latitude within [-90, 90]
-    /// and a finite longitude.</para>
+    /// before the tile arrives, or when the exaggeration lifts the height past
+    /// what the engine's float holds. <c>point</c> needs a latitude within
+    /// [-90, 90] and a finite longitude.</para>
     /// <para>See <c>mln_render_session_query_terrain_elevation</c> in the <see
     /// href="https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html">C API reference</see>.</para>
     /// <para>Errors:</para>

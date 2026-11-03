@@ -489,9 +489,10 @@ private constructor(
    * terrain exaggeration: under an exaggeration of 2, a 1000 m peak reads 2000 m. Divide by a
    * nonzero exaggeration for the height of the ground.
    *
-   * The completion delivers no value when the style has no terrain, or when no DEM tile that the
-   * session has loaded covers `point`, as before the tile arrives. `point` needs a latitude within
-   * &#91;-90, 90&#93; and a finite longitude.
+   * The completion delivers no value when the style has no terrain, when no DEM tile that the
+   * session has loaded covers `point`, as before the tile arrives, or when the exaggeration lifts
+   * the height past what the engine's float holds. `point` needs a latitude within &#91;-90,
+   * 90&#93; and a finite longitude.
    *
    * See `mln_render_session_query_terrain_elevation` in the
    * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
