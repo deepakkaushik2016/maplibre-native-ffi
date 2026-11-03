@@ -1,5 +1,5 @@
 .dart_tool/
-# Written by the core release job, and kept in the package by .pubignore.
-/hook/native_release.json
+# This fork commits hook/native_release.json, which pins its native
+# release, so that a Git dependency on this package downloads the archives.
 # The root ignores every build/ directory; this one holds the build:mobile task.
 !/.mise/tasks/build/

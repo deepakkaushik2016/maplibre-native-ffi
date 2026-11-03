@@ -344,8 +344,97 @@ void main() {
       release('v0.202610.2', [('android-arm64', 'opengl')], digest: '0' * 64);
       await expectLater(runHook(_android, mirror()), throwsStateError);
     });
+
+    test('release_url to the terrain release resolves an archive per listed '
+        'platform/backend', () async {
+      // The package's own pin, with each archive it names served as a
+      // stand-in whose digest replaces the pinned one.
+      final pin =
+          jsonDecode(await File('hook/native_release.json').readAsString())
+              as Map<String, Object?>;
+      expect(pin['tag'], 'terrain-3d-202611.1');
+      final artifacts = (pin['artifacts']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      expect(
+        {
+          for (final entry in artifacts)
+            (entry['platform'] as String, entry['backend'] as String),
+        },
+        {
+          for (final (platform, backend, _) in _terrainTargets)
+            (platform, backend),
+        },
+      );
+      for (final entry in artifacts) {
+        final platform = entry['platform']! as String;
+        final backend = entry['backend']! as String;
+        final name = entry['archive']! as String;
+        final library = platform.startsWith('android-')
+            ? 'libmaplibre-native-c.so'
+            : 'libmaplibre-native-c.dylib';
+        final bytes = GZipEncoder().encode(
+          TarEncoder().encode(
+            Archive()..addFile(
+              ArchiveFile.string(
+                '${name.replaceFirst(RegExp(r'\.tar\.gz$'), '')}/lib/$library',
+                '$platform-$backend',
+              ),
+            ),
+          ),
+        );
+        served['/${pin['tag']}/$name'] = bytes;
+        entry['sha256'] = sha256.convert(bytes).toString();
+      }
+      File.fromUri(temporary.uri.resolve('package/hook/native_release.json'))
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync(jsonEncode(pin));
+
+      for (final (platform, backend, target) in _terrainTargets) {
+        final output = await runHook(target, {
+          ...mirror(),
+          'backend': {target.targetOS.name: backend},
+        });
+        expect(await bundled(output), '$platform-$backend');
+      }
+    });
   });
 }
+
+CodeAssetExtension _androidTarget(Architecture architecture) =>
+    CodeAssetExtension(
+      targetArchitecture: architecture,
+      targetOS: OS.android,
+      linkModePreference: LinkModePreference.dynamic,
+      android: AndroidCodeConfig(targetNdkApi: 24),
+    );
+
+CodeAssetExtension _iOSTarget(IOSSdk sdk) => CodeAssetExtension(
+  targetArchitecture: Architecture.arm64,
+  targetOS: OS.iOS,
+  linkModePreference: LinkModePreference.dynamic,
+  iOS: IOSCodeConfig(targetSdk: sdk, targetVersion: 15),
+);
+
+/// The platforms and backends that the terrain release publishes, and
+/// a build target for each.
+final _terrainTargets = [
+  ('ios-arm64', 'metal', _iOSTarget(IOSSdk.iPhoneOS)),
+  ('ios-simulator-arm64', 'metal', _iOSTarget(IOSSdk.iPhoneSimulator)),
+  ('android-arm64', 'opengl', _androidTarget(Architecture.arm64)),
+  ('android-arm64', 'vulkan', _androidTarget(Architecture.arm64)),
+  ('android-x64', 'opengl', _androidTarget(Architecture.x64)),
+  ('android-x64', 'vulkan', _androidTarget(Architecture.x64)),
+  (
+    'macos-arm64',
+    'metal',
+    CodeAssetExtension(
+      targetArchitecture: Architecture.arm64,
+      targetOS: OS.macOS,
+      linkModePreference: LinkModePreference.dynamic,
+      macOS: MacOSCodeConfig(targetVersion: 13),
+    ),
+  ),
+];
 
 /// Writes an install prefix's descriptor and [libraries], each
 /// library holding the platform and backend that it stands in for, and returns
