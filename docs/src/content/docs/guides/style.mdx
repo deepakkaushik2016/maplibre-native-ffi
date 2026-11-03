@@ -1,8 +1,9 @@
 ---
 title: Style
-description: Load a style, and add and change its sources, layers, and images.
-# Scope: loading a style, and adding and changing its sources, layers, and
-# images. The style spec itself belongs in its own docs.
+description:
+  Load a style, and add and change its sources, layers, images, and terrain.
+# Scope: loading a style, and adding and changing its sources, layers, images,
+# and terrain. The style spec itself belongs in its own docs.
 ---
 
 import { Aside } from "@astrojs/starlight/components";
@@ -11,7 +12,7 @@ import Snippet from "../../../components/Snippet.astro";
 
 A style describes what a map shows: its sources supply data, and its layers draw
 that data in order. This guide shows how to load a style and change its sources,
-layers, and images. Sources and layers use the JSON of the
+layers, images, and terrain. Sources and layers use the JSON of the
 [MapLibre style spec](https://maplibre.org/maplibre-style-spec/).
 
 ## Load a style
@@ -79,3 +80,22 @@ missing-image event, whose [](api:mln_runtime_event_style_image.image_id) names
 the image. Set the image when the event arrives.
 
 <Snippet page="style" region="missing-image" />
+
+## Show terrain
+
+A style's [terrain](https://maplibre.org/maplibre-style-spec/terrain/) raises
+the map onto the heights of a `raster-dem` source. Give the style a `terrain`
+object, or set one with [](api:mln_map_set_style_terrain_json). JSON `null`
+removes it, and [](api:mln_map_get_style_terrain_json) reads it back. The
+terrain can name a source that the style doesn't have yet, and shows once you
+add the source.
+
+An `exaggeration` must be a finite number of at least 0. Setting one outside
+that range fails, and a style document with one loads without its terrain.
+
+<Aside type="caution">
+  A pitched view of terrain needs the camera's center to follow the ground,
+  which is off by default. Without it, the camera can sit under the ground and
+  the map shows nothing. See [Follow the
+  terrain](/maplibre-native-ffi/guides/camera/#follow-the-terrain).
+</Aside>

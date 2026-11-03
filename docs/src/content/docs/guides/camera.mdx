@@ -1,10 +1,11 @@
 ---
 title: Camera
 description:
-  Move, animate, and fit the camera, apply gestures, and convert between pixels
-  and coordinates.
+  Move, animate, and fit the camera, follow terrain, apply gestures, and convert
+  between pixels and coordinates.
 # Scope: reading and changing the camera, animations, fitting bounds, limits,
-# applying gestures, and converting between screen pixels and coordinates.
+# following terrain, applying gestures, and converting between screen pixels
+# and coordinates.
 ---
 
 import Snippet from "../../../components/Snippet.astro";
@@ -60,6 +61,22 @@ To keep the camera within an area, set the map's bounds with
 pitch to ranges.
 
 <Snippet page="camera" region="limit" />
+
+## Follow the terrain
+
+Over a style's terrain, the camera's center keeps its `center_altitude`, which
+is sea level unless you set it. Over high ground that puts a pitched camera
+under the ground. To have the center follow the height of the ground under it,
+turn on `center_clamped_to_ground` with [](api:mln_map_set_terrain_options). The
+same options choose how many terrain tiles the map loads, with
+[](api:mln_terrain_load_mode).
+
+The center follows ground that the map has loaded. Until the ground under the
+center loads, the center keeps its height.
+
+When a gesture starts, [](api:mln_map_anchor_center_on_terrain) moves the center
+onto the ground that the camera looks at, without moving the camera, so that
+rotating and pitching turn around that ground.
 
 ## Apply gestures
 

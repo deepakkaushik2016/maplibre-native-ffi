@@ -1,13 +1,14 @@
 ---
 title: Query
-description: Find the features on the map or in a source.
-# Scope: querying rendered features and source features.
+description:
+  Find the features on the map or in a source, and the terrain's height.
+# Scope: querying rendered features, source features, and terrain height.
 ---
 
 import Snippet from "../../../components/Snippet.astro";
 
 This guide shows how to find the features the map draws, or the features a
-source has loaded.
+source has loaded, and how to read the height of the terrain.
 
 Queries run through the map's render session. A rendered query reads the last
 frame, so after a camera or style change, render a frame before you query.
@@ -31,3 +32,14 @@ A source query only sees the tiles that the source has loaded for the current
 view, and a source loads tiles only while a visible layer uses it.
 
 <Snippet page="query" region="source" />
+
+## Query the terrain's height
+
+To read the height of the terrain at a coordinate, use
+[](api:mln_render_session_query_terrain_elevation). The height is in meters
+above sea level as the last frame drew it, so it includes the terrain's
+exaggeration.
+
+The query has no value where the style has no terrain, or where the session
+hasn't loaded the ground yet. Before the session's first frame it fails instead,
+since there is no frame to read.
