@@ -3,6 +3,7 @@
 
 #include <math.h>
 
+#include "support/camera.h"
 #include "support/frames.h"
 #include "support/map.h"
 #include "support/resources.h"
@@ -31,15 +32,65 @@ static const uint8_t plateau_1600_png[] = {
   0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 };
 
+// The same, at 1555 m.
+static const uint8_t ledge_png[] = {
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
+  0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x20, 0x08, 0x02,
+  0x00, 0x00, 0x00, 0xfc, 0x18, 0xed, 0xa3, 0x00, 0x00, 0x00, 0x29, 0x49, 0x44,
+  0x41, 0x54, 0x78, 0xda, 0xed, 0xcd, 0x41, 0x09, 0x00, 0x00, 0x08, 0x04, 0xb0,
+  0xb3, 0xa8, 0x65, 0x2d, 0x66, 0x0a, 0x1f, 0xc2, 0x60, 0xff, 0xa5, 0xa6, 0x4f,
+  0x45, 0x20, 0x10, 0x08, 0x04, 0x02, 0x81, 0x40, 0x20, 0x10, 0x7c, 0x09, 0x16,
+  0xb4, 0x28, 0x88, 0x3d, 0xbb, 0x1f, 0x64, 0xf2, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
+};
+
+// The same, at 100 m.
+static const uint8_t lowland_png[] = {
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
+  0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x20, 0x08, 0x02,
+  0x00, 0x00, 0x00, 0xfc, 0x18, 0xed, 0xa3, 0x00, 0x00, 0x00, 0x28, 0x49, 0x44,
+  0x41, 0x54, 0x78, 0xda, 0xed, 0xcd, 0xb1, 0x09, 0x00, 0x00, 0x08, 0x03, 0xb0,
+  0xfa, 0xbd, 0x78, 0xb5, 0x57, 0x38, 0x08, 0x81, 0xec, 0x49, 0x4d, 0x9f, 0x8a,
+  0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x81, 0x40, 0x20, 0xf8, 0x12, 0x2c, 0x36,
+  0xd4, 0x4c, 0x3d, 0xc4, 0x27, 0x79, 0xc8, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
+  0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
+};
+
 static const double pi = 3.14159265358979323846;
 
 // Answers each DEM tile with its plateau and each parcels tile with no
-// content, and counts the parcels tiles.
+// content, and counts the parcels tiles. With `south` set, the DEM tiles
+// south of the z9 tile edge at `step_latitude` hold `south` instead, so the
+// ground steps up there.
 typedef struct terrain_provider {
   const uint8_t* dem;
   size_t dem_size;
+  const uint8_t* south;
+  size_t south_size;
   atomic_int parcel_requests;
 } terrain_provider;
+
+// The northern edge of the z9 tiles in row 180.
+static const double step_latitude = 47.04018214480666;
+enum { step_row = 180, step_zoom = 9 };
+
+// Whether the DEM tile that `request` asks for lies south of the step.
+static bool south_of_step(const mln_resource_request_info* request) {
+  char url[128];
+  if (request->requested_url.size >= sizeof(url)) {
+    return false;
+  }
+  memcpy(url, request->requested_url.data, request->requested_url.size);
+  url[request->requested_url.size] = '\0';
+  const char* tile = strstr(url, "/dem/");
+  unsigned z = 0;
+  unsigned x = 0;
+  unsigned y = 0;
+  if (tile == NULL || sscanf(tile, "/dem/%u/%u/%u", &z, &x, &y) != 3) {
+    return false;
+  }
+  return z >= step_zoom && y >= ((unsigned)step_row << (z - step_zoom));
+}
 
 static bool url_contains(
   const mln_resource_request_info* request, const char* fragment
@@ -64,9 +115,10 @@ static void serve_terrain(
     .status = MLN_RESOURCE_RESPONSE_STATUS_NO_CONTENT,
   };
   if (url_contains(request, "/dem/")) {
+    const bool south = provider->south != NULL && south_of_step(request);
     response.status = MLN_RESOURCE_RESPONSE_STATUS_OK;
-    response.bytes = provider->dem;
-    response.byte_count = provider->dem_size;
+    response.bytes = south ? provider->south : provider->dem;
+    response.byte_count = south ? provider->south_size : provider->dem_size;
   } else if (url_contains(request, "/parcels/")) {
     atomic_fetch_add(&provider->parcel_requests, 1);
   }
@@ -404,10 +456,176 @@ static void anchoring_leaves_a_camera_in_the_ground(void) {
   close_plateau_view(&view);
 }
 
+// --- The ground under the eye -------------------------------------------
+
+// Lowland at 100 m north of the step and higher ground south of it, seen
+// at pitch 60 with the terrain at its true height. The lowland stands above
+// sea level because the renderer reports the height under the center only
+// once it differs from 0 m.
+static const char step_style_format[] =
+  "{\"version\":8,\"center\":[11.39,%.6f],\"zoom\":%.2f,\"pitch\":60,"
+  "\"bearing\":%.0f,\"sources\":{\"dem\":{\"type\":\"raster-dem\","
+  "\"tiles\":[\"custom://dem/{z}/{x}/{y}.png\"],\"encoding\":\"mapbox\","
+  "\"tileSize\":256,\"maxzoom\":12}},\"terrain\":{\"source\":\"dem\","
+  "\"exaggeration\":1},\"layers\":[{\"id\":\"bg\",\"type\":"
+  "\"background\",\"paint\":{\"background-color\":\"#ffffff\"}}]}";
+
+static mln_map open_step_map(
+  mln_runtime runtime, mln_map_mode mode, double latitude, double zoom,
+  double bearing, mln_test_render_fixture* fixture
+) {
+  mln_map_options options = mln_test_map_options();
+  options.map_mode = mode;
+  mln_map map = mln_test_create_map_with_options(runtime, &options);
+  const mln_map_terrain_options clamp = {
+    .size = sizeof(mln_map_terrain_options),
+    .fields = MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND,
+    .center_clamped_to_ground = true,
+  };
+  set_terrain_options(map, &clamp);
+  char style[sizeof(step_style_format) + 64];
+  const int written =
+    snprintf(style, sizeof(style), step_style_format, latitude, zoom, bearing);
+  TEST_ASSERT_TRUE(written > 0 && (size_t)written < sizeof(style));
+  mln_test_load_style_and_wait(map, mln_buffer_view_from_cstr(style));
+  attach_sized(map, fixture, 390, 844);
+  return map;
+}
+
+// The phone's trail view looks north from a ledge at 1555 m: the center is
+// 1 km north of the step, over the lowland, and the eye about 2.5 km south of
+// it and 1457 m above it. On the lowland the eye would be 2 m above the ledge.
+// The clamp keeps the eye 10 m above the ground under it, at 1565 m, which
+// lifts the center 8 m off the lowland.
+static void the_clamp_keeps_the_eye_above_the_ground_under_it(void) {
+  terrain_provider provider = {
+    .dem = lowland_png,
+    .dem_size = sizeof(lowland_png),
+    .south = ledge_png,
+    .south_size = sizeof(ledge_png),
+  };
+  mln_runtime runtime = create_terrain_runtime(&provider);
+  mln_test_render_fixture fixture = {0};
+  mln_map map = open_step_map(
+    runtime, MLN_MAP_MODE_STATIC, step_latitude + 0.0027, 14.5, 0.0, &fixture
+  );
+
+  // The first frame covers the view before the DEM arrives, without the
+  // ground under the eye, which lies behind the bottom of the screen. The
+  // second has it.
+  MLN_TEST_OK(mln_test_render_still_image(&fixture, map));
+  MLN_TEST_OK(mln_test_render_still_image(&fixture, map));
+
+  const mln_camera camera = read_camera(map);
+  const eye_meters eye = read_eye(map, camera.center.latitude);
+  TEST_ASSERT_DOUBLE_WITHIN(1.0, 1565.0, eye.z);
+  TEST_ASSERT_DOUBLE_WITHIN(1.0, 108.0, camera.center_altitude);
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
+// --- An animation onto higher ground -------------------------------------
+
+// Renders one frame of a continuous map and reads the camera it published.
+static mln_map_snapshot render_frame_snapshot(
+  const mln_test_render_fixture* fixture, mln_map map
+) {
+  mln_frame_demand demand = {.size = sizeof(mln_frame_demand)};
+  MLN_TEST_OK(
+    mln_render_session_demand_frame(fixture->session, &demand, NULL)
+  );
+  mln_render_frame_batch_release(mln_test_render_wait_for_results(fixture));
+  MLN_TEST_OK(mln_test_map_fence(map));
+  mln_map_snapshot snapshot = {.size = sizeof(mln_map_snapshot)};
+  MLN_TEST_OK(mln_map_get_snapshot(map, &snapshot, NULL));
+  return snapshot;
+}
+
+// The clamped center rides the lowland, looking south over the step at the
+// plateau. A two-second ease carries the center 9 km south onto the plateau.
+// The map learns the ground there while the ease runs, so the center's height
+// eases up with the move rather than staying at 100 m and jumping 1500 m once
+// the ease ends.
+static void an_ease_onto_higher_ground_eases_the_center_up(void) {
+  terrain_provider provider = {
+    .dem = lowland_png,
+    .dem_size = sizeof(lowland_png),
+    .south = plateau_1600_png,
+    .south_size = sizeof(plateau_1600_png),
+  };
+  mln_runtime runtime = create_terrain_runtime(&provider);
+  mln_test_render_fixture fixture = {0};
+  mln_map map = open_step_map(
+    runtime, MLN_MAP_MODE_CONTINUOUS, step_latitude + 0.05, 14.5, 180.0,
+    &fixture
+  );
+  mln_test_render_until_idle(runtime, map, &fixture);
+  double previous = read_camera(map).center_altitude;
+  TEST_ASSERT_DOUBLE_WITHIN(1.0, 100.0, previous);
+
+  mln_test_transition_end probe;
+  mln_test_transition_end_init(&probe);
+  mln_camera_update ease = {
+    .size = sizeof(mln_camera_update),
+    .mode = MLN_CAMERA_UPDATE_MODE_EASE,
+    .camera =
+      {
+        .size = sizeof(mln_camera_options),
+        .fields = MLN_CAMERA_OPTION_CENTER,
+        .center = {.latitude = step_latitude - 0.03, .longitude = 11.39},
+      },
+    .animation = {
+      .fields = MLN_ANIMATION_OPTION_DURATION | MLN_ANIMATION_OPTION_EASING,
+      .duration_ms = 2000.0,
+      .easing = {.x1 = 0.0, .y1 = 0.0, .x2 = 1.0, .y2 = 1.0},
+      .end_handler = mln_test_transition_end_handler(&probe),
+    },
+  };
+  MLN_TEST_AWAIT_OK(
+    mln_map_update_camera(map, &ease, &completion.descriptor, NULL)
+  );
+
+  // Each frame advances the ease on the map's clock. Record the height of
+  // every frame until the ease ends, and of the settled map after it.
+  double largest_step = 0.0;
+  size_t between = 0;
+  const mln_test_deadline deadline = mln_test_deadline_default();
+  while (atomic_load(&probe.releases) == 0) {
+    TEST_ASSERT_FALSE_MESSAGE(
+      mln_test_deadline_passed(deadline), "the ease never ended"
+    );
+    const mln_map_snapshot frame = render_frame_snapshot(&fixture, map);
+    const double altitude = frame.view.camera.center_altitude;
+    TEST_ASSERT_GREATER_OR_EQUAL_DOUBLE(previous - 0.5, altitude);
+    largest_step = fmax(largest_step, altitude - previous);
+    if (frame.transition_in_progress && altitude > 101.0 && altitude < 1599.0) {
+      between += 1;
+    }
+    previous = altitude;
+  }
+  mln_test_render_until_idle(runtime, map, &fixture);
+  const double settled = read_camera(map).center_altitude;
+  largest_step = fmax(largest_step, settled - previous);
+
+  TEST_ASSERT_DOUBLE_WITHIN(1.0, 1600.0, settled);
+  TEST_ASSERT_GREATER_THAN_size_t_MESSAGE(
+    0, between, "no frame of the ease was between the two heights"
+  );
+  TEST_ASSERT_LESS_THAN_DOUBLE_MESSAGE(
+    750.0, largest_step, "the center's height jumped"
+  );
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 MLN_TEST_GROUP {
   RUN_TEST(the_load_mode_caps_the_tiles_a_deep_source_asks_for);
   RUN_TEST(anchoring_without_terrain_leaves_the_camera);
   RUN_TEST(anchoring_keeps_the_eye_and_raises_the_zoom);
   RUN_TEST(the_clamp_lifts_a_camera_out_of_the_ground);
   RUN_TEST(anchoring_leaves_a_camera_in_the_ground);
+  RUN_TEST(the_clamp_keeps_the_eye_above_the_ground_under_it);
+  RUN_TEST(an_ease_onto_higher_ground_eases_the_center_up);
 }
