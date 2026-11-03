@@ -1089,6 +1089,13 @@ MLN_API mln_status mln_map_get_style_light_property(
  * The terrain can name a `raster-dem` source that the style doesn't have yet.
  * The map renders it once the source exists.
  *
+ * A pitched view of the terrain needs the camera's center to follow the
+ * ground: turn on `center_clamped_to_ground` in mln_map_terrain_options with
+ * mln_map_set_terrain_options(). It is off by default, and without it the
+ * camera keeps its `center_altitude`, which can leave it under the ground and
+ * the frame blank. This applies however the style gets its terrain, this
+ * function or a style document.
+ *
  * Completes with:
  * - MLN_STATUS_INVALID_STATE while the style isn't loaded, as
  *   mln_map_set_style_url() describes.

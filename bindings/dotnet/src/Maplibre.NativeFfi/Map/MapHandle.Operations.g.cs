@@ -3084,6 +3084,13 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     /// <remarks>
     /// <para>The terrain can name a <c>raster-dem</c> source that the style
     /// doesn't have yet. The map renders it once the source exists.</para>
+    /// <para>A pitched view of the terrain needs the camera's center to follow
+    /// the ground: turn on <c>center_clamped_to_ground</c> in
+    /// <c>MapTerrainOptions</c> with <c>MapHandle.SetTerrainOptionsAsync()</c>.
+    /// It is off by default, and without it the camera keeps its
+    /// <c>center_altitude</c>, which can leave it under the ground and the
+    /// frame blank. This applies however the style gets its terrain, this
+    /// function or a style document.</para>
     /// <para>See <c>mln_map_set_style_terrain_json</c> in the <see
     /// href="https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html">C API reference</see>.</para>
     /// <para>Errors:</para>

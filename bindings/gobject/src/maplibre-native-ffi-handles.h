@@ -3375,6 +3375,13 @@ maplibre_native_ffi_map_set_style_source_volatile_finish(
  * The terrain can name a `raster-dem` source that the style doesn't have yet.
  * The map renders it once the source exists.
  *
+ * A pitched view of the terrain needs the camera's center to follow the ground:
+ * turn on `center_clamped_to_ground` in `MaplibreNativeFfiMapTerrainOptions`
+ * with `maplibre_native_ffi_map_set_terrain_options_async()`. It is off by
+ * default, and without it the camera keeps its `center_altitude`, which can
+ * leave it under the ground and the frame blank. This applies however the style
+ * gets its terrain, this function or a style document.
+ *
  * See `mln_map_set_style_terrain_json` in the
  * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
  *
