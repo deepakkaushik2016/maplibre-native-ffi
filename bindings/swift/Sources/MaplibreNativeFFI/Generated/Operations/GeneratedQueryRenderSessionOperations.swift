@@ -174,4 +174,51 @@ public extension RenderSessionHandle {
       )
     }
   }
+
+  /// Reads the height of the terrain at `point`.
+  ///
+  /// The query reads the last frame that the session rendered. Submit it from
+  /// any thread. It runs with the session's graphics work, so with
+  /// `RenderDriverKind.callerGraphicsThread` it completes once you service that
+  /// work.
+  ///
+  /// The height is in meters above sea level, as the terrain draws it, so it
+  /// includes the style's terrain exaggeration: under an exaggeration of 2, a
+  /// 1000 m peak reads 2000 m. Divide by a nonzero exaggeration for the height
+  /// of the ground.
+  ///
+  /// The completion delivers no value when the style has no terrain, or when no
+  /// DEM tile that the session has loaded covers `point`, as before the tile
+  /// arrives. `point` needs a latitude within \[-90, 90\] and a finite
+  /// longitude.
+  ///
+  /// See `mln_render_session_query_terrain_elevation` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidState` when the session hasn't rendered a frame since it
+  ///   attached or changed its scale factor.
+  func queryTerrainElevation(point bindingArg0: LatLng) async throws
+    -> TerrainElevation?
+  {
+    try await nativeStart(convert: { result in
+      if result.pointee
+        .value_count ==
+        0
+      {
+        return nil
+      }; return try TerrainElevation(raw: NativeCompletion.value(
+        result,
+        as: mln_terrain_elevation.self
+      ))
+    }) { raw, _, completion, diagnostic in
+      mln_render_session_query_terrain_elevation(
+        raw,
+        bindingArg0.nativeValue(),
+        completion,
+        diagnostic
+      )
+    }
+  }
 }

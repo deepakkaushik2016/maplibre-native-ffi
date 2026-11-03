@@ -6004,6 +6004,22 @@ func nativeStyleTransitionOptions(input StyleTransitionOptions, arena *bindingAr
 	return raw
 }
 
+// TerrainElevation corresponds to mln_terrain_elevation. The height of the
+// terrain at a point.
+//
+// See mln_terrain_elevation in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+type TerrainElevation struct {
+	// Meters above sea level, with the style's terrain exaggeration applied.
+	Meters float64
+}
+
+func copyTerrainElevation(raw C.mln_terrain_elevation) TerrainElevation {
+	var result TerrainElevation
+	result.Meters = float64(raw.meters)
+	return result
+}
+
 // TextureImageInfo corresponds to mln_texture_image_info. The layout of the
 // pixels that RenderSessionHandle.ReadTexture() reads.
 //
@@ -9489,6 +9505,33 @@ func (receiver *RenderSessionHandle) QuerySourceFeatures(sourceID string, option
 	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_render_session_query_source_features(C.mln_render_session(raw), bindingView(sourceID, arena), bindingStoreOptional(options, arena, nativeSourceFeatureQueryOptions), completion, diagnostic))
 	}, completionListOf(copySourceFeature))
+}
+
+// QueryTerrainElevation reads the height of the terrain at point.
+//
+// The query reads the last frame that the session rendered. Submit it from any
+// thread. It runs with the session's graphics work, so with
+// RenderDriverKindCallerGraphicsThread it completes once you service that work.
+//
+// The height is in meters above sea level, as the terrain draws it, so it
+// includes the style's terrain exaggeration: under an exaggeration of 2, a 1000
+// m peak reads 2000 m. Divide by a nonzero exaggeration for the height of the
+// ground.
+//
+// The completion delivers no value when the style has no terrain, or when no
+// DEM tile that the session has loaded covers point, as before the tile
+// arrives. point needs a latitude within [-90, 90] and a finite longitude.
+//
+// See mln_render_session_query_terrain_elevation in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+//
+// Errors:
+//   - StatusInvalidState when the session hasn't rendered a frame since it
+//     attached or changed its scale factor.
+func (receiver *RenderSessionHandle) QueryTerrainElevation(point LatLng) (*Future[*TerrainElevation], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_render_session_query_terrain_elevation(C.mln_render_session(raw), nativeLatLng(point, arena), completion, diagnostic))
+	}, completionNullable(completionOf(copyTerrainElevation)))
 }
 
 // ReadTexture reads the pixels of the last frame that the session rendered.

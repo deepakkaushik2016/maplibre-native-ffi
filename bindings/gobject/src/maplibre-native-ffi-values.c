@@ -21489,6 +21489,46 @@ maplibre_native_ffi_style_transition_options_from_native(
 }
 
 G_DEFINE_BOXED_TYPE(
+  MaplibreNativeFfiTerrainElevation, maplibre_native_ffi_terrain_elevation,
+  maplibre_native_ffi_terrain_elevation_copy,
+  maplibre_native_ffi_terrain_elevation_free
+)
+
+MaplibreNativeFfiTerrainElevation* maplibre_native_ffi_terrain_elevation_copy(
+  const MaplibreNativeFfiTerrainElevation* self
+) {
+  g_return_val_if_fail(self != NULL, NULL);
+  return g_memdup2(self, sizeof *self);
+}
+
+void maplibre_native_ffi_terrain_elevation_free(
+  MaplibreNativeFfiTerrainElevation* self
+) {
+  g_free(self);
+}
+
+G_STATIC_ASSERT(
+  sizeof(MaplibreNativeFfiTerrainElevation) == sizeof(mln_terrain_elevation)
+);
+SAME_MEMBER(MaplibreNativeFfiTerrainElevation, mln_terrain_elevation, meters);
+
+void maplibre_native_ffi_terrain_elevation_read(
+  MaplibreNativeFfiTerrainElevation* out, const mln_terrain_elevation* in
+) {
+  memcpy(out, in, sizeof *out);
+}
+
+MaplibreNativeFfiTerrainElevation*
+maplibre_native_ffi_terrain_elevation_from_native(
+  const mln_terrain_elevation* in
+) {
+  MaplibreNativeFfiTerrainElevation* self =
+    g_new0(MaplibreNativeFfiTerrainElevation, 1);
+  maplibre_native_ffi_terrain_elevation_read(self, in);
+  return self;
+}
+
+G_DEFINE_BOXED_TYPE(
   MaplibreNativeFfiTextureImageInfo, maplibre_native_ffi_texture_image_info,
   maplibre_native_ffi_texture_image_info_copy,
   maplibre_native_ffi_texture_image_info_free

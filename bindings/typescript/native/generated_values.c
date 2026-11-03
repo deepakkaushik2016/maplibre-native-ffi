@@ -368,6 +368,23 @@ napi_value mln_ts_decode_style_transition_options(
   );
 }
 
+napi_value mln_ts_decode_terrain_elevation_optional(
+  napi_env env, const mln_completion_result* result
+) {
+  if (result->value == NULL || result->value_count == 0)
+    return mln_ts_undefined(env);
+  if (result->value_size < sizeof(mln_terrain_elevation)) {
+    napi_throw_range_error(env, NULL, "native completion stride is too small");
+    return NULL;
+  }
+  const char* value = (const char*)result->value;
+  size_t stride = result->value_size;
+  (void)stride;
+  return mln_ts_read_terrain_elevation(
+    env, &(*(const mln_terrain_elevation*)value), stride
+  );
+}
+
 napi_value mln_ts_decode_texture_readback_result(
   napi_env env, const mln_completion_result* result
 ) {
@@ -2967,6 +2984,19 @@ napi_value mln_ts_read_style_transition_options(
         ))
       return NULL;
   }
+  return result;
+}
+
+napi_value mln_ts_read_terrain_elevation(
+  napi_env env, const mln_terrain_elevation* source, size_t size
+) {
+  (void)size;
+  napi_value result = mln_ts_object(env);
+  if (result == NULL) return NULL;
+  if (!mln_ts_set(
+        env, result, "meters", mln_ts_number(env, (double)(source->meters))
+      ))
+    return NULL;
   return result;
 }
 

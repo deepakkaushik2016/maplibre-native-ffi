@@ -1588,6 +1588,16 @@ int32_t mln_kw_mln_render_session_query_source_features(
   );
 }
 
+int32_t mln_kw_mln_render_session_query_terrain_elevation(
+  int64_t session, uintptr_t point, uintptr_t completion,
+  uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_render_session_query_terrain_elevation(
+    (mln_render_session)session, *(const mln_lat_lng*)(uintptr_t)point,
+    (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
+  );
+}
+
 int32_t mln_kw_mln_render_session_read_texture(
   int64_t session, uintptr_t completion, uintptr_t out_diagnostic
 ) {

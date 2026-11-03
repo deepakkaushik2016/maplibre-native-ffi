@@ -479,6 +479,48 @@ private constructor(
     }
 
   /**
+   * Reads the height of the terrain at `point`.
+   *
+   * The query reads the last frame that the session rendered. Submit it from any thread. It runs
+   * with the session's graphics work, so with `RenderDriverKind.CALLER_GRAPHICS_THREAD` it
+   * completes once you service that work.
+   *
+   * The height is in meters above sea level, as the terrain draws it, so it includes the style's
+   * terrain exaggeration: under an exaggeration of 2, a 1000 m peak reads 2000 m. Divide by a
+   * nonzero exaggeration for the height of the ground.
+   *
+   * The completion delivers no value when the style has no terrain, or when no DEM tile that the
+   * session has loaded covers `point`, as before the tile arrives. `point` needs a latitude within
+   * &#91;-90, 90&#93; and a finite longitude.
+   *
+   * See `mln_render_session_query_terrain_elevation` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+   *
+   * Errors:
+   *
+   * - `Status.INVALID_STATE` when the session hasn't rendered a frame since it attached or changed
+   *   its scale factor.
+   */
+  public fun queryTerrainElevation(point: LatLng): Completion<TerrainElevation?> =
+    nativeSubmit(
+      this,
+      binding,
+      { result ->
+        if (CompletionBridge.valueCount(result) == 0uL) null
+        else readTerrainElevation(CompletionBridge.value(result))
+      },
+    ) {
+      check(
+        C.mln_render_session_query_terrain_elevation(
+          handle,
+          writeLatLng(point),
+          completion,
+          diagnostic,
+        ),
+      )
+    }
+
+  /**
    * Reads the pixels of the last frame that the session rendered.
    *
    * See `mln_render_session_read_texture` in the

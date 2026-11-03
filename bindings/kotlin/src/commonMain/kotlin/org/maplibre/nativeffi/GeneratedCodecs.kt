@@ -1813,6 +1813,10 @@ internal fun readSourceFeature(source: Long): SourceFeature =
   SourceFeature(feature = readViewString(source), sourceLayerId = readViewString(source + w(8, 16)))
 
 @JvmSynthetic
+internal fun readTerrainElevation(source: Long): TerrainElevation =
+  TerrainElevation(meters = readF64(source))
+
+@JvmSynthetic
 internal fun readTextureReadbackResult(source: Long): TextureReadbackResult =
   TextureReadbackResult(data = readView(source), info = readTextureImageInfo(source + w(8, 16)))
 

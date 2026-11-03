@@ -1475,6 +1475,11 @@ internal unsafe struct mln_style_transition_options
     public byte enable_placement_transitions;
 }
 
+internal unsafe struct mln_terrain_elevation
+{
+    public double meters;
+}
+
 internal unsafe struct mln_texture_image_info
 {
     public uint width;

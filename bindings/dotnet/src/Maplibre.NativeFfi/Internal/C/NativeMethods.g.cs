@@ -1249,6 +1249,14 @@ internal static unsafe partial class NativeMethods
     );
 
     [LibraryImport(LibraryName)]
+    internal static partial mln_status mln_render_session_query_terrain_elevation(
+        MlnRenderSession session,
+        mln_lat_lng point,
+        mln_completion* completion,
+        mln_diagnostic* out_diagnostic
+    );
+
+    [LibraryImport(LibraryName)]
     internal static partial mln_status mln_render_session_read_texture(
         MlnRenderSession session,
         mln_completion* completion,

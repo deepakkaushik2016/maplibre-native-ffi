@@ -5818,6 +5818,43 @@ done:
   return mln_ts_end(call);
 }
 
+static napi_value mln_ts_export_mln_render_session_query_terrain_elevation(
+  napi_env env, napi_callback_info info
+) {
+  mln_ts_call call_state;
+  mln_ts_call* call = &call_state;
+  mln_render_session arg_session = 0;
+  mln_lat_lng arg_point;
+  mln_completion arg_completion;
+  const mln_completion* present_completion = NULL;
+  mln_diagnostic diagnostic;
+  mln_status status;
+  if (!mln_ts_begin(call, env, info, 3)) return NULL;
+  {
+    uint64_t number = 0;
+    if (!mln_ts_read_u64(call, call->argv[0], &number, "session")) goto done;
+    arg_session = (mln_render_session)number;
+  }
+  memset(&arg_point, 0, sizeof arg_point);
+  if (!mln_ts_read_record(call, call->argv[1], "point")) goto done;
+  if (!mln_ts_write_lat_lng(call, call->argv[1], &arg_point, "point"))
+    goto done;
+  if (!mln_ts_read_completion(
+        call, call->argv[2], false, mln_ts_decode_terrain_elevation_optional,
+        &arg_completion, &present_completion
+      ))
+    goto done;
+  diagnostic.size = sizeof diagnostic;
+  diagnostic.message[0] = '\0';
+  status = mln_render_session_query_terrain_elevation(
+    arg_session, arg_point, present_completion, &diagnostic
+  );
+  if (status == MLN_STATUS_OK) mln_ts_accept(call);
+  if (!mln_ts_check(call, status, &diagnostic)) goto done;
+done:
+  return mln_ts_end(call);
+}
+
 static napi_value mln_ts_export_mln_render_session_read_texture(
   napi_env env, napi_callback_info info
 ) {
@@ -8163,6 +8200,8 @@ static const mln_ts_export exports[] = {
    mln_ts_export_mln_render_session_query_rendered_features},
   {"mln_render_session_query_source_features",
    mln_ts_export_mln_render_session_query_source_features},
+  {"mln_render_session_query_terrain_elevation",
+   mln_ts_export_mln_render_session_query_terrain_elevation},
   {"mln_render_session_read_texture",
    mln_ts_export_mln_render_session_read_texture},
   {"mln_render_session_reduce_memory_use",

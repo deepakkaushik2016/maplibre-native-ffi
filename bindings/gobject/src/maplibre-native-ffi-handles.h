@@ -4492,6 +4492,53 @@ GPtrArray* maplibre_native_ffi_render_session_query_source_features_finish(
 );
 
 /**
+ * maplibre_native_ffi_render_session_query_terrain_elevation_async:
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Reads the height of the terrain at `point`.
+ *
+ * The query reads the last frame that the session rendered. Submit it from any
+ * thread. It runs with the session's graphics work, so with
+ * `MAPLIBRE_NATIVE_FFI_RENDER_DRIVER_CALLER_GRAPHICS_THREAD` it completes once
+ * you service that work.
+ *
+ * The height is in meters above sea level, as the terrain draws it, so it
+ * includes the style's terrain exaggeration: under an exaggeration of 2, a 1000
+ * m peak reads 2000 m. Divide by a nonzero exaggeration for the height of the
+ * ground.
+ *
+ * The completion delivers no value when the style has no terrain, or when no
+ * DEM tile that the session has loaded covers `point`, as before the tile
+ * arrives. `point` needs a latitude within \[-90, 90\] and a finite longitude.
+ *
+ * See `mln_render_session_query_terrain_elevation` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ *
+ * It fails with these errors:
+ *
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` when the session hasn't rendered
+ *   a frame since it attached or changed its scale factor.
+ */
+void maplibre_native_ffi_render_session_query_terrain_elevation_async(
+  MaplibreNativeFfiRenderSession* self, const MaplibreNativeFfiLatLng* point,
+  GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_render_session_query_terrain_elevation_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_render_session_query_terrain_elevation_async` started.
+ *
+ * Returns: (transfer full) (nullable): the value
+ */
+MaplibreNativeFfiTerrainElevation*
+maplibre_native_ffi_render_session_query_terrain_elevation_finish(
+  MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
+);
+
+/**
  * maplibre_native_ffi_render_session_read_texture_async:
  * @callback: (scope async) (nullable): the callback to call when the call finishes
  * @user_data: the data to pass to `callback`

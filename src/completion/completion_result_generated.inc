@@ -267,6 +267,13 @@ struct CompletionResult<&mln_render_session_query_source_features> {
   static constexpr bool nullable = false;
 };
 template <>
+struct CompletionResult<&mln_render_session_query_terrain_elevation> {
+  static constexpr bool has_value = true;
+  using type = mln_terrain_elevation;
+  static constexpr bool array = false;
+  static constexpr bool nullable = true;
+};
+template <>
 struct CompletionResult<&mln_render_session_read_texture> {
   static constexpr bool has_value = true;
   using type = mln_texture_readback_result;

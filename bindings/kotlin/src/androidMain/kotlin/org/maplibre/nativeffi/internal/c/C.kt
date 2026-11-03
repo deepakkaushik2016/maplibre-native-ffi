@@ -1231,6 +1231,14 @@ internal actual object C {
   ): Int
 
   @JvmStatic
+  actual external fun mln_render_session_query_terrain_elevation(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
   actual external fun mln_render_session_read_texture(
     session: Long,
     completion: Long,

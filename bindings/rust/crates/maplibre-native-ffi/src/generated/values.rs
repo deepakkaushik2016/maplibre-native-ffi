@@ -6430,6 +6430,21 @@ impl Default for StyleVectorTileEncoding {
     }
 }
 
+/// The height of the terrain at a point.
+///
+/// See `mln_terrain_elevation` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct TerrainElevation {
+    /// Meters above sea level, with the style's terrain exaggeration applied.
+    pub meters: f64,
+}
+impl FromNative<sys::mln_terrain_elevation> for TerrainElevation {
+    unsafe fn from_native(raw: sys::mln_terrain_elevation) -> Result<Self> {
+        Ok(Self { meters: raw.meters })
+    }
+}
+
 native_enum! {
 /// How a map loads 3D terrain: how much it builds in one frame, and how many
 /// terrain mesh tiles a frame may have.

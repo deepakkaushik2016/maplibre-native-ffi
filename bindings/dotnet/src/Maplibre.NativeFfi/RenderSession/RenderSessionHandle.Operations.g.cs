@@ -614,6 +614,52 @@ public sealed unsafe partial class RenderSessionHandle
     }
 
     /// <summary>
+    /// Reads the height of the terrain at <c>point</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The query reads the last frame that the session rendered. Submit
+    /// it from any thread. It runs with the session's graphics work, so with
+    /// <c>RenderDriverKind.CallerGraphicsThread</c> it completes once you
+    /// service that work.</para>
+    /// <para>The height is in meters above sea level, as the terrain draws it,
+    /// so it includes the style's terrain exaggeration: under an exaggeration
+    /// of 2, a 1000 m peak reads 2000 m. Divide by a nonzero exaggeration for
+    /// the height of the ground.</para>
+    /// <para>The completion delivers no value when the style has no terrain, or
+    /// when no DEM tile that the session has loaded covers <c>point</c>, as
+    /// before the tile arrives. <c>point</c> needs a latitude within [-90, 90]
+    /// and a finite longitude.</para>
+    /// <para>See <c>mln_render_session_query_terrain_elevation</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html">C API reference</see>.</para>
+    /// <para>Errors:</para>
+    /// <list type="bullet">
+    /// <item><description><c>Status.InvalidState</c> when the session hasn't
+    /// rendered a frame since it attached or changed its scale
+    /// factor.</description></item>
+    /// </list>
+    /// </remarks>
+    public Task<TerrainElevation?> QueryTerrainElevationAsync(LatLng point)
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_render_session_query_terrain_elevation(
+            Handle,
+            NativeLatLng(point),
+            NativeCompletion.Start<TerrainElevation?>(
+                &nativeCompletion,
+                static nativeResult =>
+                    NativeCompletion.OptionalValue<mln_terrain_elevation, TerrainElevation>(
+                        nativeResult,
+                        CopyTerrainElevation
+                    ),
+                out var nativePending
+            ),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Reads the pixels of the last frame that the session rendered.
     /// </summary>
     /// <remarks>

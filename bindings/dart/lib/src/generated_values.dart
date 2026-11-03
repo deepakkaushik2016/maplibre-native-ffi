@@ -6066,6 +6066,22 @@ final class SourceFeature extends _Value {
       _describe('SourceFeature', const ['feature', 'sourceLayerId']);
 }
 
+/// The height of the terrain at a point.
+///
+/// See `mln_terrain_elevation` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+final class TerrainElevation extends _Value {
+  const TerrainElevation({this.meters = 0});
+
+  /// Meters above sea level, with the style's terrain exaggeration applied.
+  final double meters;
+
+  @override
+  List<Object?> get _members => [meters];
+  @override
+  String toString() => _describe('TerrainElevation', const ['meters']);
+}
+
 /// The layout of the pixels that `RenderSessionHandle.readTexture()` reads.
 ///
 /// See `mln_texture_image_info` in the

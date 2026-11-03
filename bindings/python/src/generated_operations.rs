@@ -1589,6 +1589,15 @@ fn generated_copy_mln_style_transition_options(
     Ok(dict.into_any().unbind())
 }
 
+fn generated_copy_mln_terrain_elevation(
+    py: Python<'_>,
+    value: &sys::mln_terrain_elevation,
+) -> PyResult<Py<PyAny>> {
+    let dict = PyDict::new(py);
+    dict.set_item("meters", generated_value(py, value.meters)?)?;
+    Ok(dict.into_any().unbind())
+}
+
 fn generated_copy_mln_texture_image_info(
     py: Python<'_>,
     value: &sys::mln_texture_image_info,
@@ -8257,6 +8266,37 @@ impl RenderSessionHandle {
                         handle,
                         source_id_value,
                         generated_pointer(&options_value),
+                        completion,
+                        diagnostic,
+                    )
+                },
+                convert,
+            )
+        }
+    }
+    #[pyo3(signature = (point))]
+    fn query_terrain_elevation(
+        &self,
+        py: Python<'_>,
+        point: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let point_value = generated_input_mln_lat_lng(&point.clone(), storage)?;
+        let handle = self.input();
+        let convert = |py: Python<'_>, result: &sys::mln_completion_result| {
+            if result.value.is_null() {
+                return Ok(py.None());
+            }
+            let value = completion_value::<sys::mln_terrain_elevation>(result)?;
+            generated_copy_mln_terrain_elevation(py, &value)
+        };
+        unsafe {
+            call.complete(
+                |completion, diagnostic| {
+                    sys::mln_render_session_query_terrain_elevation(
+                        handle,
+                        point_value,
                         completion,
                         diagnostic,
                     )

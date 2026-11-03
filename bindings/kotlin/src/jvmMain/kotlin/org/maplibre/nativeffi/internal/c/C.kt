@@ -1078,6 +1078,15 @@ internal actual object C {
       JAVA_LONG,
       JAVA_LONG,
     )
+  private val mln_render_session_query_terrain_elevation =
+    Ffm.downcall(
+      "mln_render_session_query_terrain_elevation",
+      JAVA_INT,
+      JAVA_LONG,
+      mln_lat_lng,
+      JAVA_LONG,
+      JAVA_LONG,
+    )
   private val mln_render_session_read_texture =
     Ffm.downcall("mln_render_session_read_texture", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG)
   private val mln_render_session_reduce_memory_use =
@@ -3080,6 +3089,19 @@ internal actual object C {
       session,
       Ffm.value(sourceId, mln_buffer_view),
       options,
+      completion,
+      outDiagnostic,
+    ) as Int
+
+  actual fun mln_render_session_query_terrain_elevation(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_render_session_query_terrain_elevation.invokeExact(
+      session,
+      Ffm.value(point, mln_lat_lng),
       completion,
       outDiagnostic,
     ) as Int

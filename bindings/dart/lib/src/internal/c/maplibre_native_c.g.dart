@@ -1818,6 +1818,11 @@ final class mln_style_transition_options extends Struct {
   external bool enable_placement_transitions;
 }
 
+final class mln_terrain_elevation extends Struct {
+  @Double()
+  external double meters;
+}
+
 final class mln_texture_image_info extends Struct {
   @Uint32()
   external int width;
@@ -4975,6 +4980,21 @@ external int mln_render_session_query_source_features(
   int session,
   mln_buffer_view source_id,
   Pointer<mln_source_feature_query_options> options,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(
+    mln_render_session,
+    mln_lat_lng,
+    Pointer<mln_completion>,
+    Pointer<mln_diagnostic>,
+  )
+>()
+external int mln_render_session_query_terrain_elevation(
+  int session,
+  mln_lat_lng point,
   Pointer<mln_completion> completion,
   Pointer<mln_diagnostic> out_diagnostic,
 );

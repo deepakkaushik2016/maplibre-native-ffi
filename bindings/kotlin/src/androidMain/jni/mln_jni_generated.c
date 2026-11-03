@@ -1802,6 +1802,17 @@ static jint mln_render_session_query_source_features_jni(
   );
 }
 
+static jint mln_render_session_query_terrain_elevation_jni(
+  JNIEnv* env, jclass type, jlong session, jlong point, jlong completion,
+  jlong out_diagnostic
+) {
+  return (jint)mln_render_session_query_terrain_elevation(
+    (mln_render_session)session, MLN_JNI_RECORD(mln_lat_lng, point),
+    MLN_JNI_POINTER(const mln_completion*, completion),
+    MLN_JNI_POINTER(mln_diagnostic*, out_diagnostic)
+  );
+}
+
 static jint mln_render_session_read_texture_jni(
   JNIEnv* env, jclass type, jlong session, jlong completion,
   jlong out_diagnostic
@@ -2717,6 +2728,8 @@ const JNINativeMethod mln_jni_methods[] = {
    (void*)mln_render_session_query_rendered_features_jni},
   {"mln_render_session_query_source_features", "(JJJJJ)I",
    (void*)mln_render_session_query_source_features_jni},
+  {"mln_render_session_query_terrain_elevation", "(JJJJ)I",
+   (void*)mln_render_session_query_terrain_elevation_jni},
   {"mln_render_session_read_texture", "(JJJ)I",
    (void*)mln_render_session_read_texture_jni},
   {"mln_render_session_reduce_memory_use", "(JJJ)I",
@@ -3122,6 +3135,8 @@ const JNINativeMethod mln_jni_critical_methods[] = {
    (void*)mln_render_session_query_rendered_features_jni},
   {"mln_render_session_query_source_features", "(JJJJJ)I",
    (void*)mln_render_session_query_source_features_jni},
+  {"mln_render_session_query_terrain_elevation", "(JJJJ)I",
+   (void*)mln_render_session_query_terrain_elevation_jni},
   {"mln_render_session_read_texture", "(JJJ)I",
    (void*)mln_render_session_read_texture_jni},
   {"mln_render_session_reduce_memory_use", "(JJJ)I",

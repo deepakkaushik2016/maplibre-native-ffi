@@ -870,6 +870,13 @@ G_GNUC_INTERNAL MaplibreNativeFfiStyleTransitionOptions*
 maplibre_native_ffi_style_transition_options_from_native(
   const mln_style_transition_options* in
 );
+G_GNUC_INTERNAL MaplibreNativeFfiTerrainElevation*
+maplibre_native_ffi_terrain_elevation_from_native(
+  const mln_terrain_elevation* in
+);
+G_GNUC_INTERNAL void maplibre_native_ffi_terrain_elevation_read(
+  MaplibreNativeFfiTerrainElevation* out, const mln_terrain_elevation* in
+);
 G_GNUC_INTERNAL MaplibreNativeFfiTextureImageInfo*
 maplibre_native_ffi_texture_image_info_from_native(
   const mln_texture_image_info* in

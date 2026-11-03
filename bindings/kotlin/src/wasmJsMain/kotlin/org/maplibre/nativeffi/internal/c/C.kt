@@ -1619,6 +1619,19 @@ internal actual object C {
       word(outDiagnostic),
     )
 
+  actual fun mln_render_session_query_terrain_elevation(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_kw_mln_render_session_query_terrain_elevation(
+      session,
+      word(point),
+      word(completion),
+      word(outDiagnostic),
+    )
+
   actual fun mln_render_session_read_texture(
     session: Long,
     completion: Long,
@@ -3342,6 +3355,16 @@ private fun mln_kw_mln_render_session_query_source_features(
 ): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_render_session_query_source_features(p0, p1, p2, p3, p4)",
+  )
+
+private fun mln_kw_mln_render_session_query_terrain_elevation(
+  p0: Long,
+  p1: Int,
+  p2: Int,
+  p3: Int,
+): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_render_session_query_terrain_elevation(p0, p1, p2, p3)",
   )
 
 private fun mln_kw_mln_render_session_read_texture(p0: Long, p1: Int, p2: Int): Int =

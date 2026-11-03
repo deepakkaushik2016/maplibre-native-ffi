@@ -7514,6 +7514,17 @@ public data class SourceFeature(
 )
 
 /**
+ * The height of the terrain at a point.
+ *
+ * See `mln_terrain_elevation` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+public data class TerrainElevation(
+  /** Meters above sea level, with the style's terrain exaggeration applied. */
+  public val meters: Double,
+)
+
+/**
  * The layout of the pixels that `RenderSessionHandle.readTexture()` reads.
  *
  * See `mln_texture_image_info` in the

@@ -5268,6 +5268,22 @@ class StyleTransitionOptions:
 
 
 @dataclass(frozen=True, slots=True)
+class TerrainElevation:
+    """The height of the terrain at a point.
+
+    See `mln_terrain_elevation` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    """
+
+    meters: float
+    """Meters above sea level, with the style's terrain exaggeration applied."""
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(meters=raw["meters"])
+
+
+@dataclass(frozen=True, slots=True)
 class TextureImageInfo:
     """The layout of the pixels that `RenderSessionHandle.read_texture()` reads.
 

@@ -108,6 +108,7 @@
     "bindings/dotnet/src/Maplibre.NativeFfi/Query/ScreenLineString.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/Query/SourceFeature.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/Query/SourceFeatureQueryOptions.g.cs",
+    "bindings/dotnet/src/Maplibre.NativeFfi/Query/TerrainElevation.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/RenderSession/AcquiredFrameHandle.Operations.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/RenderSession/FrameDemand.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/RenderSession/FrameDemandFlag.g.cs",

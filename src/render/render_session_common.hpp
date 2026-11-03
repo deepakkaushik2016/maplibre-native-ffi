@@ -1403,6 +1403,10 @@ auto render_session_query_source_features(
   const mln_source_feature_query_options* options,
   std::shared_ptr<const SourceFeatureList>& out_result
 ) -> mln_status;
+auto render_session_query_terrain_elevation(
+  mln_render_session session, mln_lat_lng point,
+  std::optional<double>& out_result
+) -> mln_status;
 
 auto render_session_query_rendered_features_start(
   mln_render_session session, const mln_rendered_query_geometry* geometry,
@@ -1426,6 +1430,10 @@ auto render_session_get_cluster_leaves_start(
 auto render_session_get_cluster_expansion_zoom_start(
   mln_render_session session, mln_buffer_view source_id,
   std::uint32_t cluster_id, const mln_completion* completion
+) -> mln_status;
+auto render_session_query_terrain_elevation_start(
+  mln_render_session session, mln_lat_lng point,
+  const mln_completion* completion
 ) -> mln_status;
 
 auto render_session_get_capabilities(

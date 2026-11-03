@@ -867,6 +867,13 @@ internal expect object C {
     outDiagnostic: Long,
   ): Int
 
+  fun mln_render_session_query_terrain_elevation(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
   fun mln_render_session_read_texture(session: Long, completion: Long, outDiagnostic: Long): Int
 
   fun mln_render_session_reduce_memory_use(

@@ -1896,6 +1896,11 @@ pub struct mln_style_transition_options {
 }
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
+pub struct mln_terrain_elevation {
+    pub meters: f64,
+}
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct mln_texture_image_info {
     pub width: u32,
     pub height: u32,
@@ -3284,6 +3289,12 @@ unsafe extern "C" {
         session: mln_render_session,
         source_id: mln_buffer_view,
         options: *const mln_source_feature_query_options,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
+    pub fn mln_render_session_query_terrain_elevation(
+        session: mln_render_session,
+        point: mln_lat_lng,
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;

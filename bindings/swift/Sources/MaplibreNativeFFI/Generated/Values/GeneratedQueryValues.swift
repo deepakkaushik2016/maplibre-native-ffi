@@ -221,3 +221,19 @@ public struct SourceFeatureQueryOptions: Equatable, Hashable, Sendable {
     return raw
   }
 }
+
+/// The height of the terrain at a point.
+///
+/// See `mln_terrain_elevation` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+public struct TerrainElevation: Equatable, Hashable, Sendable {
+  /// Meters above sea level, with the style's terrain exaggeration applied.
+  public var meters: Double
+  public init(meters: Double = 0) {
+    self.meters = meters
+  }
+
+  init(raw: mln_terrain_elevation) {
+    meters = raw.meters
+  }
+}

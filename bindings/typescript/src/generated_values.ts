@@ -4073,6 +4073,19 @@ export type StyleVectorTileEncoding =
   | (number & {});
 
 /**
+ * The height of the terrain at a point.
+ *
+ * See `mln_terrain_elevation` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+export interface TerrainElevation {
+  /**
+   * Meters above sea level, with the style's terrain exaggeration applied.
+   */
+  readonly meters: number;
+}
+
+/**
  * How a map loads 3D terrain: how much it builds in one frame, and how many
  * terrain mesh tiles a frame may have.
  *

@@ -2884,6 +2884,31 @@ auto render_session_query_source_features(
   return create_source_feature_result(features, out_result);
 }
 
+auto render_session_query_terrain_elevation(
+  mln_render_session session, mln_lat_lng point,
+  std::optional<double>& out_result
+) -> mln_status {
+  mln_render_session_object* live = nullptr;
+  const auto status = validate_live_attached_render_session(session, live);
+  if (status != MLN_STATUS_OK) {
+    return status;
+  }
+  mln::gfx::RendererBackend* backend = nullptr;
+  if (
+    const auto backend_status = validate_renderer_backend(live, backend);
+    backend_status != MLN_STATUS_OK
+  ) {
+    return backend_status;
+  }
+
+  auto current = ScopedCurrentScheduler{live->scheduler};
+  auto guard = mln::gfx::BackendScope{*backend};
+  out_result = live->renderer->queryTerrainElevation(
+    mln::LatLng{point.latitude, point.longitude}
+  );
+  return MLN_STATUS_OK;
+}
+
 namespace {
 auto publish_frame_result(
   const std::shared_ptr<mln_render_session_object>& session,

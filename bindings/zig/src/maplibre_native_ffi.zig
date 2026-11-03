@@ -2359,6 +2359,33 @@ pub const RenderSession = struct {
         return call.submit("mln_render_session_query_source_features", .handle, self, call.slice(SourceFeature, c.mln_source_feature), allocator, diagnostic, .{ source_id, options });
     }
 
+    /// Reads the height of the terrain at `point`.
+    ///
+    /// The query reads the last frame that the session rendered. Submit it from any
+    /// thread. It runs with the session's graphics work, so with
+    /// `RenderDriverKind.caller_graphics_thread` it completes once you service that
+    /// work.
+    ///
+    /// The height is in meters above sea level, as the terrain draws it, so it
+    /// includes the style's terrain exaggeration: under an exaggeration of 2, a
+    /// 1000 m peak reads 2000 m. Divide by a nonzero exaggeration for the height of
+    /// the ground.
+    ///
+    /// The completion delivers no value when the style has no terrain, or when no
+    /// DEM tile that the session has loaded covers `point`, as before the tile
+    /// arrives. `point` needs a latitude within \[-90, 90\] and a finite longitude.
+    ///
+    /// See `mln_render_session_query_terrain_elevation` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    ///
+    /// Errors:
+    ///
+    /// - `error.InvalidState` when the session hasn't rendered a frame since it
+    ///   attached or changed its scale factor.
+    pub fn queryTerrainElevation(self: RenderSession, point: LatLng, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(?TerrainElevation) {
+        return call.submit("mln_render_session_query_terrain_elevation", .handle, self, call.orNull(call.value(TerrainElevation, c.mln_terrain_elevation)), null, diagnostic, .{point});
+    }
+
     /// Reads the pixels of the last frame that the session rendered.
     ///
     /// See `mln_render_session_read_texture` in the
@@ -8948,6 +8975,20 @@ pub const StyleVectorTileEncoding = enum(u32) {
     _,
     pub const fromNative = marshal.EnumMethods(@This()).fromNative;
     pub const toNative = marshal.EnumMethods(@This()).toNative;
+};
+
+/// The height of the terrain at a point.
+///
+/// See `mln_terrain_elevation` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+pub const TerrainElevation = struct {
+    /// Meters above sea level, with the style's terrain exaggeration applied.
+    meters: f64 = 0,
+    pub fn fromNative(raw: c.mln_terrain_elevation) TerrainElevation {
+        return .{
+            .meters = raw.meters,
+        };
+    }
 };
 
 /// How a map loads 3D terrain: how much it builds in one frame, and how many

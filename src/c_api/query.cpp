@@ -61,3 +61,14 @@ auto mln_render_session_get_cluster_expansion_zoom(
     );
   });
 }
+
+auto mln_render_session_query_terrain_elevation(
+  mln_render_session session, mln_lat_lng point,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&]() -> mln_status {
+    return mln::core::render_session_query_terrain_elevation_start(
+      session, point, completion
+    );
+  });
+}

@@ -1976,6 +1976,19 @@ internal actual object C {
       outDiagnostic.toCPointer(),
     )
 
+  actual fun mln_render_session_query_terrain_elevation(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_render_session_query_terrain_elevation(
+      session.toULong(),
+      point.toCPointer<mln_lat_lng>()!!.pointed.readValue(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
   actual fun mln_render_session_read_texture(
     session: Long,
     completion: Long,

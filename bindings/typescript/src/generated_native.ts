@@ -777,6 +777,11 @@ export interface NativeOperations {
     options: SourceFeatureQueryOptions | undefined,
     completion: NativeCompletion,
   ): void;
+  mln_render_session_query_terrain_elevation(
+    session: bigint,
+    point: LatLng,
+    completion: NativeCompletion,
+  ): void;
   mln_render_session_read_texture(
     session: bigint,
     completion: NativeCompletion,

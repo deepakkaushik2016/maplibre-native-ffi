@@ -131,6 +131,14 @@ typedef struct mln_source_feature {
   mln_buffer_view source_layer_id;
 } mln_source_feature;
 
+/** The height of the terrain at a point. */
+typedef struct mln_terrain_elevation {
+  /**
+   * Meters above sea level, with the style's terrain exaggeration applied.
+   */
+  double meters;
+} mln_terrain_elevation;
+
 /**
  * Finds the features that the session drew in an area of the screen.
  *
@@ -228,6 +236,33 @@ MLN_API mln_status mln_render_session_get_cluster_leaves(
 MLN_BINDING("execution=query;result=uint32_t")
 MLN_API mln_status mln_render_session_get_cluster_expansion_zoom(
   mln_render_session session, mln_buffer_view source_id, uint32_t cluster_id,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
+ * Reads the height of the terrain at `point`.
+ *
+ * The query reads the last frame that the session rendered. Submit it from any
+ * thread. It runs with the session's graphics work, so with
+ * MLN_RENDER_DRIVER_CALLER_GRAPHICS_THREAD it completes once you service that
+ * work.
+ *
+ * The height is in meters above sea level, as the terrain draws it, so it
+ * includes the style's terrain exaggeration: under an exaggeration of 2, a
+ * 1000 m peak reads 2000 m. Divide by a nonzero exaggeration for the height of
+ * the ground.
+ *
+ * The completion delivers no value when the style has no terrain, or when no
+ * DEM tile that the session has loaded covers `point`, as before the tile
+ * arrives. `point` needs a latitude within [-90, 90] and a finite longitude.
+ *
+ * Completes with:
+ * - MLN_STATUS_INVALID_STATE when the session hasn't rendered a frame since it
+ *   attached or changed its scale factor.
+ */
+MLN_BINDING("execution=query;result=mln_terrain_elevation;nullable=true")
+MLN_API mln_status mln_render_session_query_terrain_elevation(
+  mln_render_session session, mln_lat_lng point,
   const mln_completion* completion, mln_diagnostic* out_diagnostic
 ) MLN_NOEXCEPT;
 

@@ -41,6 +41,20 @@ auto copy_view(mln_buffer_view view, std::string& out) -> mln_status {
   return MLN_STATUS_OK;
 }
 
+auto validate_lat_lng(mln_lat_lng point) -> mln_status {
+  if (
+    !std::isfinite(point.latitude) || point.latitude < -90.0 ||
+    point.latitude > 90.0 || !std::isfinite(point.longitude)
+  ) {
+    set_thread_error(
+      "latitude must be finite and within [-90, 90], and longitude must be "
+      "finite"
+    );
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  return MLN_STATUS_OK;
+}
+
 // Keep the copied query results alive through their completion callbacks.
 using OwnedRenderedFeatureList = std::shared_ptr<const RenderedFeatureList>;
 using OwnedSourceFeatureList = std::shared_ptr<const SourceFeatureList>;
@@ -242,6 +256,25 @@ auto enqueue_cluster_query(
     },
     completion, Complete
   );
+}
+
+auto complete_terrain_elevation(
+  const std::shared_ptr<Completion>& completion, mln_status status,
+  std::string diagnostic, std::any result
+) -> void {
+  using Value = CompletionValue<&mln_render_session_query_terrain_elevation>;
+  auto* height = std::any_cast<std::optional<double>>(&result);
+  if (status != MLN_STATUS_OK || height == nullptr) {
+    complete_query_failure(completion, status, std::move(diagnostic));
+    return;
+  }
+  completion->resolve([height = *height](const CompletionSink& descriptor) {
+    if (!height) {
+      Value::deliver_absent(descriptor);
+      return;
+    }
+    Value::deliver(descriptor, mln_terrain_elevation{.meters = *height});
+  });
 }
 
 // Copies a query filter once it parses, so the submission rejects a filter
@@ -524,6 +557,25 @@ auto render_session_get_cluster_expansion_zoom_start(
       mln::style::GeoJSONData& index, std::uint32_t id,
       const mln::FeatureCollection&
     ) { return std::uint32_t{index.getClusterExpansionZoom(id)}; }
+  );
+}
+
+auto render_session_query_terrain_elevation_start(
+  mln_render_session session, mln_lat_lng point,
+  const mln_completion* completion
+) -> mln_status {
+  const auto point_status = validate_lat_lng(point);
+  if (point_status != MLN_STATUS_OK) return point_status;
+  return enqueue_driver_result_operation(
+    session,
+    [point](mln_render_session_object& target, std::any& result) {
+      auto height = std::optional<double>{};
+      const auto status =
+        render_session_query_terrain_elevation(target.self, point, height);
+      if (status == MLN_STATUS_OK) result = height;
+      return status;
+    },
+    completion, complete_terrain_elevation
   );
 }
 

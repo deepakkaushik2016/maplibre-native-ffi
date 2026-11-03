@@ -364,6 +364,13 @@ static gpointer mln_render_session_query_source_features_decode(
   return items;
 }
 
+static gpointer mln_render_session_query_terrain_elevation_decode(
+  const mln_completion_result* result
+) {
+  if (result->value == NULL) return NULL;
+  return maplibre_native_ffi_terrain_elevation_from_native(result->value);
+}
+
 static gpointer mln_render_session_read_texture_decode(
   const mln_completion_result* result
 ) {
@@ -4922,6 +4929,39 @@ void maplibre_native_ffi_render_session_query_source_features_async(
 }
 
 GPtrArray* maplibre_native_ffi_render_session_query_source_features_finish(
+  MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
+) {
+  g_return_val_if_fail(g_task_is_valid(result, self), NULL);
+  return g_task_propagate_pointer(G_TASK(result), error);
+}
+
+void maplibre_native_ffi_render_session_query_terrain_elevation_async(
+  MaplibreNativeFfiRenderSession* self, const MaplibreNativeFfiLatLng* point,
+  GAsyncReadyCallback callback, gpointer user_data
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_RENDER_SESSION(self));
+  g_return_if_fail(point != NULL);
+  MaplibreNativeFfiAsync async_;
+  maplibre_native_ffi_async_init(
+    &async_, self,
+    maplibre_native_ffi_render_session_query_terrain_elevation_async, callback,
+    user_data, FALSE
+  );
+  mln_lat_lng point_native_;
+  maplibre_native_ffi_lat_lng_to_native(point, &point_native_, &async_.call);
+  if (!maplibre_native_ffi_async_begin(
+        &async_, mln_render_session_query_terrain_elevation_decode,
+        (GDestroyNotify)maplibre_native_ffi_terrain_elevation_free
+      ))
+    return;
+  mln_status status_ = mln_render_session_query_terrain_elevation(
+    self->handle, point_native_, async_.completion_argument, &async_.diagnostic
+  );
+  maplibre_native_ffi_async_end(&async_, status_);
+}
+
+MaplibreNativeFfiTerrainElevation*
+maplibre_native_ffi_render_session_query_terrain_elevation_finish(
   MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
 ) {
   g_return_val_if_fail(g_task_is_valid(result, self), NULL);

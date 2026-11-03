@@ -103,6 +103,7 @@ from ._generated_values import (
     StyleSourceInfo,
     StyleTransitionOptions,
     StyleVectorTileEncoding,
+    TerrainElevation,
     TextureReadbackResult,
     VulkanBorrowedTextureDescriptor,
     VulkanBorrowedTextureReplacement,
@@ -2616,6 +2617,37 @@ class _RenderSessionHandleOperations(GeneratedOperations):
         return map_future(
             self._native.query_source_features(source_id, options),
             lambda value: tuple(SourceFeature._from_native(item) for item in value),
+        )
+
+    def query_terrain_elevation(self, point: LatLng) -> Future[TerrainElevation | None]:
+        """Reads the height of the terrain at `point`.
+
+        The query reads the last frame that the session rendered. Submit it
+        from any thread. It runs with the session's graphics work, so with
+        `RenderDriverKind.CALLER_GRAPHICS_THREAD` it completes once you
+        service that work.
+
+        The height is in meters above sea level, as the terrain draws it, so
+        it includes the style's terrain exaggeration: under an exaggeration
+        of 2, a 1000 m peak reads 2000 m. Divide by a nonzero exaggeration
+        for the height of the ground.
+
+        The completion delivers no value when the style has no terrain, or
+        when no DEM tile that the session has loaded covers `point`, as
+        before the tile arrives. `point` needs a latitude within \\[-90, 90\\]
+        and a finite longitude.
+
+        See `mln_render_session_query_terrain_elevation` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+
+        Errors:
+
+        - `Status.INVALID_STATE` when the session hasn't rendered a frame
+          since it attached or changed its scale factor.
+        """
+        return map_future(
+            self._native.query_terrain_elevation(point),
+            lambda value: _maybe(TerrainElevation._from_native, value),
         )
 
     def read_texture(self) -> Future[TextureReadbackResult]:

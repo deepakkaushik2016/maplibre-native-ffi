@@ -2726,6 +2726,9 @@ internal static unsafe class GeneratedValues
         return native;
     }
 
+    internal static TerrainElevation CopyTerrainElevation(mln_terrain_elevation value) =>
+        new(value.meters);
+
     internal static TextureImageInfo CopyTextureImageInfo(mln_texture_image_info value) =>
         new(value.width, value.height, value.stride, (ulong)value.byte_length);
 

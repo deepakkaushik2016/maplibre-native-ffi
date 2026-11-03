@@ -46,6 +46,7 @@ ScreenBox struct
 ScreenPoint struct
 StyleExpressionInfo struct
 StyleExpressionType struct
+TerrainElevation struct
 TextureImageInfo struct
 TileId struct
 UnitBezier struct

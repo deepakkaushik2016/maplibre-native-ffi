@@ -97,6 +97,9 @@ napi_value mln_ts_decode_style_source_info_optional(
 napi_value mln_ts_decode_style_transition_options(
   napi_env env, const mln_completion_result* result
 );
+napi_value mln_ts_decode_terrain_elevation_optional(
+  napi_env env, const mln_completion_result* result
+);
 napi_value mln_ts_decode_texture_readback_result(
   napi_env env, const mln_completion_result* result
 );
@@ -371,6 +374,9 @@ napi_value mln_ts_read_style_source_tile_info_tile_urls(
 );
 napi_value mln_ts_read_style_transition_options(
   napi_env env, const mln_style_transition_options* source, size_t size
+);
+napi_value mln_ts_read_terrain_elevation(
+  napi_env env, const mln_terrain_elevation* source, size_t size
 );
 napi_value mln_ts_read_texture_image_info(
   napi_env env, const mln_texture_image_info* source, size_t size

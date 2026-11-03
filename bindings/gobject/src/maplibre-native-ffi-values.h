@@ -1524,6 +1524,20 @@ typedef struct {
 } MaplibreNativeFfiStyleExpressionType;
 
 /**
+ * MaplibreNativeFfiTerrainElevation:
+ * @meters: Meters above sea level, with the style's terrain exaggeration
+ *   applied.
+ *
+ * The height of the terrain at a point.
+ *
+ * See `mln_terrain_elevation` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+typedef struct {
+  gdouble meters;
+} MaplibreNativeFfiTerrainElevation;
+
+/**
  * MaplibreNativeFfiTextureImageInfo:
  * @width: width
  * @height: height
@@ -15501,6 +15515,35 @@ maplibre_native_ffi_style_transition_options_has_enable_placement_transitions(
 void maplibre_native_ffi_style_transition_options_set_enable_placement_transitions(
   MaplibreNativeFfiStyleTransitionOptions* self, gboolean value
 );
+
+GType maplibre_native_ffi_terrain_elevation_get_type(void) G_GNUC_CONST;
+#define MAPLIBRE_NATIVE_FFI_TYPE_TERRAIN_ELEVATION \
+  (maplibre_native_ffi_terrain_elevation_get_type())
+
+/**
+ * maplibre_native_ffi_terrain_elevation_copy:
+ *
+ * Copies the value.
+ *
+ * Returns: (transfer full): the copy
+ */
+MaplibreNativeFfiTerrainElevation* maplibre_native_ffi_terrain_elevation_copy(
+  const MaplibreNativeFfiTerrainElevation* self
+);
+
+/**
+ * maplibre_native_ffi_terrain_elevation_free:
+ * @self: (transfer full) (nullable): the value
+ *
+ * Frees the value.
+ */
+void maplibre_native_ffi_terrain_elevation_free(
+  MaplibreNativeFfiTerrainElevation* self
+);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(
+  MaplibreNativeFfiTerrainElevation, maplibre_native_ffi_terrain_elevation_free
+)
 
 GType maplibre_native_ffi_texture_image_info_get_type(void) G_GNUC_CONST;
 #define MAPLIBRE_NATIVE_FFI_TYPE_TEXTURE_IMAGE_INFO \
