@@ -2105,15 +2105,6 @@ auto map_set_style_terrain_json(MapObject& live, mln_buffer_view terrain_json)
     set_style_conversion_error("style terrain", error);
     return MLN_STATUS_INVALID_ARGUMENT;
   }
-  // The style spec's range. A terrain that a style document sets skips this
-  // check, as the engine applies it unchecked.
-  const auto exaggeration = terrain->getExaggeration();
-  if (!std::isfinite(exaggeration) || exaggeration < 0.0F) {
-    set_thread_error(
-      "style terrain: exaggeration must be a finite number of at least 0"
-    );
-    return MLN_STATUS_INVALID_ARGUMENT;
-  }
   style.setTerrain(std::make_unique<mln::style::Terrain>(std::move(*terrain)));
   return MLN_STATUS_OK;
 }
@@ -2157,8 +2148,8 @@ auto map_get_style_terrain_json(MapObject& live) -> std::string {
   if (terrain == nullptr) {
     return "null";
   }
-  // The setter keeps the value finite, but a style document's terrain isn't
-  // checked, so an exaggeration that overflowed the float writes null.
+  // The engine's conversion keeps the value finite. Should a terrain reach the
+  // style some other way, an exaggeration that isn't finite writes null.
   const auto exaggeration = shortest_float_json(terrain->getExaggeration());
   return R"({"source":)" +
          serialize_json_value(mln::Value{terrain->getSource()}) +

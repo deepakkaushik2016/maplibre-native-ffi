@@ -539,14 +539,14 @@ static void the_style_terrain_round_trips_through_json(void) {
   // The style spec's range: a negative exaggeration, or one that overflows
   // the engine's float, is rejected. A number past a double fails to parse.
   MLN_TEST_EXPECT_COMMAND_FAILED(
-    MLN_STATUS_INVALID_ARGUMENT, "terrain: exaggeration",
+    MLN_STATUS_INVALID_ARGUMENT, "exaggeration must be a finite number",
     mln_map_set_style_terrain_json(
       map, MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":-1}"),
       &completion.descriptor, NULL
     )
   );
   MLN_TEST_EXPECT_COMMAND_FAILED(
-    MLN_STATUS_INVALID_ARGUMENT, "terrain: exaggeration",
+    MLN_STATUS_INVALID_ARGUMENT, "exaggeration must be a finite number",
     mln_map_set_style_terrain_json(
       map, MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":1e39}"),
       &completion.descriptor, NULL
@@ -694,28 +694,31 @@ static size_t count_changed_pixels(
   return changed;
 }
 
-// Terrain may name a source the style doesn't have yet. Once the source
-// arrives, the map lifts the grid onto the cone that its DEM tiles hold, which
-// bends the grid's lines on screen where a terrain with no exaggeration leaves
-// them straight.
-// A style document's terrain skips the setter's range check, so its
-// exaggeration may overflow the engine's float. The getter still writes JSON,
-// with null for the number it cannot write.
-static void a_style_documents_non_finite_exaggeration_reads_back_as_null(void) {
+// A style document's terrain meets the same range as the setter's: a negative
+// exaggeration, or one that overflows the engine's float, fails to convert, so
+// the style loads without terrain.
+static void a_style_documents_out_of_range_exaggeration_has_no_terrain(void) {
+  static const char* const styles[] = {
+    "{\"version\":8,\"sources\":{},\"layers\":[],"
+    "\"terrain\":{\"source\":\"dem\",\"exaggeration\":-1}}",
+    "{\"version\":8,\"sources\":{},\"layers\":[],"
+    "\"terrain\":{\"source\":\"dem\",\"exaggeration\":1e39}}",
+  };
   mln_runtime runtime = mln_test_create_runtime();
   mln_map map = mln_test_create_map(runtime);
-  mln_test_load_style_and_wait(
-    map, MLN_BUFFER_LITERAL(
-           "{\"version\":8,\"sources\":{},\"layers\":[],"
-           "\"terrain\":{\"source\":\"dem\",\"exaggeration\":1e39}}"
-         )
-  );
-  EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":null}", map);
+  for (size_t index = 0; index < sizeof(styles) / sizeof(styles[0]); ++index) {
+    mln_test_load_style_and_wait(map, mln_buffer_view_from_cstr(styles[index]));
+    EXPECT_TERRAIN("null", map);
+  }
 
   mln_test_destroy_map(map);
   mln_test_destroy_runtime(runtime);
 }
 
+// Terrain may name a source the style doesn't have yet. Once the source
+// arrives, the map lifts the grid onto the cone that its DEM tiles hold, which
+// bends the grid's lines on screen where a terrain with no exaggeration leaves
+// them straight.
 static void terrain_set_before_its_source_applies_once_the_source_arrives(
   void
 ) {
@@ -770,6 +773,6 @@ MLN_TEST_GROUP {
   RUN_TEST(style_transition_options_reject_unsafe_raw_input);
   RUN_TEST(the_style_light_round_trips_through_json);
   RUN_TEST(the_style_terrain_round_trips_through_json);
-  RUN_TEST(a_style_documents_non_finite_exaggeration_reads_back_as_null);
+  RUN_TEST(a_style_documents_out_of_range_exaggeration_has_no_terrain);
   RUN_TEST(terrain_set_before_its_source_applies_once_the_source_arrives);
 }
