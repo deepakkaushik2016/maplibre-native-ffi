@@ -1,0 +1,32 @@
+Publishes a map update when the terrain load mode changes, as the tile LOD
+setters do, so a continuous map renders with the new mesh-tile cap and build
+budgets without waiting for another change. Setting the mode it already has
+publishes nothing.
+Upstream: not proposed
+
+diff --git a/src/mln/map/map.cpp b/src/mln/map/map.cpp
+index f2b3d12..c9c9e0c 100644
+--- a/src/mln/map/map.cpp
++++ b/src/mln/map/map.cpp
+@@ -632,7 +632,9 @@ TileLodMode Map::getTileLodMode() const {
+ }
+ 
+ void Map::setTerrainLoadMode(TerrainLoadMode mode) {
++    if (impl->terrainLoadMode == mode) return;
+     impl->terrainLoadMode = mode;
++    impl->onUpdate();
+ }
+ 
+ TerrainLoadMode Map::getTerrainLoadMode() const {
+diff --git a/test/map/map.test.cpp b/test/map/map.test.cpp
+index 85ab7e1..4d1d7ef 100644
+--- a/test/map/map.test.cpp
++++ b/test/map/map.test.cpp
+@@ -2705,6 +2705,7 @@ TEST(Map, TileSelectionOptionsPublishUpdates) {
+     check(&Map::setTileLodPitchThreshold, &UpdateParameters::tileLodPitchThreshold, 0.5);
+     check(&Map::setTileLodZoomShift, &UpdateParameters::tileLodZoomShift, 1.0);
+     check(&Map::setTileLodMode, &UpdateParameters::tileLodMode, TileLodMode::Distance);
++    check(&Map::setTerrainLoadMode, &UpdateParameters::terrainLoadMode, TerrainLoadMode::Performance);
+ }
+ 
+ TEST(Map, UnrelatedImagePreservesTileLayoutAndCache) {
