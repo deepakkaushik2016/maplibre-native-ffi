@@ -311,30 +311,51 @@ def publish_embedded_inventory(archive: pathlib.Path, name: str, tag: str) -> No
     publish_inventory(archive, inventory, tag)
 
 
-def publish_inventory(archive: pathlib.Path, inventory: dict, tag: str) -> None:
+def archive_inventory(archive: pathlib.Path) -> dict:
+    """The inventory that a native archive carries for its own contents."""
+    root = archive.name.removesuffix(ARCHIVE_SUFFIX)
+    with tarfile.open(archive, "r:gz") as source:
+        return json.load(
+            source.extractfile(f"{root}/share/maplibre-native-c/{SBOM_NAME}")
+        )
+
+
+def publish_inventory(
+    archive: pathlib.Path,
+    inventory: dict,
+    tag: str,
+    download_url: str = RELEASE_DOWNLOAD_URL,
+) -> None:
     # Only the sidecar hashes the final archive. Embedding that hash in the
     # archive's own inventory would make the checksum self-referential.
     inventory["metadata"]["component"].setdefault("externalReferences", []).append(
         {
             "type": "distribution",
-            "url": f"{RELEASE_DOWNLOAD_URL}/{tag}/{archive.name}",
+            "url": f"{download_url}/{tag}/{archive.name}",
             "hashes": [{"alg": "SHA-256", "content": sha256(archive)}],
         }
     )
     write_json(sbom_path(archive), inventory)
 
 
-def sbom_reference(archive: pathlib.Path, tag: str) -> dict:
+def sbom_reference(
+    archive: pathlib.Path, tag: str, download_url: str = RELEASE_DOWNLOAD_URL
+) -> dict:
     path = sbom_path(archive)
     return {
         "file": path.name,
-        "url": f"{RELEASE_DOWNLOAD_URL}/{tag}/{path.name}",
+        "url": f"{download_url}/{tag}/{path.name}",
         "sha256": sha256(path),
     }
 
 
-def artifact_index(tag: str, archives: list[pathlib.Path]) -> dict:
-    """The artifact index of release `tag`, which holds `archives`.
+def artifact_index(
+    tag: str,
+    archives: list[pathlib.Path],
+    download_url: str = RELEASE_DOWNLOAD_URL,
+) -> dict:
+    """The artifact index of release `tag`, which holds `archives`, published
+    under `download_url`.
 
     A published package pins the index to choose an archive for its target
     and backend before it has downloaded any. Each descriptor's release fields
@@ -368,7 +389,7 @@ def artifact_index(tag: str, archives: list[pathlib.Path]) -> dict:
             "backend": key[1],
             "archive": archive.name,
             "sha256": sha256(archive),
-            "sbom": sbom_reference(archive, tag),
+            "sbom": sbom_reference(archive, tag, download_url),
         }
     if index is None:
         raise SystemExit("an artifact index needs at least one archive")
