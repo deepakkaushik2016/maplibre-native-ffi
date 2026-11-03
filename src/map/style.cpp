@@ -11,12 +11,15 @@
 #include <cstdint>
 #include <cstring>
 #include <exception>
+#include <iomanip>
 #include <limits>
+#include <locale>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <ratio>
 #include <span>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -79,7 +82,6 @@
 #include <mln/util/projection.hpp>
 #include <mln/util/range.hpp>
 #include <mln/util/size.hpp>
-#include <mln/util/string.hpp>
 #include <mln/util/tileset.hpp>
 #include <mln/util/vectors.hpp>
 
@@ -2120,27 +2122,32 @@ namespace {
 
 // The shortest number that reads back as `value`, so a stored 1.1F writes 1.1
 // rather than the double it widens to. std::to_chars would find it, but Apple's
-// libc++ offers its floating-point overloads only from iOS 16.3. Rounding to
-// ever more significant digits finds the same number, and the engine's double
-// formatter writes it without depending on the C locale.
+// libc++ offers its floating-point overloads only from iOS 16.3, so this tries
+// each count of significant digits up to the nine that any float needs, as
+// printf's %g writes them, in the classic locale that JSON's numbers follow.
+// JSON has no infinity or NaN, so those write null.
 auto shortest_float_json(float value) -> std::string {
-  const auto widened = static_cast<double>(value);
-  if (!std::isfinite(widened)) {
-    return serialize_json_value(mln::Value{widened});
+  if (!std::isfinite(value)) {
+    return "null";
   }
-  if (widened != 0.0) {
-    const auto magnitude =
-      static_cast<int>(std::floor(std::log10(std::abs(widened))));
-    for (auto digits = 1; digits < std::numeric_limits<float>::max_digits10;
-         ++digits) {
-      const auto scale = std::pow(10.0, digits - 1 - magnitude);
-      const auto rounded = std::round(widened * scale) / scale;
-      if (static_cast<float>(rounded) == value) {
-        return mln::util::toString(rounded);
-      }
+  auto text = std::string{};
+  for (auto digits = 1; digits <= std::numeric_limits<float>::max_digits10;
+       ++digits) {
+    auto written = std::ostringstream{};
+    written.imbue(std::locale::classic());
+    written << std::setprecision(digits) << value;
+    text = written.str();
+    // Read back as the setter reads it: a JSON double, narrowed to a float.
+    auto read = mln::JSDocument{};
+    read.Parse<0>(text.data(), text.size());
+    if (
+      !read.HasParseError() && read.IsNumber() &&
+      static_cast<float>(read.GetDouble()) == value
+    ) {
+      break;
     }
   }
-  return mln::util::toString(widened);
+  return text;
 }
 
 }  // namespace
@@ -2151,7 +2158,7 @@ auto map_get_style_terrain_json(MapObject& live) -> std::string {
     return "null";
   }
   // The setter keeps the value finite, but a style document's terrain isn't
-  // checked, so this writes whatever the engine holds.
+  // checked, so an exaggeration that overflowed the float writes null.
   const auto exaggeration = shortest_float_json(terrain->getExaggeration());
   return R"({"source":)" +
          serialize_json_value(mln::Value{terrain->getSource()}) +

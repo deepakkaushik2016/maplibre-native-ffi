@@ -491,6 +491,18 @@ static void read_terrain(mln_map map, char* out, size_t capacity) {
     TEST_ASSERT_EQUAL_STRING((expected), terrain); \
   } while (false)
 
+// Sets the terrain's exaggeration to the JSON number `set` and expects it to
+// read back as `read`.
+#define EXPECT_TERRAIN_EXAGGERATION(set, read, map)                          \
+  do {                                                                       \
+    MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(                        \
+      (map),                                                                 \
+      MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":" set "}"),   \
+      &completion.descriptor, NULL                                           \
+    ));                                                                      \
+    EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":" read "}", (map)); \
+  } while (false)
+
 // The terrain has no ID to miss, so every bad input is an INVALID_ARGUMENT,
 // and JSON null is how a caller turns it off.
 static void the_style_terrain_round_trips_through_json(void) {
@@ -561,6 +573,12 @@ static void the_style_terrain_round_trips_through_json(void) {
     &completion.descriptor, NULL
   ));
   EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":2}", map);
+  // The shortest text that reads back as the float, at its extremes too.
+  EXPECT_TERRAIN_EXAGGERATION("3.4028234663852886e38", "3.4028235e+38", map);
+  EXPECT_TERRAIN_EXAGGERATION("1.401298464324817e-45", "1e-45", map);
+  EXPECT_TERRAIN_EXAGGERATION("1e37", "1e+37", map);
+  EXPECT_TERRAIN_EXAGGERATION("0", "0", map);
+  EXPECT_TERRAIN_EXAGGERATION("-0.0", "-0", map);
 
   MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(
     map, MLN_BUFFER_LITERAL("null"), &completion.descriptor, NULL
@@ -680,6 +698,24 @@ static size_t count_changed_pixels(
 // arrives, the map lifts the grid onto the cone that its DEM tiles hold, which
 // bends the grid's lines on screen where a terrain with no exaggeration leaves
 // them straight.
+// A style document's terrain skips the setter's range check, so its
+// exaggeration may overflow the engine's float. The getter still writes JSON,
+// with null for the number it cannot write.
+static void a_style_documents_non_finite_exaggeration_reads_back_as_null(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(
+    map, MLN_BUFFER_LITERAL(
+           "{\"version\":8,\"sources\":{},\"layers\":[],"
+           "\"terrain\":{\"source\":\"dem\",\"exaggeration\":1e39}}"
+         )
+  );
+  EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":null}", map);
+
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 static void terrain_set_before_its_source_applies_once_the_source_arrives(
   void
 ) {
@@ -734,5 +770,6 @@ MLN_TEST_GROUP {
   RUN_TEST(style_transition_options_reject_unsafe_raw_input);
   RUN_TEST(the_style_light_round_trips_through_json);
   RUN_TEST(the_style_terrain_round_trips_through_json);
+  RUN_TEST(a_style_documents_non_finite_exaggeration_reads_back_as_null);
   RUN_TEST(terrain_set_before_its_source_applies_once_the_source_arrives);
 }
