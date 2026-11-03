@@ -3444,7 +3444,8 @@ export class MapHandle extends Owner {
    * map's style, or removes it when `terrainJson` is JSON `null`.
    *
    * The terrain can name a `raster-dem` source that the style doesn't have yet.
-   * The map renders it once the source exists.
+   * The map renders it once the source exists. A terrain whose source isn't a
+   * `raster-dem` source, such as a vector source, has no height.
    *
    * A pitched view of the terrain needs the camera's center to follow the
    * ground: turn on `center_clamped_to_ground` in `MapTerrainOptions` with
@@ -4505,7 +4506,8 @@ export class MapHandleDiscarding {
    * map's style, or removes it when `terrainJson` is JSON `null`.
    *
    * The terrain can name a `raster-dem` source that the style doesn't have yet.
-   * The map renders it once the source exists.
+   * The map renders it once the source exists. A terrain whose source isn't a
+   * `raster-dem` source, such as a vector source, has no height.
    *
    * A pitched view of the terrain needs the camera's center to follow the
    * ground: turn on `center_clamped_to_ground` in `MapTerrainOptions` with

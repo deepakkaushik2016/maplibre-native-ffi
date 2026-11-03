@@ -3083,7 +3083,9 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     /// </summary>
     /// <remarks>
     /// <para>The terrain can name a <c>raster-dem</c> source that the style
-    /// doesn't have yet. The map renders it once the source exists.</para>
+    /// doesn't have yet. The map renders it once the source exists. A terrain
+    /// whose source isn't a <c>raster-dem</c> source, such as a vector source,
+    /// has no height.</para>
     /// <para>A pitched view of the terrain needs the camera's center to follow
     /// the ground: turn on <c>center_clamped_to_ground</c> in
     /// <c>MapTerrainOptions</c> with <c>MapHandle.SetTerrainOptionsAsync()</c>.

@@ -151,6 +151,32 @@ static void a_height_past_a_float_is_no_value(void) {
   close_plateau_map(&view);
 }
 
+// Terrain may name a source that holds no DEM, such as a GeoJSON source that a
+// layer draws. The map accepts it and renders, but the terrain has no height.
+static void terrain_on_a_source_without_dem_has_no_height(void) {
+  plateau_map view = {0};
+  open_plateau_map(&view, 1.0);
+  MLN_TEST_AWAIT_OK(mln_map_add_style_source_json(
+    view.map, MLN_BUFFER_LITERAL("trail"),
+    MLN_BUFFER_LITERAL(
+      "{\"type\":\"geojson\",\"data\":{\"type\":\"LineString\","
+      "\"coordinates\":[[11.3,47.27],[11.5,47.27]]}}"
+    ),
+    &completion.descriptor, NULL
+  ));
+  MLN_TEST_AWAIT_OK(mln_map_add_style_layer_json(
+    view.map,
+    MLN_BUFFER_LITERAL(
+      "{\"id\":\"trail\",\"type\":\"line\",\"source\":\"trail\"}"
+    ),
+    (mln_buffer_view){0}, &completion.descriptor, NULL
+  ));
+  set_terrain(view.map, "{\"source\":\"trail\"}");
+  MLN_TEST_OK(mln_test_render_still_image(&view.fixture, view.map));
+  EXPECT_NO_ELEVATION(&view.fixture, on_the_plateau);
+  close_plateau_map(&view);
+}
+
 // A session creates its renderer for its first frame, so before that the
 // query fails as every other render session query does.
 static void a_session_that_never_rendered_has_no_renderer(void) {
@@ -228,6 +254,7 @@ static void malformed_queries_are_rejected_at_submission(void) {
 MLN_TEST_GROUP {
   RUN_TEST(the_height_is_the_terrain_the_last_frame_drew);
   RUN_TEST(a_height_past_a_float_is_no_value);
+  RUN_TEST(terrain_on_a_source_without_dem_has_no_height);
   RUN_TEST(a_session_that_never_rendered_has_no_renderer);
   RUN_TEST(malformed_queries_are_rejected_at_submission);
 }
