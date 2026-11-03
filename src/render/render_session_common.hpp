@@ -784,6 +784,29 @@ class SessionFrameObserver final : public mln::RendererObserver {
     if (!suppress_frame_callbacks_) map_completed_ = true;
   }
 
+  // The terrain heights describe the renderer's state rather than the frame,
+  // and the renderer reports each only when it changes, so they reach the map
+  // whether or not the frame's own callbacks do.
+  void onTerrainCenterElevationChanged(double elevation_meters) override {
+    if (delegate_ != nullptr) {
+      delegate_->onTerrainCenterElevationChanged(elevation_meters);
+    }
+  }
+
+  void onTerrainEyeElevationChanged(double elevation_meters) override {
+    if (delegate_ != nullptr) {
+      delegate_->onTerrainEyeElevationChanged(elevation_meters);
+    }
+  }
+
+  void onTerrainTransitionTargetElevationChanged(
+    double elevation_meters
+  ) override {
+    if (delegate_ != nullptr) {
+      delegate_->onTerrainTransitionTargetElevationChanged(elevation_meters);
+    }
+  }
+
   void onStyleImageMissing(
     const std::string& id, const StyleImageMissingCallback& done
   ) override {

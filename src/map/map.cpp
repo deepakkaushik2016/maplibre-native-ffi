@@ -1158,6 +1158,27 @@ class ForwardingRendererObserver final : public mln::RendererObserver {
     delegate_.invoke(&mln::RendererObserver::onDidFinishRenderingMap);
   }
 
+  void onTerrainCenterElevationChanged(double elevation_meters) override {
+    delegate_.invoke(
+      &mln::RendererObserver::onTerrainCenterElevationChanged, elevation_meters
+    );
+  }
+
+  void onTerrainEyeElevationChanged(double elevation_meters) override {
+    delegate_.invoke(
+      &mln::RendererObserver::onTerrainEyeElevationChanged, elevation_meters
+    );
+  }
+
+  void onTerrainTransitionTargetElevationChanged(
+    double elevation_meters
+  ) override {
+    delegate_.invoke(
+      &mln::RendererObserver::onTerrainTransitionTargetElevationChanged,
+      elevation_meters
+    );
+  }
+
   void onStyleImageMissing(
     const std::string& id, const StyleImageMissingCallback& done
   ) override {
