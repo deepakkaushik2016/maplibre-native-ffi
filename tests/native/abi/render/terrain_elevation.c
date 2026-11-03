@@ -66,7 +66,8 @@ static mln_status query_elevation(
   bool* out_found
 ) {
   *out_found = false;
-  mln_test_completion completion = mln_test_completion_default(sizeof(double));
+  mln_test_completion completion =
+    mln_test_completion_default(sizeof(mln_terrain_elevation));
   const mln_status submitted = mln_render_session_query_terrain_elevation(
     fixture->session, point, &completion.descriptor, MLN_TEST_DIAGNOSTIC
   );
@@ -79,11 +80,16 @@ static mln_status query_elevation(
     mln_test_render_fixture_finish_operation(fixture, &completion);
   *out_found = status == MLN_STATUS_OK &&
                mln_test_completion_value_count(&completion) != 0;
+  mln_terrain_elevation elevation = {0};
   if (
-    *out_found &&
-    !mln_test_completion_copy_value(&completion, out_meters, sizeof(double))
+    *out_found && !mln_test_completion_copy_value(
+                    &completion, &elevation, sizeof(mln_terrain_elevation)
+                  )
   ) {
     status = MLN_STATUS_NATIVE_ERROR;
+  }
+  if (*out_found) {
+    *out_meters = elevation.meters;
   }
   mln_test_completion_destroy(&completion);
   return status;
