@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
@@ -2103,7 +2104,8 @@ auto map_set_style_terrain_json(MapObject& live, mln_buffer_view terrain_json)
     set_style_conversion_error("style terrain", error);
     return MLN_STATUS_INVALID_ARGUMENT;
   }
-  // The style spec's range, which also keeps the JSON that reads it back valid.
+  // The style spec's range. A terrain that a style document sets skips this
+  // check, as the engine applies it unchecked.
   const auto exaggeration = terrain->getExaggeration();
   if (!std::isfinite(exaggeration) || exaggeration < 0.0F) {
     set_thread_error(
@@ -2121,15 +2123,19 @@ auto map_get_style_terrain_json(MapObject& live) -> std::string {
     return "null";
   }
   // The shortest text that reads back as the stored float, so 1.1 stays 1.1.
-  auto exaggeration = std::array<char, 32>{};
-  const auto written = std::to_chars(
-    exaggeration.data(), exaggeration.data() + exaggeration.size(),
-    terrain->getExaggeration()
-  );
+  // The setter keeps the value finite, but a style document's terrain isn't
+  // checked, so this writes whatever the engine holds.
+  const auto value = terrain->getExaggeration();
+  auto buffer = std::array<char, 32>{};
+  const auto written =
+    std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+  const auto exaggeration =
+    written.ec == std::errc{}
+      ? std::string{buffer.data(), written.ptr}
+      : serialize_json_value(mln::Value{static_cast<double>(value)});
   return R"({"source":)" +
          serialize_json_value(mln::Value{terrain->getSource()}) +
-         R"(,"exaggeration":)" + std::string{exaggeration.data(), written.ptr} +
-         "}";
+         R"(,"exaggeration":)" + exaggeration + "}";
 }
 
 auto map_set_style_light_property(

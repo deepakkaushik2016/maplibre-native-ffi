@@ -2,6 +2,7 @@
 // that belong to no layer.
 
 #include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -522,6 +523,29 @@ static void the_style_terrain_round_trips_through_json(void) {
       NULL
     )
   );
+  // The style spec's range: a negative exaggeration, or one that overflows
+  // the engine's float, is rejected. A number past a double fails to parse.
+  MLN_TEST_EXPECT_COMMAND_FAILED(
+    MLN_STATUS_INVALID_ARGUMENT, "terrain: exaggeration",
+    mln_map_set_style_terrain_json(
+      map, MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":-1}"),
+      &completion.descriptor, NULL
+    )
+  );
+  MLN_TEST_EXPECT_COMMAND_FAILED(
+    MLN_STATUS_INVALID_ARGUMENT, "terrain: exaggeration",
+    mln_map_set_style_terrain_json(
+      map, MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":1e39}"),
+      &completion.descriptor, NULL
+    )
+  );
+  MLN_TEST_EXPECT_COMMAND_FAILED(
+    MLN_STATUS_INVALID_ARGUMENT, "terrain",
+    mln_map_set_style_terrain_json(
+      map, MLN_BUFFER_LITERAL("{\"source\":\"dem\",\"exaggeration\":1e999}"),
+      &completion.descriptor, NULL
+    )
+  );
   // A rejected terrain leaves the one before it in place.
   EXPECT_TERRAIN("{\"source\":\"dem\",\"exaggeration\":1.25}", map);
 
@@ -573,6 +597,23 @@ static void serve_dem_tile(
   mln_test_request_answer(handle, &response);
 }
 
+// Appends formatted text at `*length` in `out`, which holds `capacity` bytes,
+// and fails the case when the text and its terminator don't fit.
+static void append_text(
+  char* out, size_t capacity, size_t* length, const char* format, ...
+) {
+  va_list arguments;
+  va_start(arguments, format);
+  const int written =
+    vsnprintf(out + *length, capacity - *length, format, arguments);
+  va_end(arguments);
+  TEST_ASSERT_TRUE_MESSAGE(
+    written >= 0 && (size_t)written < capacity - *length,
+    "the text overflows its buffer"
+  );
+  *length += (size_t)written;
+}
+
 // A pitched static map over a grid of lines, which terrain drapes over the
 // cones in the DEM tiles.
 static mln_map create_terrain_grid_map(mln_runtime runtime) {
@@ -585,8 +626,9 @@ static mln_map create_terrain_grid_map(mln_runtime runtime) {
   enum { style_capacity = 16384 };
   char* style = malloc(style_capacity);
   TEST_ASSERT_NOT_NULL(style);
-  int length = snprintf(
-    style, style_capacity,
+  size_t length = 0;
+  append_text(
+    style, style_capacity, &length,
     "{\"version\":8,\"center\":[31.025390625,36.527295],\"zoom\":10,"
     "\"pitch\":60,\"sources\":{\"grid\":{\"type\":\"geojson\",\"data\":"
     "{\"type\":\"MultiLineString\",\"coordinates\":["
@@ -594,20 +636,19 @@ static mln_map create_terrain_grid_map(mln_runtime runtime) {
   for (int line = 0; line <= 50; line += 1) {
     const double lng = 30.9 + (line * 0.005);
     const double lat = 36.4 + (line * 0.005);
-    length += snprintf(
-      style + length, (size_t)(style_capacity - length),
+    append_text(
+      style, style_capacity, &length,
       "%s[[%.3f,36.4],[%.3f,36.65]],[[30.9,%.3f],[31.15,%.3f]]",
       line == 0 ? "" : ",", lng, lng, lat, lat
     );
   }
-  length += snprintf(
-    style + length, (size_t)(style_capacity - length),
+  append_text(
+    style, style_capacity, &length,
     "]}}},\"layers\":[{\"id\":\"bg\",\"type\":\"background\",\"paint\":"
     "{\"background-color\":\"#ffffff\"}},{\"id\":\"grid\",\"type\":\"line\","
     "\"source\":\"grid\",\"paint\":{\"line-color\":\"#000000\","
     "\"line-width\":2}}]}"
   );
-  TEST_ASSERT_TRUE(length > 0 && length < style_capacity);
   mln_test_load_style_and_wait(map, mln_buffer_view_from_cstr(style));
   free(style);
   return map;
