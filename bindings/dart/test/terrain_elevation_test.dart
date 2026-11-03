@@ -33,29 +33,35 @@ final _plateauStyle = {
   'layers': <Object?>[],
 };
 
+/// Attaches a session to a static map of the plateau, which renders no frame
+/// until it is asked for a still image.
+Future<(MapHandle, WorkerSession)> _openPlateau() async {
+  final fixture = await openRuntime(
+    provider: ResourceProvider(
+      callback: (request, handle) => handle.complete(
+        request.requestedUrl.contains('/dem/')
+            ? ResourceResponse(bytes: _plateauPng)
+            : ResourceResponse(status: ResourceResponseStatus.noContent),
+      ),
+    ),
+  );
+  final map = await fixture.openMap(
+    MapOptions(
+      mapMode: MapMode.static,
+      initialExtent: LogicalExtent(
+        width: renderSize,
+        height: renderSize,
+        scaleFactor: 1,
+      ),
+    ),
+  );
+  await expectCommitted(map.setStyleJson(_plateauStyle));
+  return (map, await WorkerSession.attach(map));
+}
+
 void main() {
   test('the height under a point, or null where no DEM tile is', () async {
-    final fixture = await openRuntime(
-      provider: ResourceProvider(
-        callback: (request, handle) => handle.complete(
-          request.requestedUrl.contains('/dem/')
-              ? ResourceResponse(bytes: _plateauPng)
-              : ResourceResponse(status: ResourceResponseStatus.noContent),
-        ),
-      ),
-    );
-    final map = await fixture.openMap(
-      MapOptions(
-        mapMode: MapMode.static,
-        initialExtent: LogicalExtent(
-          width: renderSize,
-          height: renderSize,
-          scaleFactor: 1,
-        ),
-      ),
-    );
-    await expectCommitted(map.setStyleJson(_plateauStyle));
-    final worker = await WorkerSession.attach(map);
+    final (map, worker) = await _openPlateau();
     await within(map.requestStillImage(), 'the still image');
 
     final elevation = await within(
@@ -72,5 +78,22 @@ void main() {
       'the elevation query',
     );
     expect(elsewhere, isNull);
+  });
+
+  // Null means the frame has no terrain there. Before the first frame there is
+  // no frame to read, so the query throws rather than completing with null.
+  test('a session that never rendered throws invalidState', () async {
+    final (_, worker) = await _openPlateau();
+
+    await expectLater(
+      worker.session.queryTerrainElevation(_plateau),
+      throwsA(
+        isA<MaplibreException>().having(
+          (error) => error.status,
+          'status',
+          Status.invalidState,
+        ),
+      ),
+    );
   });
 }

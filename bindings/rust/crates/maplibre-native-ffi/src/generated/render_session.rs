@@ -519,7 +519,8 @@ impl RenderSessionHandle {
     /// # Errors
     ///
     /// - `Status::InvalidState` when the session hasn't rendered a frame since
-    ///   it attached or changed its scale factor.
+    ///   it attached or changed its scale factor. The query fails then, rather
+    ///   than delivering no value, because there is no frame to read.
     pub fn query_terrain_elevation(
         &self,
         point: LatLng,

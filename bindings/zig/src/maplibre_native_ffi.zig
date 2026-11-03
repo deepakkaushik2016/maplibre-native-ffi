@@ -2382,7 +2382,8 @@ pub const RenderSession = struct {
     /// Errors:
     ///
     /// - `error.InvalidState` when the session hasn't rendered a frame since it
-    ///   attached or changed its scale factor.
+    ///   attached or changed its scale factor. The query fails then, rather than
+    ///   delivering no value, because there is no frame to read.
     pub fn queryTerrainElevation(self: RenderSession, point: LatLng, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(?TerrainElevation) {
         return call.submit("mln_render_session_query_terrain_elevation", .handle, self, call.orNull(call.value(TerrainElevation, c.mln_terrain_elevation)), null, diagnostic, .{point});
     }

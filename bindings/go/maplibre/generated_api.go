@@ -9528,7 +9528,8 @@ func (receiver *RenderSessionHandle) QuerySourceFeatures(sourceID string, option
 //
 // Errors:
 //   - StatusInvalidState when the session hasn't rendered a frame since it
-//     attached or changed its scale factor.
+//     attached or changed its scale factor. The query fails then, rather than
+//     delivering no value, because there is no frame to read.
 func (receiver *RenderSessionHandle) QueryTerrainElevation(point LatLng) (*Future[*TerrainElevation], error) {
 	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_render_session_query_terrain_elevation(C.mln_render_session(raw), nativeLatLng(point, arena), completion, diagnostic))

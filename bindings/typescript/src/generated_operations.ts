@@ -5296,7 +5296,8 @@ export class RenderSessionHandle extends Owner {
    * Errors:
    *
    * - `Status.invalidState` when the session hasn't rendered a frame since it
-   *   attached or changed its scale factor.
+   *   attached or changed its scale factor. The query fails then, rather than
+   *   delivering no value, because there is no frame to read.
    */
   queryTerrainElevation(point: LatLng): Promise<TerrainElevation | undefined> {
     return query<TerrainElevation | undefined>((completion) =>

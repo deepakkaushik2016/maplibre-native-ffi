@@ -259,7 +259,8 @@ MLN_API mln_status mln_render_session_get_cluster_expansion_zoom(
  *
  * Completes with:
  * - MLN_STATUS_INVALID_STATE when the session hasn't rendered a frame since it
- *   attached or changed its scale factor.
+ *   attached or changed its scale factor. The query fails then, rather than
+ *   delivering no value, because there is no frame to read.
  */
 MLN_BINDING("execution=query;result=mln_terrain_elevation;nullable=true")
 MLN_API mln_status mln_render_session_query_terrain_elevation(

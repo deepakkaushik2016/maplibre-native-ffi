@@ -635,8 +635,9 @@ public sealed unsafe partial class RenderSessionHandle
     /// <para>Errors:</para>
     /// <list type="bullet">
     /// <item><description><c>Status.InvalidState</c> when the session hasn't
-    /// rendered a frame since it attached or changed its scale
-    /// factor.</description></item>
+    /// rendered a frame since it attached or changed its scale factor. The
+    /// query fails then, rather than delivering no value, because there is no
+    /// frame to read.</description></item>
     /// </list>
     /// </remarks>
     public Task<TerrainElevation?> QueryTerrainElevationAsync(LatLng point)

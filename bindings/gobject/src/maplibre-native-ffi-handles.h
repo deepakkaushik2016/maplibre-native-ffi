@@ -4519,7 +4519,8 @@ GPtrArray* maplibre_native_ffi_render_session_query_source_features_finish(
  * It fails with these errors:
  *
  * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` when the session hasn't rendered
- *   a frame since it attached or changed its scale factor.
+ *   a frame since it attached or changed its scale factor. The query fails
+ *   then, rather than delivering no value, because there is no frame to read.
  */
 void maplibre_native_ffi_render_session_query_terrain_elevation_async(
   MaplibreNativeFfiRenderSession* self, const MaplibreNativeFfiLatLng* point,
