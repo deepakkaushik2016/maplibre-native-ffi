@@ -10,43 +10,45 @@ observer, as gfx::Context's does, for a layer group that is never given one.
 Upstream: not proposed
 
 diff --git a/include/mln/renderer/layer_group.hpp b/include/mln/renderer/layer_group.hpp
-index ee3e5a8..d0db7f0 100644
+index 3f69012f7a..11bb2b309e 100644
 --- a/include/mln/renderer/layer_group.hpp
 +++ b/include/mln/renderer/layer_group.hpp
-@@ -117,7 +117,7 @@ protected:
-     int32_t layerIndex;
+@@ -136,7 +136,7 @@ protected:
      std::vector<LayerTweakerWeakPtr> layerTweakers;
      std::string name;
+     bool renderToTerrain;
 -    gfx::ContextObserver* observer;
 +    gfx::ContextObserver* observer = &gfx::Context::nullObserver;
- };
- 
- /**
+     /// See hasUntweakedDrawables
+     bool untweakedDrawables = false;
+     /// See getPaintRevision
 diff --git a/src/mln/webgpu/context.cpp b/src/mln/webgpu/context.cpp
-index b534ded..7e0c8c8 100644
+index e51fce1e25..ccc3b1ed98 100644
 --- a/src/mln/webgpu/context.cpp
 +++ b/src/mln/webgpu/context.cpp
-@@ -118,11 +118,13 @@ gfx::ShaderProgramBasePtr Context::getGenericShader(gfx::ShaderRegistry& registr
- 
- TileLayerGroupPtr Context::createTileLayerGroup(int32_t layerIndex, std::size_t initialCapacity, std::string name) {
-     auto tileLayerGroup = std::make_shared<webgpu::TileLayerGroup>(layerIndex, initialCapacity, std::move(name));
+@@ -123,6 +123,7 @@ TileLayerGroupPtr Context::createTileLayerGroup(int32_t layerIndex,
+                                                 bool renderToTerrain) {
+     auto tileLayerGroup = std::make_shared<webgpu::TileLayerGroup>(
+         layerIndex, initialCapacity, std::move(name), renderToTerrain);
 +    tileLayerGroup->setObserver(observer);
      return tileLayerGroup;
  }
  
- LayerGroupPtr Context::createLayerGroup(int32_t layerIndex, std::size_t initialCapacity, std::string name) {
-     auto layerGroup = std::make_shared<webgpu::LayerGroup>(layerIndex, initialCapacity, std::move(name));
+@@ -132,6 +133,7 @@ LayerGroupPtr Context::createLayerGroup(int32_t layerIndex,
+                                         bool renderToTerrain) {
+     auto layerGroup = std::make_shared<webgpu::LayerGroup>(
+         layerIndex, initialCapacity, std::move(name), renderToTerrain);
 +    layerGroup->setObserver(observer);
      return layerGroup;
  }
  
 diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
-index 3d8e57b..dbd8904 100644
+index f4f53e48f6..922a73b584 100644
 --- a/test/CMakeLists.txt
 +++ b/test/CMakeLists.txt
-@@ -28,6 +28,7 @@ add_library(
-     ${PROJECT_SOURCE_DIR}/test/renderer/renderable.test.cpp
-     ${PROJECT_SOURCE_DIR}/test/renderer/shader_registry.test.cpp
+@@ -54,6 +54,7 @@ add_library(
+     ${PROJECT_SOURCE_DIR}/test/renderer/terrain_mesh_cover.test.cpp
+     ${PROJECT_SOURCE_DIR}/test/renderer/terrain_source_cover.test.cpp
      $<$<BOOL:${MLN_WITH_WEBGPU}>:${PROJECT_SOURCE_DIR}/test/renderer/wgsl_preprocessor.test.cpp>
 +    $<$<BOOL:${MLN_WITH_WEBGPU}>:${PROJECT_SOURCE_DIR}/test/renderer/webgpu_layer_group.test.cpp>
      ${PROJECT_SOURCE_DIR}/test/sprite/sprite_loader.test.cpp
@@ -54,7 +56,7 @@ index 3d8e57b..dbd8904 100644
      ${PROJECT_SOURCE_DIR}/test/src/mln/test/fixture_log_observer.cpp
 diff --git a/test/renderer/webgpu_layer_group.test.cpp b/test/renderer/webgpu_layer_group.test.cpp
 new file mode 100644
-index 0000000..85dc2a0
+index 0000000000..85dc2a018f
 --- /dev/null
 +++ b/test/renderer/webgpu_layer_group.test.cpp
 @@ -0,0 +1,100 @@

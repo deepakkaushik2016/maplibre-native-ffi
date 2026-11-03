@@ -7,29 +7,16 @@ feature A and setting the state of feature B before one frame cleared A but
 left B unchanged on screen until a later frame resent every current state. On
 an idle map no such frame comes. The removed states now merge into the set
 states, as in GL JS.
+On the terrain engine, coalesceChanges already folds the set and removed
+states into the current states and sends every current state to each tile, so
+only the regression test remains.
 Upstream: not proposed
 
-diff --git a/src/mln/renderer/source_state.cpp b/src/mln/renderer/source_state.cpp
-index bd930ba..f9376e9 100644
---- a/src/mln/renderer/source_state.cpp
-+++ b/src/mln/renderer/source_state.cpp
-@@ -91,7 +91,10 @@ void SourceFeatureState::coalesceChanges(std::vector<RenderTile>& tiles) {
-                 layerStates[featureID] = currentStates[sourceLayer][featureID];
-             }
-         }
--        changes[sourceLayer] = std::move(layerStates);
-+        auto& layerChanges = changes[sourceLayer];
-+        for (auto& [featureID, featureState] : layerStates) {
-+            layerChanges[featureID] = std::move(featureState);
-+        }
-     }
- 
-     stateChanges.clear();
 diff --git a/test/map/map.test.cpp b/test/map/map.test.cpp
-index d521208..8140958 100644
+index 84dc9a0ad7..4720fbcd74 100644
 --- a/test/map/map.test.cpp
 +++ b/test/map/map.test.cpp
-@@ -2548,6 +2548,88 @@ TEST(Map, FeatureStateChangesRenderedStyle) {
+@@ -2620,6 +2620,88 @@ TEST(Map, FeatureStateChangesRenderedStyle) {
      }
  }
  

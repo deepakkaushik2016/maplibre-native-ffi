@@ -3,7 +3,7 @@ WebGPU, which could otherwise suppress uploads after feature-state changes.
 Upstream: https://github.com/maplibre/maplibre-native/pull/4679 at 02ddb45f
 
 diff --git a/include/mln/mtl/vertex_buffer_resource.hpp b/include/mln/mtl/vertex_buffer_resource.hpp
-index 72c2c89b7b..e9207fd280 100644
+index 72c2c89b7b9c..e9207fd28052 100644
 --- a/include/mln/mtl/vertex_buffer_resource.hpp
 +++ b/include/mln/mtl/vertex_buffer_resource.hpp
 @@ -12,7 +12,8 @@ class VertexBufferResource : public gfx::VertexBufferResource {
@@ -26,7 +26,7 @@ index 72c2c89b7b..e9207fd280 100644
  
  using UniqueVertexBufferResource = std::unique_ptr<VertexBufferResource>;
 diff --git a/include/mln/vulkan/vertex_buffer_resource.hpp b/include/mln/vulkan/vertex_buffer_resource.hpp
-index 708ce6ba25..5741eeb288 100644
+index 708ce6ba255b..5741eeb28877 100644
 --- a/include/mln/vulkan/vertex_buffer_resource.hpp
 +++ b/include/mln/vulkan/vertex_buffer_resource.hpp
 @@ -3,6 +3,8 @@
@@ -58,7 +58,7 @@ index 708ce6ba25..5741eeb288 100644
  
  using UniqueVertexBufferResource = std::unique_ptr<VertexBufferResource>;
 diff --git a/include/mln/webgpu/vertex_buffer_resource.hpp b/include/mln/webgpu/vertex_buffer_resource.hpp
-index 4763dc7d17..1bf03943de 100644
+index 4763dc7d17d3..1bf03943de84 100644
 --- a/include/mln/webgpu/vertex_buffer_resource.hpp
 +++ b/include/mln/webgpu/vertex_buffer_resource.hpp
 @@ -15,7 +15,8 @@ class VertexBufferResource : public gfx::VertexBufferResource {
@@ -81,20 +81,20 @@ index 4763dc7d17..1bf03943de 100644
  
  using UniqueVertexBufferResource = std::unique_ptr<VertexBufferResource>;
 diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
-index fe388e12bf..88937133f5 100644
+index ec27754c9e9c..3728b41e48e6 100644
 --- a/test/CMakeLists.txt
 +++ b/test/CMakeLists.txt
-@@ -11,6 +11,7 @@ add_library(
-     ${PROJECT_SOURCE_DIR}/test/api/recycle_map.cpp
+@@ -12,6 +12,7 @@ add_library(
+     ${PROJECT_SOURCE_DIR}/test/api/still_image.test.cpp
      ${PROJECT_SOURCE_DIR}/test/geometry/dem_data.test.cpp
      ${PROJECT_SOURCE_DIR}/test/geometry/line_atlas.test.cpp
 +    ${PROJECT_SOURCE_DIR}/test/gfx/vertex_buffer.test.cpp
      ${PROJECT_SOURCE_DIR}/test/map/map.test.cpp
      ${PROJECT_SOURCE_DIR}/test/map/prefetch.test.cpp
-     ${PROJECT_SOURCE_DIR}/test/map/transform.test.cpp
+     ${PROJECT_SOURCE_DIR}/test/map/terrain_offline.test.cpp
 diff --git a/test/gfx/vertex_buffer.test.cpp b/test/gfx/vertex_buffer.test.cpp
 new file mode 100644
-index 0000000000..6ee5739765
+index 000000000000..6ee573976517
 --- /dev/null
 +++ b/test/gfx/vertex_buffer.test.cpp
 @@ -0,0 +1,57 @@

@@ -6,10 +6,10 @@ scroll spline. On a tilted map, a pan glides the same distance on screen in
 every direction.
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 03ad5ae..27026fe 100644
+index 841931253f..18c7f55556 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -294,6 +294,7 @@ list(APPEND INCLUDE_FILES
+@@ -300,6 +300,7 @@ list(APPEND INCLUDE_FILES
      ${PROJECT_SOURCE_DIR}/include/mln/layermanager/symbol_layer_factory.hpp
      ${PROJECT_SOURCE_DIR}/include/mln/map/bound_options.hpp
      ${PROJECT_SOURCE_DIR}/include/mln/map/camera.hpp
@@ -18,10 +18,10 @@ index 03ad5ae..27026fe 100644
      ${PROJECT_SOURCE_DIR}/include/mln/map/map_observer.hpp
      ${PROJECT_SOURCE_DIR}/include/mln/map/map_options.hpp
 diff --git a/bazel/core.bzl b/bazel/core.bzl
-index e72aacd..2646f15 100644
+index de609f7390..80a8a760a6 100644
 --- a/bazel/core.bzl
 +++ b/bazel/core.bzl
-@@ -692,6 +692,7 @@ MLN_CORE_HEADERS = [
+@@ -704,6 +704,7 @@ MLN_CORE_HEADERS = [
      "include/mln/layermanager/symbol_layer_factory.hpp",
      "include/mln/map/bound_options.hpp",
      "include/mln/map/camera.hpp",
@@ -31,7 +31,7 @@ index e72aacd..2646f15 100644
      "include/mln/map/map_observer.hpp",
 diff --git a/include/mln/map/camera_momentum.hpp b/include/mln/map/camera_momentum.hpp
 new file mode 100644
-index 0000000..6b86726
+index 0000000000..6b86726621
 --- /dev/null
 +++ b/include/mln/map/camera_momentum.hpp
 @@ -0,0 +1,128 @@
@@ -164,7 +164,7 @@ index 0000000..6b86726
 +
 +} // namespace mln
 diff --git a/include/mln/map/map.hpp b/include/mln/map/map.hpp
-index 052ede8..f171f55 100644
+index 89e42cad7a..05bec0725d 100644
 --- a/include/mln/map/map.hpp
 +++ b/include/mln/map/map.hpp
 @@ -27,6 +27,7 @@ namespace mln {
@@ -186,10 +186,10 @@ index 052ede8..f171f55 100644
      bool isGestureInProgress() const;
      bool isRotating() const;
 diff --git a/src/mln/map/map.cpp b/src/mln/map/map.cpp
-index 3e01d9a..77fe561 100644
+index 0187f9b96c..aab8974924 100644
 --- a/src/mln/map/map.cpp
 +++ b/src/mln/map/map.cpp
-@@ -125,6 +125,12 @@ void Map::cancelTransitions(uint64_t transitionId) {
+@@ -126,6 +126,12 @@ void Map::cancelTransitions(uint64_t transitionId) {
      if (impl->transform.cancelTransitions(transitionId)) impl->onUpdate();
  }
  
@@ -200,10 +200,10 @@ index 3e01d9a..77fe561 100644
 +}
 +
  void Map::setGestureInProgress(bool inProgress) {
-     impl->transform.setGestureInProgress(inProgress);
-     impl->onUpdate();
+     if (!inProgress) {
+         impl->groundGrab.reset();
 diff --git a/src/mln/map/transform.cpp b/src/mln/map/transform.cpp
-index e2bb728..723dd75 100644
+index f06b1df2a7..9be923a5e0 100644
 --- a/src/mln/map/transform.cpp
 +++ b/src/mln/map/transform.cpp
 @@ -13,6 +13,9 @@
@@ -216,7 +216,7 @@ index e2bb728..723dd75 100644
  #include <cstdio>
  #include <utility>
  #include <numbers>
-@@ -550,6 +553,166 @@ ProjectionMode Transform::getProjectionMode() const {
+@@ -592,6 +595,166 @@ ProjectionMode Transform::getProjectionMode() const {
          .withYSkew(state.getYSkew());
  }
  
@@ -383,23 +383,28 @@ index e2bb728..723dd75 100644
  // MARK: - Transition
  
  uint16_t Transform::cameraFields(const CameraOptions& camera) {
-@@ -588,14 +751,7 @@ void Transform::startTransition(const CameraOptions& camera,
+@@ -643,19 +806,7 @@ void Transform::startTransition(const CameraOptions& camera,
      transition->duration = latestTransitionDuration = transition->fields ? duration : Duration::zero();
      transition->frame = frame;
  
+-    // A command whose only remaining field is the height it eases as a passenger
+-    // has ended: the height never keeps a command alive on its own.
+-    const auto ended = [](const auto& active) {
+-        return !active->fields || (active->altitudePassenger && active->fields == Altitude);
+-    };
 -    std::vector<std::shared_ptr<Transition>> finished;
 -    for (auto& active : transitions) {
 -        auto replaced = transition->fields;
 -        if (active->coupledFields & replaced) replaced |= active->coupledFields;
 -        active->fields &= ~replaced;
--        if (!active->fields) finished.push_back(active);
+-        if (ended(active)) finished.push_back(active);
 -    }
--    std::erase_if(transitions, [](const auto& active) { return !active->fields; });
+-    std::erase_if(transitions, ended);
 +    auto finished = releaseFields(transition->fields);
-     transitions.push_back(transition);
-     updateMovementFlags();
-     finishTransitions(finished);
-@@ -620,6 +776,7 @@ void Transform::applyTransitions(const std::vector<std::shared_ptr<Transition>>&
+     // A command that leaves the center alone eases its height only when no other
+     // command owns it, so it never takes the height from one that moves the
+     // center, and the height never outlasts the command's own fields.
+@@ -689,6 +840,7 @@ void Transform::applyTransitions(const std::vector<std::shared_ptr<Transition>>&
      camera.center = getLatLng(LatLng::Unwrapped);
  
      for (const auto& transition : active) {
@@ -407,7 +412,7 @@ index e2bb728..723dd75 100644
          const double t = transition->duration == Duration::zero()
                               ? 1.0
                               : std::clamp(std::chrono::duration<double>(now - transition->start) /
-@@ -670,6 +827,9 @@ void Transform::updateMovementFlags() {
+@@ -739,6 +891,9 @@ void Transform::updateMovementFlags() {
  
  void Transform::finishTransitions(const std::vector<std::shared_ptr<Transition>>& finished) {
      for (const auto& transition : finished) {
@@ -417,7 +422,7 @@ index e2bb728..723dd75 100644
          if (transition->animation.transitionFinishFn) transition->animation.transitionFinishFn();
          // This notification ends a command, not necessarily all camera motion.
          observer.onCameraDidChange(transition->duration != Duration::zero() ? MapObserver::CameraChangeMode::Animated
-@@ -693,11 +853,17 @@ void Transform::updateTransitions(const TimePoint& now) {
+@@ -794,11 +949,17 @@ void Transform::updateTransitions(const TimePoint& now) {
      } guard{updatingTransitions};
  
      const auto active = transitions;
@@ -437,7 +442,7 @@ index e2bb728..723dd75 100644
              std::erase(transitions, transition);
              finished.push_back(transition);
          }
-@@ -706,7 +872,7 @@ void Transform::updateTransitions(const TimePoint& now) {
+@@ -807,7 +968,7 @@ void Transform::updateTransitions(const TimePoint& now) {
  
      for (const auto& transition : active) {
          if (std::find(transitions.begin(), transitions.end(), transition) == transitions.end()) continue;
@@ -446,20 +451,25 @@ index e2bb728..723dd75 100644
              const double t = std::clamp(std::chrono::duration<double>(now - transition->start) /
                                              std::chrono::duration<double>(transition->duration),
                                          0.0,
-@@ -719,6 +885,284 @@ void Transform::updateTransitions(const TimePoint& now) {
+@@ -820,6 +981,289 @@ void Transform::updateTransitions(const TimePoint& now) {
      finishTransitions(finished);
  }
  
 +std::vector<std::shared_ptr<Transform::Transition>> Transform::releaseFields(uint16_t fields) {
++    // A command whose only remaining field is the height it eases as a passenger
++    // has ended: the height never keeps a command alive on its own.
++    const auto ended = [](const auto& active) {
++        return !active->fields || (active->altitudePassenger && active->fields == Altitude);
++    };
 +    std::vector<std::shared_ptr<Transition>> finished;
 +    for (auto& active : transitions) {
 +        auto replaced = fields;
 +        if (active->coupledFields & replaced) replaced |= active->coupledFields;
 +        active->fields &= ~replaced;
 +        if (active->momentum) active->fields = active->momentum->retain(active->fields);
-+        if (!active->fields) finished.push_back(active);
++        if (ended(active)) finished.push_back(active);
 +    }
-+    std::erase_if(transitions, [](const auto& active) { return !active->fields; });
++    std::erase_if(transitions, ended);
 +    return finished;
 +}
 +
@@ -732,7 +742,7 @@ index e2bb728..723dd75 100644
      auto finished = std::exchange(transitions, {});
      updateMovementFlags();
 diff --git a/src/mln/map/transform.hpp b/src/mln/map/transform.hpp
-index f767342..710ccc9 100644
+index 7c47131a27..c87871dcbc 100644
 --- a/src/mln/map/transform.hpp
 +++ b/src/mln/map/transform.hpp
 @@ -1,6 +1,7 @@
@@ -743,7 +753,7 @@ index f767342..710ccc9 100644
  #include <mln/map/projection_mode.hpp>
  #include <mln/map/map_observer.hpp>
  #include <mln/map/mode.hpp>
-@@ -120,6 +121,9 @@ public:
+@@ -129,6 +130,9 @@ public:
      TimePoint getLatestTransitionStart() const { return latestTransitionStart; }
      Duration getLatestTransitionDuration() const { return latestTransitionDuration; }
      void cancelTransitions();
@@ -753,7 +763,7 @@ index f767342..710ccc9 100644
      // Cancels the commands whose AnimationOptions::transitionId equals
      // `transitionId`, leaves the others running, and returns whether any
      // command ended.
-@@ -166,6 +170,7 @@ private:
+@@ -201,6 +205,7 @@ private:
          Roll = 1 << 6,
          Fov = 1 << 7
      };
@@ -761,14 +771,16 @@ index f767342..710ccc9 100644
      struct Transition {
          explicit Transition(const AnimationOptions& options)
              : animation(options) {}
-@@ -182,9 +187,24 @@ private:
-         std::function<CameraOptions(double)> frame;
-         std::optional<ScreenCoordinate> anchor;
-         LatLng anchorLatLng;
+@@ -222,11 +227,26 @@ private:
+         // Whether the command eases the height only alongside fields of its own,
+         // so it ends once only the height is left.
+         bool altitudePassenger = false;
 +        // Set for a momentum, which moves the camera relative to where it
 +        // stands instead of through `frame`.
 +        std::shared_ptr<MomentumState> momentum;
      };
+     // The running transition that owns the center altitude through an ease, if any.
+     std::shared_ptr<Transition> altitudeEaseTransition() const;
      static uint16_t cameraFields(const CameraOptions&);
 +    // Takes `fields` from the running transitions, and returns the ones left
 +    // with no fields, which the caller finishes.
@@ -787,10 +799,10 @@ index f767342..710ccc9 100644
      void finishTransitions(const std::vector<std::shared_ptr<Transition>>&);
  
 diff --git a/test/map/transform.test.cpp b/test/map/transform.test.cpp
-index c15ea59..44700ea 100644
+index a78ad76891..d62203ecb7 100644
 --- a/test/map/transform.test.cpp
 +++ b/test/map/transform.test.cpp
-@@ -1619,3 +1619,267 @@ TEST(Transform, FlyDurationRange) {
+@@ -1830,3 +1830,267 @@ TEST(Transform, FlyDurationRange) {
      EXPECT_DOUBLE_EQ(1.0, transform.getZoom());
      EXPECT_FALSE(transform.inTransition());
  }

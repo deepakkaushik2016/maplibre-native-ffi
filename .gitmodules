@@ -1,6 +1,6 @@
 [submodule "third_party/maplibre-native"]
 	path = third_party/maplibre-native
-	url = https://github.com/maplibre/maplibre-native.git
+	url = file:///Users/deepakkaushik/Documents/Projects/maplibre/engine/maplibre-native
 	shallow = true
 	ignore = dirty
 	# Cargo and SwiftPM fetch a git dependency's submodules recursively and

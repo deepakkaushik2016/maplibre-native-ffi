@@ -15,7 +15,7 @@ each surface a context draws to to match the context's config, stencil size
 included.
 
 diff --git a/src/mln/gl/context.cpp b/src/mln/gl/context.cpp
-index f30d62c..57b0ddf 100644
+index 2bb1d54157..12f42924ad 100644
 --- a/src/mln/gl/context.cpp
 +++ b/src/mln/gl/context.cpp
 @@ -26,8 +26,10 @@
@@ -29,7 +29,7 @@ index f30d62c..57b0ddf 100644
  
  namespace mln {
  namespace gl {
-@@ -719,10 +721,26 @@ void Context::setStencilMode(const gfx::StencilMode& stencil) {
+@@ -795,10 +797,26 @@ void Context::setStencilMode(const gfx::StencilMode& stencil) {
      }
  }
  
@@ -60,7 +60,7 @@ index f30d62c..57b0ddf 100644
  }
  
  void Context::setColorMode(const gfx::ColorMode& color) {
-@@ -857,6 +875,8 @@ void Context::performCleanup() {
+@@ -999,6 +1017,8 @@ void Context::performCleanup() {
              if (bindFramebuffer == id) {
                  bindFramebuffer.setDirty();
              }
@@ -70,7 +70,7 @@ index f30d62c..57b0ddf 100644
          MBGL_CHECK_ERROR(glDeleteFramebuffers(int(abandonedFramebuffers.size()), abandonedFramebuffers.data()));
          stats.numFrameBuffers -= int(abandonedFramebuffers.size());
 diff --git a/src/mln/gl/context.hpp b/src/mln/gl/context.hpp
-index bb2481d..93d1292 100644
+index 1a225f0ad4..704ae5d201 100644
 --- a/src/mln/gl/context.hpp
 +++ b/src/mln/gl/context.hpp
 @@ -24,6 +24,7 @@
@@ -92,8 +92,8 @@ index bb2481d..93d1292 100644
 +    bool hasStencilBuffer();
  
      void draw(const gfx::DrawMode&, std::size_t indexOffset, std::size_t indexLength);
- 
-@@ -252,6 +256,7 @@ private:
+     /// Instanced draw: renders `instanceCount` copies of the index range in a single
+@@ -299,6 +303,7 @@ private:
      std::vector<TextureID> abandonedTextures;
      std::vector<VertexArrayID> abandonedVertexArrays;
      std::vector<FramebufferID> abandonedFramebuffers;
@@ -102,7 +102,7 @@ index bb2481d..93d1292 100644
  
      std::unique_ptr<Texture2DPool> texturePool;
 diff --git a/test/gl/context.test.cpp b/test/gl/context.test.cpp
-index fbe2701..7b5d429 100644
+index fbe2701c52..7b5d429ebf 100644
 --- a/test/gl/context.test.cpp
 +++ b/test/gl/context.test.cpp
 @@ -185,4 +185,24 @@ TEST(GLContext, UniformBufferCloneCopiesLargeBuffer) {

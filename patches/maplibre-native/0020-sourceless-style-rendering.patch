@@ -2,10 +2,10 @@ Renders a style that has no sources.
 Upstream: https://github.com/maplibre/maplibre-native/pull/4674
 
 diff --git a/src/mln/map/map_impl.cpp b/src/mln/map/map_impl.cpp
-index 52c156a314..48329c446a 100644
+index e48544106a89..eb8df438251c 100644
 --- a/src/mln/map/map_impl.cpp
 +++ b/src/mln/map/map_impl.cpp
-@@ -163,6 +163,8 @@ void Map::Impl::onStyleLoaded() {
+@@ -215,6 +215,8 @@ void Map::Impl::onStyleLoaded() {
      if (LayerManager::annotationsEnabled) {
          annotationManager.onStyleLoaded();
      }
@@ -15,10 +15,10 @@ index 52c156a314..48329c446a 100644
      observer.onDidFinishLoadingStyle();
  
 diff --git a/src/mln/renderer/render_orchestrator.cpp b/src/mln/renderer/render_orchestrator.cpp
-index 7f6fe14b09..57cc24743d 100644
+index 2d865b111fc5..448749b8cc00 100644
 --- a/src/mln/renderer/render_orchestrator.cpp
 +++ b/src/mln/renderer/render_orchestrator.cpp
-@@ -402,6 +402,30 @@ std::unique_ptr<RenderTree> RenderOrchestrator::createRenderTree(
+@@ -463,6 +463,30 @@ std::unique_ptr<RenderTree> RenderOrchestrator::createRenderTree(
      // Track which layers are flagged for rendering
      std::vector<bool> updateList(orderedLayers.size());
  
@@ -49,7 +49,7 @@ index 7f6fe14b09..57cc24743d 100644
      // Update all sources and initialize renderItems.
      for (const auto& sourceImpl : *sourceImpls) {
          MLN_TRACE_ZONE(update source);
-@@ -418,73 +442,56 @@ std::unique_ptr<RenderTree> RenderOrchestrator::createRenderTree(
+@@ -479,58 +503,41 @@ std::unique_ptr<RenderTree> RenderOrchestrator::createRenderTree(
              const bool zoomFitsLayer = layer.supportsZoom(zoomHistory.lastZoom);
              renderTreeParameters->has3D |= (layerInfo->pass3d == LayerTypeInfo::Pass3D::Required);
  
@@ -139,27 +139,26 @@ index 7f6fe14b09..57cc24743d 100644
 -                updateList[index] = true;
              }
          }
+         // Mark DEM source as needed for terrain rendering
+@@ -544,15 +551,15 @@ std::unique_ptr<RenderTree> RenderOrchestrator::createRenderTree(
          tileParameters.isUpdateSynchronous = sourceImpl->isUpdateSynchronous();
          source->update(sourceImpl, filteredLayersForSource, sourceNeedsRendering, sourceNeedsRelayout, tileParameters);
          filteredLayersForSource.clear();
--
++    }
+ 
 -        // Update all layers with their new renderability status, if it changed.
 -        for (size_t i = 0; i < updateList.size(); i++) {
 -            if (orderedLayers[i].get().isLayerRenderable() != updateList[i]) {
 -                orderedLayers[i].get().markLayerRenderable(updateList[i], changes);
 -            }
--        }
--        addChanges(changes);
-     }
- 
 +    // Update all layers with their new renderability status, if it changed.
 +    for (size_t i = 0; i < updateList.size(); i++) {
 +        if (orderedLayers[i].get().isLayerRenderable() != updateList[i]) {
 +            orderedLayers[i].get().markLayerRenderable(updateList[i], changes);
-+        }
-+    }
+         }
+-        addChanges(changes);
+     }
 +    addChanges(changes);
-+
-     renderTreeParameters->loaded = updateParameters->styleLoaded && isLoaded();
-     if (!isMapModeContinuous && !renderTreeParameters->loaded) {
-         return nullptr;
+ 
+     // Enable 3D mode if terrain is present
+     if (renderTerrain && renderTerrain->isEnabled()) {

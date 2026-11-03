@@ -10,12 +10,12 @@ rebinds when the serial it bound no longer matches.
 Upstream: not proposed
 
 diff --git a/src/mln/gl/drawable_gl.cpp b/src/mln/gl/drawable_gl.cpp
-index baad494..e022cd7 100644
+index e7e13387ea..bbffda8829 100644
 --- a/src/mln/gl/drawable_gl.cpp
 +++ b/src/mln/gl/drawable_gl.cpp
-@@ -10,6 +10,9 @@
- #include <mln/util/instrumentation.hpp>
- #include <mln/util/logging.hpp>
+@@ -17,6 +17,9 @@
+ #include <unordered_set>
+ #endif
  
 +#include <atomic>
 +#include <cstdint>
@@ -23,7 +23,7 @@ index baad494..e022cd7 100644
  namespace mln {
  namespace gl {
  
-@@ -141,6 +144,16 @@ struct IndexBufferGL : public gfx::IndexBufferBase {
+@@ -188,6 +191,16 @@ struct IndexBufferGL : public gfx::IndexBufferBase {
      ~IndexBufferGL() override = default;
  
      std::unique_ptr<mln::gfx::IndexBuffer> buffer;
@@ -40,7 +40,7 @@ index baad494..e022cd7 100644
  };
  
  void DrawableGL::upload(gfx::UploadPass& uploadPass) {
-@@ -219,13 +232,22 @@ void DrawableGL::upload(gfx::UploadPass& uploadPass) {
+@@ -299,13 +312,22 @@ void DrawableGL::upload(gfx::UploadPass& uploadPass) {
              }
          }
  
@@ -66,7 +66,7 @@ index baad494..e022cd7 100644
          }
      }
 diff --git a/src/mln/gl/drawable_gl_impl.hpp b/src/mln/gl/drawable_gl_impl.hpp
-index ea45d49..c5bb313 100644
+index ea45d4990d..c5bb313a28 100644
 --- a/src/mln/gl/drawable_gl_impl.hpp
 +++ b/src/mln/gl/drawable_gl_impl.hpp
 @@ -59,8 +59,13 @@ struct DrawableGL::DrawSegmentGL final : public gfx::Drawable::DrawSegment {
@@ -84,10 +84,10 @@ index ea45d49..c5bb313 100644
  
  } // namespace gl
 diff --git a/test/map/map.test.cpp b/test/map/map.test.cpp
-index 7300093..b4fb26f 100644
+index 68d82824bb..ee3e5f6158 100644
 --- a/test/map/map.test.cpp
 +++ b/test/map/map.test.cpp
-@@ -2889,3 +2889,62 @@ INSTANTIATE_TEST_SUITE_P(Rendering,
+@@ -2961,3 +2961,62 @@ INSTANTIATE_TEST_SUITE_P(Rendering,
                           [](const testing::TestParamInfo<std::string>& paramInfo) {
                               return paramInfo.param == "color-relief" ? "colorRelief"s : paramInfo.param;
                           });

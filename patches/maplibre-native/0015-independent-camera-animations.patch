@@ -4,7 +4,7 @@ macOS SDKs cancel transitions first to keep their behavior.
 Upstream: https://github.com/maplibre/maplibre-native/pull/4637
 
 diff --git a/include/mln/map/camera.hpp b/include/mln/map/camera.hpp
-index 63e7d2b92c..a67ab2ddde 100644
+index 63e7d2b92c20..a67ab2dddec5 100644
 --- a/include/mln/map/camera.hpp
 +++ b/include/mln/map/camera.hpp
 @@ -13,6 +13,10 @@ namespace mln {
@@ -31,10 +31,10 @@ index 63e7d2b92c..a67ab2ddde 100644
  
      /** Creates an animation with no options specified. */
 diff --git a/platform/android/MapLibreAndroid/src/main/java/org/maplibre/android/maps/MapLibreMap.java b/platform/android/MapLibreAndroid/src/main/java/org/maplibre/android/maps/MapLibreMap.java
-index 56059f0231..30b02b65d5 100644
+index 914d244e3ee3..ee3bd151ccd3 100644
 --- a/platform/android/MapLibreAndroid/src/main/java/org/maplibre/android/maps/MapLibreMap.java
 +++ b/platform/android/MapLibreAndroid/src/main/java/org/maplibre/android/maps/MapLibreMap.java
-@@ -877,6 +877,9 @@ public final class MapLibreMap {
+@@ -981,6 +981,9 @@ public final class MapLibreMap {
     */
    public void scrollBy(float x, float y, long duration) {
      notifyDeveloperAnimationListeners();
@@ -44,7 +44,7 @@ index 56059f0231..30b02b65d5 100644
      nativeMapView.moveBy(x, y, duration);
    }
  
-@@ -895,6 +898,9 @@ public final class MapLibreMap {
+@@ -999,6 +1002,9 @@ public final class MapLibreMap {
     */
    public void setZoom(double zoom, @NonNull PointF focalPoint, long duration ) {
      notifyDeveloperAnimationListeners();
@@ -54,7 +54,7 @@ index 56059f0231..30b02b65d5 100644
      nativeMapView.setZoom(zoom, focalPoint, duration);
    }
  
-@@ -920,6 +926,9 @@ public final class MapLibreMap {
+@@ -1024,6 +1030,9 @@ public final class MapLibreMap {
     */
    public void setFocalBearing(double bearing, float focalX, float focalY, long duration) {
      notifyDeveloperAnimationListeners();
@@ -65,7 +65,7 @@ index 56059f0231..30b02b65d5 100644
    }
  
 diff --git a/platform/android/MapLibreAndroid/src/test/java/org/maplibre/android/maps/MapLibreMapTest.kt b/platform/android/MapLibreAndroid/src/test/java/org/maplibre/android/maps/MapLibreMapTest.kt
-index dd722a6003..0831b6239e 100644
+index dd722a6003b7..0831b6239e7e 100644
 --- a/platform/android/MapLibreAndroid/src/test/java/org/maplibre/android/maps/MapLibreMapTest.kt
 +++ b/platform/android/MapLibreAndroid/src/test/java/org/maplibre/android/maps/MapLibreMapTest.kt
 @@ -106,6 +106,7 @@ class MapLibreMapTest : BaseTest() {
@@ -93,7 +93,7 @@ index dd722a6003..0831b6239e 100644
      }
  
 diff --git a/platform/macos/src/MLNMapView.mm b/platform/macos/src/MLNMapView.mm
-index 90a44dd788..55dd1e77fd 100644
+index 90a44dd7888f..55dd1e77fdc0 100644
 --- a/platform/macos/src/MLNMapView.mm
 +++ b/platform/macos/src/MLNMapView.mm
 @@ -1307,6 +1307,9 @@ - (void)setCenterCoordinate:(CLLocationCoordinate2D)centerCoordinate
@@ -137,10 +137,10 @@ index 90a44dd788..55dd1e77fd 100644
    _mbglMap->easeTo(mln::CameraOptions().withBearing(direction).withPadding(
                         MLNEdgeInsetsFromNSEdgeInsets(self.contentInsets)),
 diff --git a/src/mln/map/transform.cpp b/src/mln/map/transform.cpp
-index c05acb1052..f091f2d5cf 100644
+index f1ce8ab1b1be..00a9e472df20 100644
 --- a/src/mln/map/transform.cpp
 +++ b/src/mln/map/transform.cpp
-@@ -95,8 +95,7 @@ CameraOptions Transform::getCameraOptions(const std::optional<EdgeInsets>& paddi
+@@ -94,8 +94,7 @@ CameraOptions Transform::getCameraOptions(const std::optional<EdgeInsets>& paddi
  
  /**
   * Change any combination of center, zoom, bearing, and pitch, without
@@ -150,7 +150,7 @@ index c05acb1052..f091f2d5cf 100644
   */
  void Transform::jumpTo(const CameraOptions& camera) {
      easeTo(camera);
-@@ -104,8 +103,8 @@ void Transform::jumpTo(const CameraOptions& camera) {
+@@ -103,8 +102,8 @@ void Transform::jumpTo(const CameraOptions& camera) {
  
  /**
   * Change any combination of center, zoom, bearing, pitch and edgeInsets, with a
@@ -161,7 +161,7 @@ index c05acb1052..f091f2d5cf 100644
   */
  void Transform::easeTo(const CameraOptions& inputCamera, const AnimationOptions& animation) {
      CameraOptions camera = inputCamera;
-@@ -163,49 +162,33 @@ void Transform::easeTo(const CameraOptions& inputCamera, const AnimationOptions&
+@@ -162,59 +161,41 @@ void Transform::easeTo(const CameraOptions& inputCamera, const AnimationOptions&
  
      // Minimize rotation by taking the shorter path around the circle.
      bearing = _normalizeAngle(bearing, state.getBearing());
@@ -178,6 +178,10 @@ index c05acb1052..f091f2d5cf 100644
 -                            .withScalingInProgress(zoom != startZoom)
 -                            .withRotatingInProgress(bearing != startBearing));
      const EdgeInsets startEdgeInsets = state.getEdgeInsets();
++    const auto altitudeEase = !camera.centerAltitude
++                                  ? std::make_shared<CenterAltitudeEase>(CenterAltitudeEase{
++                                        .start = startCenterAlt, .target = centerAlt, .progress = 0.0, .center = latLng})
++                                  : nullptr;
  
      startTransition(
 -        camera,
@@ -188,7 +192,12 @@ index c05acb1052..f091f2d5cf 100644
              LatLng frameLatLng = Projection::unproject(framePoint, state.zoomScale(startZoom));
              double frameZoom = util::interpolate(startZoom, zoom, t);
 -            state.setLatLngZoom(frameLatLng, frameZoom);
--            state.setCenterAltitude(util::interpolate(startCenterAlt, centerAlt, t));
+-            if (centerAltitudeEase) {
+-                centerAltitudeEase->progress = t;
+-                state.setCenterAltitude(util::interpolate(centerAltitudeEase->start, centerAltitudeEase->target, t));
+-            } else {
+-                state.setCenterAltitude(util::interpolate(startCenterAlt, centerAlt, t));
+-            }
 -            if (bearing != startBearing) {
 -                state.setBearing(util::wrap(util::interpolate(startBearing, bearing, t), -pi, pi));
 -            }
@@ -213,7 +222,7 @@ index c05acb1052..f091f2d5cf 100644
 +            return CameraOptions()
 +                .withCenter(frameLatLng)
 +                .withZoom(frameZoom)
-+                .withCenterAltitude(util::interpolate(startCenterAlt, centerAlt, t))
++                .withCenterAltitude(altitudeEase ? altitudeEase->at(t) : util::interpolate(startCenterAlt, centerAlt, t))
 +                .withBearing(-util::rad2deg(util::wrap(util::interpolate(startBearing, bearing, t), -pi, pi)))
 +                .withPadding(EdgeInsets{util::interpolate(startEdgeInsets.top(), padding.top(), t),
 +                                        util::interpolate(startEdgeInsets.left(), padding.left(), t),
@@ -223,9 +232,16 @@ index c05acb1052..f091f2d5cf 100644
 +                .withRoll(util::rad2deg(util::interpolate(startRoll, roll, t)))
 +                .withFov(util::rad2deg(util::interpolate(startFov, fov, t)));
          },
-         duration);
+         duration,
+-        camera.centerAltitude ? std::nullopt
+-                              : std::optional<CenterAltitudeEase>(CenterAltitudeEase{
+-                                    .start = startCenterAlt, .target = centerAlt, .progress = 0.0, .center = latLng}));
++        false,
++        altitudeEase);
  }
-@@ -257,9 +240,8 @@ void Transform::flyTo(const CameraOptions& inputCamera,
+ 
+ /** This method implements an “optimal path” animation, as detailed in:
+@@ -264,9 +245,8 @@ void Transform::flyTo(const CameraOptions& inputCamera,
  
      // Minimize rotation by taking the shorter path around the circle.
      bearing = _normalizeAngle(bearing, state.getBearing());
@@ -236,7 +252,7 @@ index c05acb1052..f091f2d5cf 100644
      const double startPitch = state.getPitch();
      const double startRoll = state.getRoll();
      const double startFov = state.getFieldOfView();
-@@ -339,23 +321,11 @@ void Transform::flyTo(const CameraOptions& inputCamera,
+@@ -346,23 +326,15 @@ void Transform::flyTo(const CameraOptions& inputCamera,
          }
          duration = std::chrono::duration_cast<Duration>(std::chrono::duration<double>(S / velocity));
      }
@@ -254,6 +270,10 @@ index c05acb1052..f091f2d5cf 100644
 -        TransformStateProperties().withPanningInProgress(true).withScalingInProgress(true).withRotatingInProgress(
 -            bearing != startBearing));
      const EdgeInsets startEdgeInsets = state.getEdgeInsets();
++    const auto altitudeEase = !camera.centerAltitude
++                                  ? std::make_shared<CenterAltitudeEase>(CenterAltitudeEase{
++                                        .start = startCenterAlt, .target = centerAlt, .progress = 0.0, .center = latLng})
++                                  : nullptr;
  
      startTransition(
 -        camera,
@@ -261,12 +281,17 @@ index c05acb1052..f091f2d5cf 100644
          animation,
          [=, this](double k) {
              /// s: The distance traveled along the flight path, measured in
-@@ -375,31 +345,21 @@ void Transform::flyTo(const CameraOptions& inputCamera,
+@@ -382,39 +354,22 @@ void Transform::flyTo(const CameraOptions& inputCamera,
  
              // Convert to geographic coordinates and set the new viewpoint.
              LatLng frameLatLng = Projection::unproject(framePoint, startScale);
 -            state.setLatLngZoom(frameLatLng, frameZoom);
--            state.setCenterAltitude(util::interpolate(startCenterAlt, centerAlt, us));
+-            if (centerAltitudeEase) {
+-                centerAltitudeEase->progress = us;
+-                state.setCenterAltitude(util::interpolate(centerAltitudeEase->start, centerAltitudeEase->target, us));
+-            } else {
+-                state.setCenterAltitude(util::interpolate(startCenterAlt, centerAlt, us));
+-            }
 -            if (bearing != startBearing) {
 -                state.setBearing(util::wrap(util::interpolate(startBearing, bearing, k), -pi, pi));
 -            }
@@ -291,7 +316,7 @@ index c05acb1052..f091f2d5cf 100644
 +            return CameraOptions()
 +                .withCenter(frameLatLng)
 +                .withZoom(frameZoom)
-+                .withCenterAltitude(util::interpolate(startCenterAlt, centerAlt, us))
++                .withCenterAltitude(altitudeEase ? altitudeEase->at(us) : util::interpolate(startCenterAlt, centerAlt, us))
 +                .withBearing(-util::rad2deg(util::wrap(util::interpolate(startBearing, bearing, k), -pi, pi)))
 +                .withPadding(EdgeInsets{util::interpolate(startEdgeInsets.top(), padding.top(), k),
 +                                        util::interpolate(startEdgeInsets.left(), padding.left(), k),
@@ -301,13 +326,16 @@ index c05acb1052..f091f2d5cf 100644
 +                .withRoll(util::rad2deg(util::interpolate(startRoll, roll, k)))
 +                .withFov(util::rad2deg(util::interpolate(startFov, fov, k)));
          },
--        duration);
-+        duration,
-+        !linearZoomInterpolation);
+         duration,
+-        camera.centerAltitude ? std::nullopt
+-                              : std::optional<CenterAltitudeEase>(CenterAltitudeEase{
+-                                    .start = startCenterAlt, .target = centerAlt, .progress = 0.0, .center = latLng}));
++        !linearZoomInterpolation,
++        altitudeEase);
  }
  
  // MARK: - Position
-@@ -585,130 +545,177 @@ ProjectionMode Transform::getProjectionMode() const {
+@@ -632,99 +587,183 @@ ProjectionMode Transform::getProjectionMode() const {
  
  // MARK: - Transition
  
@@ -320,12 +348,28 @@ index c05acb1052..f091f2d5cf 100644
  void Transform::startTransition(const CameraOptions& camera,
                                  const AnimationOptions& animation,
 -                                const std::function<void(double)>& frame,
--                                const Duration& duration) {
++                                const std::function<CameraOptions(double)>& frame,
+                                 const Duration& duration,
+-                                std::optional<CenterAltitudeEase> altitudeEase) {
 -    if (transitionFinishFn) {
 -        transitionFinishFn();
-+                                const std::function<CameraOptions(double)>& frame,
-+                                const Duration& duration,
-+                                bool flight) {
+-    }
+-    // After the finish above, which clears the previous transition's ease.
+-    centerAltitudeEase = altitudeEase;
+-
+-    bool isAnimated = duration != Duration::zero();
+-    observer.onCameraWillChange(isAnimated ? MapObserver::CameraChangeMode::Animated
+-                                           : MapObserver::CameraChangeMode::Immediate);
+-
+-    // Associate the anchor, if given, with a coordinate.
+-    // Anchor and center points are mutually exclusive, with preference for the
+-    // center point when both are set.
+-    std::optional<ScreenCoordinate> anchor = camera.center ? std::nullopt : camera.anchor;
+-    LatLng anchorLatLng;
+-    if (anchor) {
+-        anchor->y = state.getSize().height - anchor->y;
++                                bool flight,
++                                std::shared_ptr<CenterAltitudeEase> altitudeEase) {
 +    auto transition = std::make_shared<Transition>(animation);
 +    transition->fields = cameraFields(camera);
 +    transition->coupledFields = flight ? Center | Zoom : 0;
@@ -338,38 +382,79 @@ index c05acb1052..f091f2d5cf 100644
 +        transition->fields |= Center;
 +        transition->coupledFields = transition->fields;
 +        transition->anchor->y = state.getSize().height - transition->anchor->y;
-+        transition->anchorLatLng = state.screenCoordinateToLatLng(*transition->anchor);
+         // At the centre's altitude, as in moveBy and moveLatLng.
+-        anchorLatLng = state.screenCoordinateToLatLng(*anchor, state.getCenterAltitude(), LatLng::Unwrapped);
++        transition->anchorLatLng = state.screenCoordinateToLatLng(
++            *transition->anchor, state.getCenterAltitude(), LatLng::Unwrapped);
++    }
++    // An eased center altitude follows the ground under the center it heads for.
++    // A command that moves the center owns it together with the center:
++    // replacing either relinquishes both. One that leaves the center alone, such
++    // as a rotation, takes it below, only when no other command owns it.
++    transition->altitudeEase = altitudeEase;
++    if (altitudeEase && (transition->fields & Center)) {
++        transition->fields |= Altitude;
++        transition->coupledFields |= Center | Altitude;
      }
  
--    bool isAnimated = duration != Duration::zero();
--    observer.onCameraWillChange(isAnimated ? MapObserver::CameraChangeMode::Animated
--                                           : MapObserver::CameraChangeMode::Immediate);
+-    transitionStart = Clock::now();
+-    transitionDuration = duration;
+-
+-    transitionFrameFn = [isAnimated, animation, frame, anchor, anchorLatLng, this](const TimePoint now) {
+-        float t = isAnimated ? (std::chrono::duration<float>(now - transitionStart) / transitionDuration) : 1.0f;
+-        if (t >= 1.0) {
+-            frame(1.0);
+-        } else {
+-            util::UnitBezier ease = animation.easing ? *animation.easing : util::DEFAULT_TRANSITION_EASE;
+-            frame(ease.solve(t, 0.001));
+-        }
+-
+-        if (anchor) state.moveLatLng(anchorLatLng, *anchor);
+-
+-        // At t = 1.0, a DidChangeAnimated notification should be sent from finish().
+-        if (t < 1.0) {
+-            if (animation.transitionFrameFn) {
+-                animation.transitionFrameFn(t);
+-            }
+-            observer.onCameraIsChanging();
+-            return false;
+-        } else {
+-            // Indicate that we need to terminate this transition
+-            return true;
+-        }
 +    const auto target = frame(1.0);
++    if (altitudeEase) altitudeEase->progress = 0.0;
 +    const bool panning = flight || transition->anchor || camera.center != std::optional(getLatLng(LatLng::Unwrapped));
 +    const bool scaling = flight || target.zoom != std::optional(getZoom());
 +    const bool rotating = target.bearing != std::optional(-util::rad2deg(getBearing()));
 +    transition->movingFields = (panning ? Center : 0) | (scaling ? Zoom : 0) | (rotating ? Bearing : 0);
- 
--    // Associate the anchor, if given, with a coordinate.
--    // Anchor and center points are mutually exclusive, with preference for the
--    // center point when both are set.
--    std::optional<ScreenCoordinate> anchor = camera.center ? std::nullopt : camera.anchor;
--    LatLng anchorLatLng;
--    if (anchor) {
--        anchor->y = state.getSize().height - anchor->y;
--        anchorLatLng = state.screenCoordinateToLatLng(*anchor);
++
 +    transition->start = latestTransitionStart = Clock::now();
 +    transition->duration = latestTransitionDuration = transition->fields ? duration : Duration::zero();
 +    transition->frame = frame;
 +
++    // A command whose only remaining field is the height it eases as a passenger
++    // has ended: the height never keeps a command alive on its own.
++    const auto ended = [](const auto& active) {
++        return !active->fields || (active->altitudePassenger && active->fields == Altitude);
+     };
 +    std::vector<std::shared_ptr<Transition>> finished;
 +    for (auto& active : transitions) {
 +        auto replaced = transition->fields;
 +        if (active->coupledFields & replaced) replaced |= active->coupledFields;
 +        active->fields &= ~replaced;
-+        if (!active->fields) finished.push_back(active);
++        if (ended(active)) finished.push_back(active);
 +    }
-+    std::erase_if(transitions, [](const auto& active) { return !active->fields; });
++    std::erase_if(transitions, ended);
++    // A command that leaves the center alone eases its height only when no other
++    // command owns it, so it never takes the height from one that moves the
++    // center, and the height never outlasts the command's own fields.
++    if (altitudeEase && transition->fields && !(transition->fields & Altitude) &&
++        std::none_of(
++            transitions.begin(), transitions.end(), [](const auto& active) { return active->fields & Altitude; })) {
++        transition->fields |= Altitude;
++        transition->altitudePassenger = true;
++    }
 +    transitions.push_back(transition);
 +    updateMovementFlags();
 +    finishTransitions(finished);
@@ -388,7 +473,18 @@ index c05acb1052..f091f2d5cf 100644
 +        finishTransitions({transition});
 +    }
 +}
-+
+ 
+-    transitionFinishFn = [isAnimated, animation, this] {
+-        centerAltitudeEase.reset();
+-        state.setProperties(
+-            TransformStateProperties().withPanningInProgress(false).withScalingInProgress(false).withRotatingInProgress(
+-                false));
+-        if (animation.transitionFinishFn) {
+-            animation.transitionFinishFn();
+-        }
+-        observer.onCameraDidChange(isAnimated ? MapObserver::CameraChangeMode::Animated
+-                                              : MapObserver::CameraChangeMode::Immediate);
+-    };
 +void Transform::applyTransitions(const std::vector<std::shared_ptr<Transition>>& active, const TimePoint& now) {
 +    auto camera = state.getCameraOptions(std::nullopt);
 +    camera.center = getLatLng(LatLng::Unwrapped);
@@ -411,24 +507,19 @@ index c05acb1052..f091f2d5cf 100644
 +        if (fields & Altitude) camera.centerAltitude = value.centerAltitude;
 +        if (fields & Roll) camera.roll = value.roll;
 +        if (fields & Fov) camera.fov = value.fov;
-     }
++    }
  
--    transitionStart = Clock::now();
--    transitionDuration = duration;
+-    if (!isAnimated) {
+-        auto update = std::move(transitionFrameFn);
+-        auto finish = std::move(transitionFinishFn);
 +    // An active anchor also applies to immediate changes of other properties.
 +    std::shared_ptr<Transition> anchored;
 +    for (const auto& transition : transitions) {
 +        if (transition->anchor && (transition->fields & Center)) anchored = transition;
 +    }
  
--    transitionFrameFn = [isAnimated, animation, frame, anchor, anchorLatLng, this](const TimePoint now) {
--        float t = isAnimated ? (std::chrono::duration<float>(now - transitionStart) / transitionDuration) : 1.0f;
--        if (t >= 1.0) {
--            frame(1.0);
--        } else {
--            util::UnitBezier ease = animation.easing ? *animation.easing : util::DEFAULT_TRANSITION_EASE;
--            frame(ease.solve(t, 0.001));
--        }
+-        transitionFrameFn = nullptr;
+-        transitionFinishFn = nullptr;
 +    // Compose the camera before applying constraints. In particular, padding
 +    // and field of view determine the pitch limit, and center and zoom jointly
 +    // determine the geographic bounds and altitude scale.
@@ -442,8 +533,7 @@ index c05acb1052..f091f2d5cf 100644
 +    if (anchored) state.moveLatLng(anchored->anchorLatLng, *anchored->anchor);
 +    state.setCenterAltitude(*camera.centerAltitude);
 +}
- 
--        if (anchor) state.moveLatLng(anchorLatLng, *anchor);
++
 +void Transform::updateMovementFlags() {
 +    uint16_t moving = 0;
 +    for (const auto& transition : transitions) moving |= transition->fields & transition->movingFields;
@@ -453,37 +543,6 @@ index c05acb1052..f091f2d5cf 100644
 +                            .withRotatingInProgress(moving & Bearing));
 +}
  
--        // At t = 1.0, a DidChangeAnimated notification should be sent from finish().
--        if (t < 1.0) {
--            if (animation.transitionFrameFn) {
--                animation.transitionFrameFn(t);
--            }
--            observer.onCameraIsChanging();
--            return false;
--        } else {
--            // Indicate that we need to terminate this transition
--            return true;
--        }
--    };
--
--    transitionFinishFn = [isAnimated, animation, this] {
--        state.setProperties(
--            TransformStateProperties().withPanningInProgress(false).withScalingInProgress(false).withRotatingInProgress(
--                false));
--        if (animation.transitionFinishFn) {
--            animation.transitionFinishFn();
--        }
--        observer.onCameraDidChange(isAnimated ? MapObserver::CameraChangeMode::Animated
--                                              : MapObserver::CameraChangeMode::Immediate);
--    };
--
--    if (!isAnimated) {
--        auto update = std::move(transitionFrameFn);
--        auto finish = std::move(transitionFinishFn);
--
--        transitionFrameFn = nullptr;
--        transitionFinishFn = nullptr;
--
 -        update(Clock::now());
 -        finish();
 +void Transform::finishTransitions(const std::vector<std::shared_ptr<Transition>>& finished) {
@@ -498,21 +557,43 @@ index c05acb1052..f091f2d5cf 100644
  bool Transform::inTransition() const {
 -    return transitionFrameFn != nullptr;
 +    return !transitions.empty();
++}
++
++std::shared_ptr<Transform::Transition> Transform::altitudeEaseTransition() const {
++    for (auto it = transitions.rbegin(); it != transitions.rend(); ++it) {
++        if ((*it)->altitudeEase && ((*it)->fields & Altitude)) return *it;
++    }
++    return nullptr;
+ }
+ 
+ std::optional<LatLng> Transform::getTransitionTargetCenter() const {
+-    if (!centerAltitudeEase || !inTransition()) {
++    const auto transition = altitudeEaseTransition();
++    if (!transition) {
+         return std::nullopt;
+     }
+-    return centerAltitudeEase->center;
++    return transition->altitudeEase->center;
+ }
+ 
+ void Transform::retargetTransitionCenterAltitude(double altitudeMeters) {
+-    if (!centerAltitudeEase || !inTransition()) {
++    const auto transition = altitudeEaseTransition();
++    if (!transition) {
+         return;
+     }
+-    auto& ease = *centerAltitudeEase;
++    auto& ease = *transition->altitudeEase;
+     const double k = ease.progress;
+     if (k >= 1.0 || std::isnan(altitudeMeters)) {
+         return;
+@@ -737,53 +776,47 @@ void Transform::retargetTransitionCenterAltitude(double altitudeMeters) {
  }
  
  void Transform::updateTransitions(const TimePoint& now) {
 -    // Use a temporary function to ensure that the transitionFrameFn lambda is
 -    // called only once per update.
-+    // Observers can synchronously update the map or start another command.
-+    // Snapshot the commands for this frame, and detach completed commands
-+    // before calling user code so each command finishes exactly once.
-+    if (updatingTransitions || transitions.empty()) return;
-+    updatingTransitions = true;
-+    struct TransitionUpdateGuard {
-+        bool& updating;
-+        ~TransitionUpdateGuard() { updating = false; }
-+    } guard{updatingTransitions};
- 
+-
 -    // This addresses the symptoms of
 -    // https://github.com/mapbox/mapbox-gl-native/issues/11180 where setting a
 -    // shape source to nil (or similar) in the `onCameraIsChanging` observer
@@ -527,9 +608,7 @@ index c05acb1052..f091f2d5cf 100644
 -    // It's important to note that the scope of this change is stop the above
 -    // crashes. It doesn't address any potential deeper issue (for example
 -    // user error, how often and when transition callbacks are called).
-+    const auto active = transitions;
-+    applyTransitions(active, now);
- 
+-
 -    auto transition = std::move(transitionFrameFn);
 -    transitionFrameFn = nullptr;
 -
@@ -543,18 +622,26 @@ index c05acb1052..f091f2d5cf 100644
 -
 -        if (finish) {
 -            finish();
++    // Observers can synchronously update the map or start another command.
++    // Snapshot the commands for this frame, and detach completed commands
++    // before calling user code so each command finishes exactly once.
++    if (updatingTransitions || transitions.empty()) return;
++    updatingTransitions = true;
++    struct TransitionUpdateGuard {
++        bool& updating;
++        ~TransitionUpdateGuard() { updating = false; }
++    } guard{updatingTransitions};
++
++    const auto active = transitions;
++    applyTransitions(active, now);
++
 +    std::vector<std::shared_ptr<Transition>> finished;
 +    for (const auto& transition : active) {
 +        if (now - transition->start >= transition->duration) {
 +            std::erase(transitions, transition);
 +            finished.push_back(transition);
-         }
--    } else if (!transitionFrameFn) {
--        // We have to check `transitionFrameFn` is nil here, since a new
--        // transition may have been triggered in a user callback (from the
--        // transition call above)
--        transitionFrameFn = std::move(transition);
-     }
++        }
++    }
 +    updateMovementFlags();
 +
 +    for (const auto& transition : active) {
@@ -565,8 +652,13 @@ index c05acb1052..f091f2d5cf 100644
 +                                        0.0,
 +                                        1.0);
 +            transition->animation.transitionFrameFn(t);
-+        }
-+    }
+         }
+-    } else if (!transitionFrameFn) {
+-        // We have to check `transitionFrameFn` is nil here, since a new
+-        // transition may have been triggered in a user callback (from the
+-        // transition call above)
+-        transitionFrameFn = std::move(transition);
+     }
 +    if (!transitions.empty()) observer.onCameraIsChanging();
 +
 +    finishTransitions(finished);
@@ -586,7 +678,7 @@ index c05acb1052..f091f2d5cf 100644
  
  void Transform::setGestureInProgress(bool inProgress) {
 diff --git a/src/mln/map/transform.hpp b/src/mln/map/transform.hpp
-index d9ec6acf28..3107c308b7 100644
+index 10ea7c32aafa..1d62837a83dd 100644
 --- a/src/mln/map/transform.hpp
 +++ b/src/mln/map/transform.hpp
 @@ -13,6 +13,8 @@
@@ -598,7 +690,7 @@ index d9ec6acf28..3107c308b7 100644
  
  namespace mln {
  
-@@ -113,8 +115,10 @@ public:
+@@ -122,8 +124,10 @@ public:
      // Transitions
      bool inTransition() const;
      void updateTransitions(const TimePoint& now);
@@ -609,17 +701,28 @@ index d9ec6acf28..3107c308b7 100644
 +    TimePoint getLatestTransitionStart() const { return latestTransitionStart; }
 +    Duration getLatestTransitionDuration() const { return latestTransitionDuration; }
      void cancelTransitions();
- 
-     // Gesture
-@@ -144,16 +148,49 @@ private:
+     /// The center a running ease or flight is headed for, while the center altitude it ends at may
+     /// still move (retargetTransitionCenterAltitude); empty otherwise.
+@@ -169,22 +173,66 @@ private:
+         double target;
+         double progress;
+         LatLng center;
++        /// The altitude at `progress`, which this records for a later retarget.
++        double at(double k) {
++            progress = k;
++            return start + (target - start) * k;
++        }
+     };
+-    std::optional<CenterAltitudeEase> centerAltitudeEase;
  
      void startTransition(const CameraOptions&,
                           const AnimationOptions&,
 -                         const std::function<void(double)>&,
--                         const Duration&);
 +                         const std::function<CameraOptions(double)>&,
-+                         const Duration&,
-+                         bool flight = false);
+                          const Duration&,
+-                         std::optional<CenterAltitudeEase> = std::nullopt);
++                         bool flight = false,
++                         std::shared_ptr<CenterAltitudeEase> altitudeEase = nullptr);
 +
 +    enum CameraField : uint16_t {
 +        Center = 1 << 0,
@@ -647,7 +750,14 @@ index d9ec6acf28..3107c308b7 100644
 +        std::function<CameraOptions(double)> frame;
 +        std::optional<ScreenCoordinate> anchor;
 +        LatLng anchorLatLng;
++        // Shared with the frame function, which interpolates the center altitude through it.
++        std::shared_ptr<CenterAltitudeEase> altitudeEase;
++        // Whether the command eases the height only alongside fields of its own,
++        // so it ends once only the height is left.
++        bool altitudePassenger = false;
 +    };
++    // The running transition that owns the center altitude through an ease, if any.
++    std::shared_ptr<Transition> altitudeEaseTransition() const;
 +    static uint16_t cameraFields(const CameraOptions&);
 +    void applyTransitions(const std::vector<std::shared_ptr<Transition>>&, const TimePoint&);
 +    void updateMovementFlags();
@@ -668,10 +778,10 @@ index d9ec6acf28..3107c308b7 100644
  
  } // namespace mln
 diff --git a/test/map/transform.test.cpp b/test/map/transform.test.cpp
-index fe44091489..8c176138da 100644
+index 65effa2f38fa..8e801e15edd9 100644
 --- a/test/map/transform.test.cpp
 +++ b/test/map/transform.test.cpp
-@@ -45,7 +45,7 @@ TEST(Transform, InvalidZoom) {
+@@ -47,7 +47,7 @@ TEST(Transform, InvalidZoom) {
      transform.flyTo(CameraOptions()
                          .withCenter(LatLng{util::LATITUDE_MAX, util::LONGITUDE_MAX})
                          .withZoom(transform.getState().getMaxZoom()));
@@ -680,7 +790,7 @@ index fe44091489..8c176138da 100644
      ASSERT_DOUBLE_EQ(transform.getZoom(), transform.getState().getMaxZoom());
  
      // Executing flyTo with maximum zoom level to the same zoom level causes
-@@ -54,7 +54,7 @@ TEST(Transform, InvalidZoom) {
+@@ -56,7 +56,7 @@ TEST(Transform, InvalidZoom) {
      transform.flyTo(CameraOptions()
                          .withCenter(LatLng{util::LATITUDE_MAX, util::LONGITUDE_MAX})
                          .withZoom(transform.getState().getMaxZoom()));
@@ -689,7 +799,7 @@ index fe44091489..8c176138da 100644
  
      ASSERT_TRUE(transform.getState().valid());
      ASSERT_DOUBLE_EQ(transform.getState().getMaxZoom(), transform.getZoom());
-@@ -521,10 +521,10 @@ TEST(Transform, Camera) {
+@@ -651,10 +651,10 @@ TEST(Transform, Camera) {
  
      transform.easeTo(cameraOptions1, easeOptions);
      ASSERT_TRUE(transform.inTransition());
@@ -704,7 +814,7 @@ index fe44091489..8c176138da 100644
      ASSERT_FALSE(transform.inTransition());
  
      AnimationOptions flyOptions(Seconds(1));
-@@ -543,10 +543,10 @@ TEST(Transform, Camera) {
+@@ -673,10 +673,10 @@ TEST(Transform, Camera) {
  
      transform.flyTo(cameraOptions2, flyOptions);
      ASSERT_TRUE(transform.inTransition());
@@ -719,7 +829,7 @@ index fe44091489..8c176138da 100644
      ASSERT_FALSE(transform.inTransition());
  
      // Anchor and center points are mutually exclusive.
-@@ -555,10 +555,10 @@ TEST(Transform, Camera) {
+@@ -685,10 +685,10 @@ TEST(Transform, Camera) {
      camera.anchor = ScreenCoordinate{0, 0}; // top-left
      camera.zoom = transform.getState().getMaxZoom();
      transform.easeTo(camera, AnimationOptions(Seconds(1)));
@@ -734,7 +844,7 @@ index fe44091489..8c176138da 100644
      ASSERT_DOUBLE_EQ(transform.getLatLng().latitude(), 0);
      ASSERT_DOUBLE_EQ(transform.getLatLng().longitude(), 0);
  }
-@@ -584,10 +584,10 @@ TEST(Transform, IsPanning) {
+@@ -714,10 +714,10 @@ TEST(Transform, IsPanning) {
  
      transform.resize({1000, 1000});
      transform.easeTo(CameraOptions().withCenter(LatLng(0, 360.0)), easeOptions);
@@ -749,7 +859,7 @@ index fe44091489..8c176138da 100644
  }
  
  TEST(Transform, DefaultTransform) {
-@@ -671,7 +671,7 @@ TEST(Transform, DefaultTransform) {
+@@ -801,7 +801,7 @@ TEST(Transform, DefaultTransform) {
      AnimationOptions easeOptions(Seconds(1));
      transform.easeTo(CameraOptions().withCenter(LatLng{56, 11}).withZoom(1), easeOptions);
      ASSERT_TRUE(transform.inTransition());
@@ -758,7 +868,7 @@ index fe44091489..8c176138da 100644
  
      // Rotate the screen during a transition (resize it)
      transform.resize({500, 1000});
-@@ -800,11 +800,11 @@ TEST(Transform, LatLngBounds) {
+@@ -930,11 +930,11 @@ TEST(Transform, LatLngBounds) {
      };
      transform.moveBy(ScreenCoordinate{-500, -500}, easeOptions);
  
@@ -775,7 +885,7 @@ index fe44091489..8c176138da 100644
  
      // Constrain to the right edge.
      transform.jumpTo(CameraOptions().withCenter(LatLng{inside.latitude(), 241.0}));
-@@ -819,11 +819,11 @@ TEST(Transform, LatLngBounds) {
+@@ -949,11 +949,11 @@ TEST(Transform, LatLngBounds) {
      };
      transform.moveBy(ScreenCoordinate{500, 500}, easeOptions);
  
@@ -792,9 +902,9 @@ index fe44091489..8c176138da 100644
  
      //    -1   |   0   |  +1
      // ┌───┬───┰───┬───┰───┬───┐
-@@ -1292,3 +1292,250 @@ TEST(Camera, SetOrientationWithRollNoPitch) {
-     EXPECT_NEAR(pitch, pitch_, 1.0e-9);
-     EXPECT_NEAR(0.0, roll_, 1.0e-9);
+@@ -1457,3 +1457,296 @@ TEST(TransformState, RayThroughAnEmptyViewportIsEmpty) {
+     Transform transform;
+     EXPECT_FALSE(transform.moveGroundTo(LatLng{47.0, 11.0}, 1000.0, {10, 10}));
  }
 +
 +TEST(Transform, IndependentCameraTracks) {
@@ -836,6 +946,52 @@ index fe44091489..8c176138da 100644
 +    EXPECT_NEAR(transform.getLatLng().longitude(), 30, 1e-5);
 +    EXPECT_NEAR(transform.getZoom(), 12, 1e-5);
 +    EXPECT_EQ(centerFinished, 1u);
++    EXPECT_FALSE(transform.inTransition());
++}
++
++// An animation that leaves the center alone still eases the center's height, so terrain can
++// retarget it to the ground under the center, as upstream #4873 does for every animation.
++TEST(Transform, AnAnimationThatKeepsTheCenterEasesItsHeight) {
++    Transform transform;
++    transform.resize({1000, 1000});
++    transform.jumpTo(CameraOptions().withCenter(LatLng{10, 20}).withZoom(8).withCenterAltitude(500));
++    transform.easeTo(CameraOptions().withBearing(90), AnimationOptions(Seconds(2)));
++    const auto start = transform.getLatestTransitionStart();
++    const auto target = transform.getTransitionTargetCenter();
++    ASSERT_TRUE(target);
++    EXPECT_NEAR(target->latitude(), 10, 1e-6);
++    EXPECT_NEAR(target->longitude(), 20, 1e-6);
++
++    transform.retargetTransitionCenterAltitude(100);
++    transform.updateTransitions(start + Seconds(2));
++    EXPECT_NEAR(transform.getState().getCenterAltitude(), 100, 1e-5);
++    EXPECT_NEAR(transform.getBearing(), util::deg2rad(-90), 1e-5);
++    EXPECT_FALSE(transform.inTransition());
++}
++
++// The height that an animation keeping the center eases never keeps it running once another
++// command has taken all of its own properties.
++TEST(Transform, AReplacedAnimationEndsThoughItEasedTheHeight) {
++    Transform transform;
++    transform.resize({1000, 1000});
++    transform.jumpTo(CameraOptions().withZoom(8));
++    unsigned firstFinished = 0;
++    AnimationOptions first(Seconds(2));
++    first.transitionFinishFn = [&] {
++        ++firstFinished;
++    };
++    transform.easeTo(CameraOptions().withZoom(10), first);
++    unsigned secondFinished = 0;
++    AnimationOptions second(Seconds(2));
++    second.transitionFinishFn = [&] {
++        ++secondFinished;
++    };
++    transform.easeTo(CameraOptions().withZoom(12), second);
++    EXPECT_EQ(firstFinished, 1u) << "the second zoom replaced the first";
++    const auto start = transform.getLatestTransitionStart();
++    transform.updateTransitions(start + Seconds(2));
++    EXPECT_NEAR(transform.getZoom(), 12, 1e-5);
++    EXPECT_EQ(secondFinished, 1u);
 +    EXPECT_FALSE(transform.inTransition());
 +}
 +
@@ -1042,4 +1198,61 @@ index fe44091489..8c176138da 100644
 +    EXPECT_FALSE(transform.inTransition());
 +    transform.cancelTransitions();
 +    EXPECT_EQ(observer.events, (std::vector<int>{1, 0, 2, 0}));
++}
+diff --git a/test/renderer/terrain_camera.test.cpp b/test/renderer/terrain_camera.test.cpp
+index 4c4618e8322e..776f9e109570 100644
+--- a/test/renderer/terrain_camera.test.cpp
++++ b/test/renderer/terrain_camera.test.cpp
+@@ -2027,3 +2027,52 @@ TEST(TerrainGesture, AZoomAboutAPointAPixelFromTheFingerDropsTheGroundItHad) {
+     EXPECT_LT(test.distance(test.project(*tapped), focal), 0.5);
+     test.map.setGestureInProgress(false);
+ }
++
++// An animation that leaves the center where it is, such as a rotation, eases the center's height
++// to the ground under it too. Here the center has just jumped from the 6,000 m plateau to the flat
++// ground north of the ridge, keeping the plateau's height, and a rotation starts before the
++// renderer reports the ground there. Once it does, the rotation carries the center down to that
++// ground instead of holding it 6,000 m up until the rotation ends.
++TEST(TerrainCamera, ARotationEasesTheCenterHeightToTheGroundUnderIt) {
++    util::RunLoop loop;
++    auto fileSource = std::make_shared<StubFileSource>(ResourceOptions::Default(), ClientOptions());
++    fileSource->tileResponse = [](const Resource& resource) {
++        Response res;
++        res.data = std::make_shared<std::string>(makeRampDEMTile(resource.url));
++        return res;
++    };
++    HeadlessFrontend frontend{{390, 844}, 1};
++    MapAdapter map(frontend,
++                   MapObserver::nullObserver(),
++                   fileSource,
++                   MapOptions().withMapMode(MapMode::Continuous).withSize(frontend.getSize()));
++    map.setCenterClampedToGround(true);
++    map.setBounds(BoundOptions().withMaxPitch(85.0));
++    map.getStyle().loadJSON(rampStyle);
++    const auto pump = [&](std::chrono::milliseconds duration, const std::function<bool()>& done = nullptr) {
++        const auto end = std::chrono::steady_clock::now() + duration;
++        while (std::chrono::steady_clock::now() < end && !(done && done())) {
++            loop.runOnce();
++            std::this_thread::sleep_for(std::chrono::milliseconds(8));
++        }
++    };
++    map.jumpTo(CameraOptions().withCenter(LatLng{47.20, 11.4041}).withZoom(10.0).withPitch(0.0).withBearing(0.0));
++    pump(std::chrono::milliseconds(2000));
++    map.jumpTo(CameraOptions().withZoom(14.0).withPitch(60.0));
++    pump(std::chrono::milliseconds(2000));
++    ASSERT_NEAR(*map.getCameraOptions().centerAltitude, 6000.0, 30.0) << "the center starts on the plateau";
++
++    bool finished = false;
++    double altitudeAtTheEnd = std::numeric_limits<double>::quiet_NaN();
++    AnimationOptions animation(Milliseconds(3000));
++    animation.transitionFinishFn = [&] {
++        finished = true;
++        altitudeAtTheEnd = map.getCameraOptions().centerAltitude.value_or(0.0);
++    };
++    map.jumpTo(CameraOptions().withCenter(LatLng{47.40, 11.4041}));
++    map.easeTo(CameraOptions().withBearing(90.0), animation);
++    pump(std::chrono::milliseconds(15000), [&] { return finished; });
++    ASSERT_TRUE(finished);
++    EXPECT_NEAR(altitudeAtTheEnd, 0.0, 30.0) << "the center's height reached the ground under it";
++    EXPECT_NEAR(*map.getCameraOptions().bearing, 90.0, 1e-6) << "the rotation ran to its end";
 +}

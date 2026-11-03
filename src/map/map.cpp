@@ -2673,6 +2673,9 @@ auto from_native_tile_lod_mode(mln::TileLodMode mode) -> mln_tile_lod_mode {
       return MLN_TILE_LOD_MODE_DISTANCE;
     case mln::TileLodMode::Default:
       return MLN_TILE_LOD_MODE_DEFAULT;
+    case mln::TileLodMode::Adaptive:
+      // The engine's terrain mode, which the C API can't select yet.
+      break;
   }
   assert(false);
   return MLN_TILE_LOD_MODE_DEFAULT;

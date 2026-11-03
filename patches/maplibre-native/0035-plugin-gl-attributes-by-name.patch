@@ -3,7 +3,7 @@ linked locations differ from metadata order.
 Upstream: https://github.com/maplibre/maplibre-native/pull/4708
 
 diff --git a/src/mln/shaders/gl/shader_program_gl.cpp b/src/mln/shaders/gl/shader_program_gl.cpp
-index 5afa48ac7e..51f24016b7 100644
+index 3bce3fdb8104..a47db50d0202 100644
 --- a/src/mln/shaders/gl/shader_program_gl.cpp
 +++ b/src/mln/shaders/gl/shader_program_gl.cpp
 @@ -7,6 +7,7 @@
@@ -32,12 +32,12 @@ index 5afa48ac7e..51f24016b7 100644
 +            }
          }
  
-         return std::make_shared<ShaderProgramGL>(std::move(program), std::move(attrs), std::move(samplerLocations));
+         auto shader = std::make_shared<ShaderProgramGL>(
 diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
-index 33a868b818..34c8087c40 100644
+index b681767812f6..779b2a548b58 100644
 --- a/test/CMakeLists.txt
 +++ b/test/CMakeLists.txt
-@@ -155,6 +155,7 @@ if(MLN_WITH_OPENGL)
+@@ -173,6 +173,7 @@ if(MLN_WITH_OPENGL)
              ${PROJECT_SOURCE_DIR}/test/gl/gl_functions.test.cpp
              ${PROJECT_SOURCE_DIR}/test/gl/object.test.cpp
              ${PROJECT_SOURCE_DIR}/test/gl/resource_pool.test.cpp
@@ -47,7 +47,7 @@ index 33a868b818..34c8087c40 100644
              ${PROJECT_SOURCE_DIR}/test/util/offscreen_texture.test.cpp
 diff --git a/test/gl/shader_program.test.cpp b/test/gl/shader_program.test.cpp
 new file mode 100644
-index 0000000000..5fffd1dd9d
+index 000000000000..5fffd1dd9d27
 --- /dev/null
 +++ b/test/gl/shader_program.test.cpp
 @@ -0,0 +1,39 @@
@@ -91,7 +91,7 @@ index 0000000000..5fffd1dd9d
 +
 +#endif
 diff --git a/test/plugin/rendering.test.cpp b/test/plugin/rendering.test.cpp
-index 5793d0cf22..1e9c66f5c2 100644
+index 9dac0678d607..3455f1c66bed 100644
 --- a/test/plugin/rendering.test.cpp
 +++ b/test/plugin/rendering.test.cpp
 @@ -46,14 +46,17 @@ void registerTriangles(const std::string& pluginID,
@@ -259,8 +259,8 @@ index 5793d0cf22..1e9c66f5c2 100644
          layer.enable_stencil_overlap_dedup = stencilOverlapDedup;
          layer.should_animate = shouldAnimate;
          layer.update_uniform_block = [](const mln_plugin_uniform_context_v1*, uint32_t, uint8_t*, size_t) {
-@@ -329,6 +394,42 @@ TEST(PluginRendering, StencilOverlapDedupGeneratesStencilUpdates) {
-     EXPECT_GT(result.stats.stencilUpdates, 0u);
+@@ -416,6 +481,42 @@ TEST(PluginRendering, DrawableStencilOverlapWithoutLayerDedupDrawsEachPixelOnce)
+     EXPECT_NEAR(128, pixel[3], 2);
  }
  
 +TEST(PluginRendering, UniformPaintBetweenVertexAttributes) {

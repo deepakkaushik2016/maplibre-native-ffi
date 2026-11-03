@@ -2,7 +2,7 @@ Cancels only the camera commands that carry one transition ID. Needs 0015.
 Upstream: not proposed
 
 diff --git a/include/mln/map/camera.hpp b/include/mln/map/camera.hpp
-index a67ab2ddde..c437052e42 100644
+index a67ab2dddec5..c437052e42a9 100644
 --- a/include/mln/map/camera.hpp
 +++ b/include/mln/map/camera.hpp
 @@ -131,6 +131,11 @@ struct AnimationOptions {
@@ -18,7 +18,7 @@ index a67ab2ddde..c437052e42 100644
      AnimationOptions() = default;
  
 diff --git a/include/mln/map/map.hpp b/include/mln/map/map.hpp
-index d5dca349de..777c31eeaa 100644
+index cd643ce813a5..1658b654fda6 100644
 --- a/include/mln/map/map.hpp
 +++ b/include/mln/map/map.hpp
 @@ -63,6 +63,10 @@ public:
@@ -33,10 +33,10 @@ index d5dca349de..777c31eeaa 100644
      bool isGestureInProgress() const;
      bool isRotating() const;
 diff --git a/src/mln/map/map.cpp b/src/mln/map/map.cpp
-index ef034b4bd8..e4029bbe28 100644
+index 5150b9ec203d..f6b3739f37e2 100644
 --- a/src/mln/map/map.cpp
 +++ b/src/mln/map/map.cpp
-@@ -120,6 +120,10 @@ void Map::cancelTransitions() {
+@@ -121,6 +121,10 @@ void Map::cancelTransitions() {
      impl->onUpdate();
  }
  
@@ -45,13 +45,13 @@ index ef034b4bd8..e4029bbe28 100644
 +}
 +
  void Map::setGestureInProgress(bool inProgress) {
-     impl->transform.setGestureInProgress(inProgress);
-     impl->onUpdate();
+     if (!inProgress) {
+         impl->groundGrab.reset();
 diff --git a/src/mln/map/transform.cpp b/src/mln/map/transform.cpp
-index f091f2d5cf..7dd49c545d 100644
+index 00a9e472df20..82a01d959546 100644
 --- a/src/mln/map/transform.cpp
 +++ b/src/mln/map/transform.cpp
-@@ -718,6 +718,19 @@ void Transform::cancelTransitions() {
+@@ -819,6 +819,19 @@ void Transform::cancelTransitions() {
      finishTransitions(finished);
  }
  
@@ -72,10 +72,10 @@ index f091f2d5cf..7dd49c545d 100644
      state.setGestureInProgress(inProgress);
  }
 diff --git a/src/mln/map/transform.hpp b/src/mln/map/transform.hpp
-index 3107c308b7..f7673426d0 100644
+index 1d62837a83dd..7c47131a2731 100644
 --- a/src/mln/map/transform.hpp
 +++ b/src/mln/map/transform.hpp
-@@ -120,6 +120,10 @@ public:
+@@ -129,6 +129,10 @@ public:
      TimePoint getLatestTransitionStart() const { return latestTransitionStart; }
      Duration getLatestTransitionDuration() const { return latestTransitionDuration; }
      void cancelTransitions();
@@ -83,14 +83,14 @@ index 3107c308b7..f7673426d0 100644
 +    // `transitionId`, leaves the others running, and returns whether any
 +    // command ended.
 +    bool cancelTransitions(uint64_t transitionId);
- 
-     // Gesture
-     void setGestureInProgress(bool);
+     /// The center a running ease or flight is headed for, while the center altitude it ends at may
+     /// still move (retargetTransitionCenterAltitude); empty otherwise.
+     std::optional<LatLng> getTransitionTargetCenter() const;
 diff --git a/test/map/transform.test.cpp b/test/map/transform.test.cpp
-index 8c176138da..7ab06e333c 100644
+index 8e801e15edd9..ec67d3b50650 100644
 --- a/test/map/transform.test.cpp
 +++ b/test/map/transform.test.cpp
-@@ -1539,3 +1539,56 @@ TEST(Transform, PartialCameraCommandsFinishTogetherForStillImage) {
+@@ -1750,3 +1750,56 @@ TEST(Transform, PartialCameraCommandsFinishTogetherForStillImage) {
      transform.cancelTransitions();
      EXPECT_EQ(observer.events, (std::vector<int>{1, 0, 2, 0}));
  }

@@ -8,7 +8,7 @@ tile finished without it
 Upstream: not proposed
 
 diff --git a/src/mln/map/map.cpp b/src/mln/map/map.cpp
-index 4361df19b3..3e01d9a90d 100644
+index 10df900236..0187f9b96c 100644
 --- a/src/mln/map/map.cpp
 +++ b/src/mln/map/map.cpp
 @@ -79,6 +79,7 @@ void Map::renderStill(StillImageCallback callback) {
@@ -20,10 +20,10 @@ index 4361df19b3..3e01d9a90d 100644
      impl->onUpdate();
  }
 diff --git a/src/mln/map/map_impl.cpp b/src/mln/map/map_impl.cpp
-index 48329c446a..594dcfe55e 100644
+index 27185a7a9b..6b34ba226e 100644
 --- a/src/mln/map/map_impl.cpp
 +++ b/src/mln/map/map_impl.cpp
-@@ -134,6 +134,7 @@ void Map::Impl::onUpdate() {
+@@ -190,6 +190,7 @@ void Map::Impl::onUpdate() {
                                 .fileSource = fileSource,
                                 .prefetchZoomDelta = prefetchZoomDelta,
                                 .stillImageRequest = bool(stillImageRequest),
@@ -32,10 +32,10 @@ index 48329c446a..594dcfe55e 100644
                                 .fastPFOREnabled = fastPFOREnabled,
                                 .captureRenderedFeatures = captureRenderedFeatures,
 diff --git a/src/mln/map/map_impl.hpp b/src/mln/map/map_impl.hpp
-index b97df4567f..d3002b2428 100644
+index bd029f1fc8..6b60d532dc 100644
 --- a/src/mln/map/map_impl.hpp
 +++ b/src/mln/map/map_impl.hpp
-@@ -111,6 +111,7 @@ public:
+@@ -117,6 +117,7 @@ public:
      bool loading = false;
      bool rendererFullyLoaded;
      std::unique_ptr<StillImageRequest> stillImageRequest;
@@ -44,10 +44,10 @@ index b97df4567f..d3002b2428 100644
      double tileLodMinRadius = 3;
      double tileLodScale = 1;
 diff --git a/src/mln/renderer/render_orchestrator.cpp b/src/mln/renderer/render_orchestrator.cpp
-index 705c55ab22..467a105a91 100644
+index bbe2a7bc78..fa4bb84ddd 100644
 --- a/src/mln/renderer/render_orchestrator.cpp
 +++ b/src/mln/renderer/render_orchestrator.cpp
-@@ -382,6 +382,19 @@ std::unique_ptr<RenderTree> RenderOrchestrator::createRenderTree(
+@@ -472,6 +472,19 @@ std::unique_ptr<RenderTree> RenderOrchestrator::createRenderTree(
          renderSource->setFastPFOREnabled(updateParameters->fastPFOREnabled);
          renderSources.emplace(entry.first, std::move(renderSource));
      }
@@ -68,10 +68,10 @@ index 705c55ab22..467a105a91 100644
      const bool tiltedView = transformState.getPitch() != 0.0f;
  
 diff --git a/src/mln/renderer/render_orchestrator.hpp b/src/mln/renderer/render_orchestrator.hpp
-index 67da00bccd..e165f89f30 100644
+index fa5e3423e5..4ac519aa06 100644
 --- a/src/mln/renderer/render_orchestrator.hpp
 +++ b/src/mln/renderer/render_orchestrator.hpp
-@@ -210,6 +210,7 @@ private:
+@@ -232,6 +232,7 @@ private:
      RendererObserver* observer;
  
      ZoomHistory zoomHistory;
@@ -80,7 +80,7 @@ index 67da00bccd..e165f89f30 100644
  
      std::shared_ptr<GlyphManager> glyphManager;
 diff --git a/src/mln/renderer/render_source.hpp b/src/mln/renderer/render_source.hpp
-index bf389edf1f..243d81754c 100644
+index 0b8b8788c7..79dc2714d8 100644
 --- a/src/mln/renderer/render_source.hpp
 +++ b/src/mln/renderer/render_source.hpp
 @@ -113,6 +113,8 @@ public:
@@ -93,7 +93,7 @@ index bf389edf1f..243d81754c 100644
  
      virtual uint8_t getMaxZoom() const;
 diff --git a/src/mln/renderer/sources/render_tile_source.cpp b/src/mln/renderer/sources/render_tile_source.cpp
-index a4ab5165aa..2eb5eee5ee 100644
+index 46f56a284a..aa48fe2680 100644
 --- a/src/mln/renderer/sources/render_tile_source.cpp
 +++ b/src/mln/renderer/sources/render_tile_source.cpp
 @@ -569,6 +569,10 @@ void RenderTileSource::reduceMemoryUse() {
@@ -108,7 +108,7 @@ index a4ab5165aa..2eb5eee5ee 100644
      tilePyramid.dumpDebugLogs();
  }
 diff --git a/src/mln/renderer/sources/render_tile_source.hpp b/src/mln/renderer/sources/render_tile_source.hpp
-index 04f1b047dd..1b18d3b5bc 100644
+index faa276dcf2..57cced884f 100644
 --- a/src/mln/renderer/sources/render_tile_source.hpp
 +++ b/src/mln/renderer/sources/render_tile_source.hpp
 @@ -49,6 +49,7 @@ public:
@@ -120,10 +120,10 @@ index 04f1b047dd..1b18d3b5bc 100644
  
  protected:
 diff --git a/src/mln/renderer/tile_pyramid.cpp b/src/mln/renderer/tile_pyramid.cpp
-index a45781207b..2b5b46ddce 100644
+index ddc6d87c7f..352f9cd260 100644
 --- a/src/mln/renderer/tile_pyramid.cpp
 +++ b/src/mln/renderer/tile_pyramid.cpp
-@@ -425,6 +425,12 @@ void TilePyramid::reduceMemoryUse() {
+@@ -438,6 +438,12 @@ void TilePyramid::reduceMemoryUse() {
      cache.clear();
  }
  
@@ -137,7 +137,7 @@ index a45781207b..2b5b46ddce 100644
      observer = observer_;
  }
 diff --git a/src/mln/renderer/tile_pyramid.hpp b/src/mln/renderer/tile_pyramid.hpp
-index 56eda6aeb0..6906f455a2 100644
+index 4ebf2fe170..f5bc9d540e 100644
 --- a/src/mln/renderer/tile_pyramid.hpp
 +++ b/src/mln/renderer/tile_pyramid.hpp
 @@ -63,6 +63,7 @@ public:
@@ -149,10 +149,10 @@ index 56eda6aeb0..6906f455a2 100644
      void setObserver(TileObserver*);
      void dumpDebugLogs() const;
 diff --git a/src/mln/renderer/update_parameters.hpp b/src/mln/renderer/update_parameters.hpp
-index e3ead8f5c5..8825fa0290 100644
+index d880cd1219..11df44c61a 100644
 --- a/src/mln/renderer/update_parameters.hpp
 +++ b/src/mln/renderer/update_parameters.hpp
-@@ -49,6 +49,7 @@ public:
+@@ -54,6 +54,7 @@ public:
  
      // For still image requests, render requested
      const bool stillImageRequest;
@@ -227,10 +227,10 @@ index e523c7fcdd..7e7df2e87c 100644
          std::unordered_map<GlyphRequestor *, std::shared_ptr<GlyphDependencies>> requestors;
          std::shared_ptr<const GlyphCache::Range> glyphs;
 diff --git a/src/mln/tile/raster_dem_tile.cpp b/src/mln/tile/raster_dem_tile.cpp
-index 9d38a538f3..aa551b049b 100644
+index 7f04914006..e7261806ec 100644
 --- a/src/mln/tile/raster_dem_tile.cpp
 +++ b/src/mln/tile/raster_dem_tile.cpp
-@@ -151,6 +151,10 @@ void RasterDEMTile::setUpdateParameters(const TileUpdateParameters& params) {
+@@ -193,6 +193,10 @@ void RasterDEMTile::setUpdateParameters(const TileUpdateParameters& params) {
      loader.setUpdateParameters(params);
  }
  
@@ -242,10 +242,10 @@ index 9d38a538f3..aa551b049b 100644
      markObsolete();
  }
 diff --git a/src/mln/tile/raster_dem_tile.hpp b/src/mln/tile/raster_dem_tile.hpp
-index ebbc1a8e58..11161ee215 100644
+index b187ccfbb5..dca9976848 100644
 --- a/src/mln/tile/raster_dem_tile.hpp
 +++ b/src/mln/tile/raster_dem_tile.hpp
-@@ -68,6 +68,7 @@ public:
+@@ -143,6 +143,7 @@ public:
      std::unique_ptr<TileRenderData> createRenderData() override;
      void setNecessity(TileNecessity) override;
      void setUpdateParameters(const TileUpdateParameters&) override;
@@ -281,7 +281,7 @@ index 5c06076699..c074b45707 100644
      void setError(std::exception_ptr);
      void setMetadata(std::optional<Timestamp> modified, std::optional<Timestamp> expires);
 diff --git a/src/mln/tile/tile.hpp b/src/mln/tile/tile.hpp
-index f21ee089d3..ed74025f0b 100644
+index 042cc755b6..41299de280 100644
 --- a/src/mln/tile/tile.hpp
 +++ b/src/mln/tile/tile.hpp
 @@ -68,6 +68,8 @@ public:
@@ -302,18 +302,18 @@ index f21ee089d3..ed74025f0b 100644
      // Returns true when the tile source has received a first response,
      // regardless of whether a load error occurred or actual data was loaded.
 diff --git a/src/mln/tile/tile_loader.hpp b/src/mln/tile/tile_loader.hpp
-index d8b53cfdca..024bf93896 100644
+index 4b5a5ee7da..af4fff4d8f 100644
 --- a/src/mln/tile/tile_loader.hpp
 +++ b/src/mln/tile/tile_loader.hpp
-@@ -25,6 +25,7 @@ public:
- 
-     void setNecessity(TileNecessity newNecessity);
+@@ -30,6 +30,7 @@ public:
+     /// first load does.
+     void revalidateFromCache();
      void setUpdateParameters(const TileUpdateParameters&);
 +    void retryFailedLoad();
  
  private:
      // called when the tile is one of the ideal tiles that we want to show
-@@ -51,6 +52,7 @@ private:
+@@ -56,6 +57,7 @@ private:
      Resource resource;
      std::shared_ptr<FileSource> fileSource;
      std::unique_ptr<AsyncRequest> request;
@@ -322,10 +322,10 @@ index d8b53cfdca..024bf93896 100644
  
      /// @brief It's possible for async requests in flight to mess with the request
 diff --git a/src/mln/tile/tile_loader_impl.hpp b/src/mln/tile/tile_loader_impl.hpp
-index f9459e07cb..7f659d260e 100644
+index 12ab32469e..23c194330d 100644
 --- a/src/mln/tile/tile_loader_impl.hpp
 +++ b/src/mln/tile/tile_loader_impl.hpp
-@@ -97,6 +97,16 @@ void TileLoader<T>::setUpdateParameters(const TileUpdateParameters& params) {
+@@ -104,6 +104,16 @@ void TileLoader<T>::setUpdateParameters(const TileUpdateParameters& params) {
      }
  }
  
@@ -342,7 +342,7 @@ index f9459e07cb..7f659d260e 100644
  template <typename T>
  void TileLoader<T>::loadFromCache() {
      assert(!request);
-@@ -160,10 +170,12 @@ void TileLoader<T>::makeOptional() {
+@@ -167,10 +177,12 @@ void TileLoader<T>::makeOptional() {
  template <typename T>
  void TileLoader<T>::loadedData(const Response& res, Resource::LoadingMethod method) {
      if (res.error && res.error->reason != Response::Error::Reason::NotFound) {
@@ -383,10 +383,10 @@ index 2a5d482302..c416491af6 100644
  
      virtual void setData(const std::shared_ptr<const std::string>&) = 0;
 diff --git a/test/map/map.test.cpp b/test/map/map.test.cpp
-index 107c66f4da..73000930ea 100644
+index 85ab7e1bea..68d82824bb 100644
 --- a/test/map/map.test.cpp
 +++ b/test/map/map.test.cpp
-@@ -1817,6 +1817,64 @@ TEST(Map, ResourceError) {
+@@ -1889,6 +1889,64 @@ TEST(Map, ResourceError) {
      }
  }
  
