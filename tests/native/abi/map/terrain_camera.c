@@ -716,6 +716,156 @@ static void an_ease_onto_higher_ground_eases_the_center_up(void) {
   mln_test_destroy_runtime(runtime);
 }
 
+// --- A move onto ground still loading -----------------------------------
+
+// Serves the step's terrain, except that while `holding` it holds every DEM
+// tile that covers `target`, at any zoom, so no coarser tile answers for it.
+typedef struct held_terrain_provider {
+  terrain_provider terrain;
+  mln_lat_lng target;
+  atomic_flag lock;
+  bool holding;
+  size_t held_count;
+  mln_resource_request held[32];
+  bool held_south[32];
+} held_terrain_provider;
+
+static void lock_provider(held_terrain_provider* provider) {
+  while (atomic_flag_test_and_set(&provider->lock)) {
+  }
+}
+
+static bool covers_target(
+  const held_terrain_provider* provider,
+  const mln_resource_request_info* request
+) {
+  char url[128];
+  if (request->requested_url.size >= sizeof(url)) {
+    return false;
+  }
+  memcpy(url, request->requested_url.data, request->requested_url.size);
+  url[request->requested_url.size] = '\0';
+  const char* tile = strstr(url, "/dem/");
+  unsigned z = 0;
+  unsigned x = 0;
+  unsigned y = 0;
+  if (tile == NULL || sscanf(tile, "/dem/%u/%u/%u", &z, &x, &y) != 3) {
+    return false;
+  }
+  const double tiles = ldexp(1.0, (int)z);
+  const double latitude = provider->target.latitude * pi / 180.0;
+  const double target_x = (provider->target.longitude + 180.0) / 360.0 * tiles;
+  const double target_y =
+    (1.0 - log(tan(latitude) + 1.0 / cos(latitude)) / pi) / 2.0 * tiles;
+  return x == (unsigned)floor(target_x) && y == (unsigned)floor(target_y);
+}
+
+static void serve_held_terrain(
+  void* user_data, const mln_resource_request_info* request,
+  mln_resource_request handle
+) {
+  held_terrain_provider* provider = user_data;
+  if (covers_target(provider, request)) {
+    lock_provider(provider);
+    const bool hold =
+      provider->holding &&
+      provider->held_count < sizeof(provider->held) / sizeof(provider->held[0]);
+    if (hold) {
+      provider->held[provider->held_count] = handle;
+      provider->held_south[provider->held_count] = south_of_step(request);
+      provider->held_count += 1;
+    }
+    atomic_flag_clear(&provider->lock);
+    if (hold) {
+      return;
+    }
+  }
+  serve_terrain(&provider->terrain, request, handle);
+}
+
+// Answers every held tile, and serves the rest as they come.
+static void release_held_terrain(held_terrain_provider* provider) {
+  lock_provider(provider);
+  provider->holding = false;
+  atomic_flag_clear(&provider->lock);
+  for (size_t index = 0; index < provider->held_count; ++index) {
+    const bool south = provider->held_south[index];
+    const mln_resource_response response = {
+      .size = sizeof(mln_resource_response),
+      .status = MLN_RESOURCE_RESPONSE_STATUS_OK,
+      .bytes = south ? provider->terrain.south : provider->terrain.dem,
+      .byte_count =
+        south ? provider->terrain.south_size : provider->terrain.dem_size,
+    };
+    mln_test_request_answer(provider->held[index], &response);
+  }
+}
+
+// The clamped center rides the 100 m lowland, looking north, away from the
+// step. A jump puts it 3 km south of the step, over a 1000 m plateau whose DEM
+// tiles haven't arrived. Unknown ground isn't sea level, so the center keeps
+// its height until they arrive, and then settles on the plateau.
+static void a_jump_onto_ground_still_loading_keeps_the_center_height(void) {
+  held_terrain_provider provider = {
+    .terrain =
+      {
+        .dem = lowland_png,
+        .dem_size = sizeof(lowland_png),
+        .south = mln_test_plateau_1000_png,
+        .south_size = mln_test_plateau_1000_png_size,
+      },
+    .target = {.latitude = step_latitude - 0.03, .longitude = 11.39},
+    .lock = ATOMIC_FLAG_INIT,
+    .holding = true,
+  };
+  const mln_resource_provider callback = {
+    .size = sizeof(mln_resource_provider),
+    .callback = serve_held_terrain,
+    .user_data = &provider,
+  };
+  mln_runtime runtime = mln_test_create_runtime();
+  MLN_TEST_OK(mln_test_set_resource_provider(runtime, &callback));
+  mln_test_render_fixture fixture = {0};
+  mln_map map = open_step_map(
+    runtime, MLN_MAP_MODE_CONTINUOUS, step_latitude + 0.05, 14.5, 0.0, 12,
+    &fixture
+  );
+  const mln_test_deadline settling = mln_test_deadline_default();
+  while (fabs(read_camera(map).center_altitude - 100.0) > 1.0) {
+    TEST_ASSERT_FALSE_MESSAGE(
+      mln_test_deadline_passed(settling), "the center never met the lowland"
+    );
+    render_frame_snapshot(&fixture, map);
+  }
+
+  mln_camera_update jump = {
+    .size = sizeof(mln_camera_update),
+    .mode = MLN_CAMERA_UPDATE_MODE_JUMP,
+    .camera = {
+      .size = sizeof(mln_camera_options),
+      .fields = MLN_CAMERA_OPTION_CENTER,
+      .center = provider.target,
+    },
+  };
+  MLN_TEST_AWAIT_OK(
+    mln_map_update_camera(map, &jump, &completion.descriptor, NULL)
+  );
+  for (int frame = 0; frame < 10; ++frame) {
+    const mln_map_snapshot snapshot = render_frame_snapshot(&fixture, map);
+    TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(
+      1.0, 100.0, snapshot.view.camera.center_altitude,
+      "the center left its height before its ground loaded"
+    );
+  }
+
+  release_held_terrain(&provider);
+  mln_test_render_until_idle(runtime, map, &fixture);
+  TEST_ASSERT_DOUBLE_WITHIN(1.0, 1000.0, read_camera(map).center_altitude);
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 MLN_TEST_GROUP {
   RUN_TEST(the_load_mode_caps_the_tiles_a_deep_source_asks_for);
   RUN_TEST(anchoring_without_terrain_leaves_the_camera);
@@ -725,4 +875,5 @@ MLN_TEST_GROUP {
   RUN_TEST(the_clamp_keeps_the_eye_above_the_ground_under_it);
   RUN_TEST(the_clamp_keeps_the_eye_above_a_sea_cliff);
   RUN_TEST(an_ease_onto_higher_ground_eases_the_center_up);
+  RUN_TEST(a_jump_onto_ground_still_loading_keeps_the_center_height);
 }

@@ -1,32 +1,114 @@
-Reports terrain at exactly 0 m under the map center. The renderer started from
-a last reported height of 0 m, so it never reported sea-level ground, and a
-clamped center over it never learned of the ground: the clamp neither settled
-the center there nor lifted an eye under a cliff beside the sea. The height now
-starts unknown, and the first report waits for a loaded DEM tile under the
-center, so ground that has not loaded yet still does not read as sea level.
+Reports terrain at exactly 0 m under the map center, and only ground that a
+loaded DEM tile covers. The renderer started from a last reported height of
+0 m, so it never reported sea-level ground, and a clamped center over it never
+learned of the ground: the clamp neither settled the center there nor lifted an
+eye under a cliff beside the sea. And it read the center's height where
+getElevationForLatLng answers 0 m without a DEM tile, so a clamped center moved
+onto ground still loading dropped toward sea level until the tile arrived. The
+height now starts unknown, and every report waits for a loaded DEM tile under
+the center, as the animation target's already does. findElevationForLatLng now
+finds the covering DEM tile and samples it in one search, so a frame reads the
+center's height with the same two passes over the DEM tiles as before.
 Upstream: not proposed
 
+diff --git a/src/mln/renderer/render_terrain.cpp b/src/mln/renderer/render_terrain.cpp
+index a39ca4a158..bb9bf7f1a0 100644
+--- a/src/mln/renderer/render_terrain.cpp
++++ b/src/mln/renderer/render_terrain.cpp
+@@ -810,14 +810,18 @@ bool RenderTerrain::normalizeTileCoordinates(UnwrappedTileID& tileID, float& x,
+     return true;
+ }
+ 
+-float RenderTerrain::getElevation(const UnwrappedTileID& tileID_, float x, float y) const {
++float RenderTerrain::getElevation(const UnwrappedTileID& tileID, float x, float y) const {
++    return findElevation(tileID, x, y).value_or(0.0f);
++}
++
++std::optional<float> RenderTerrain::findElevation(const UnwrappedTileID& tileID_, float x, float y) const {
+     if (!demSource) {
+-        return 0.0f;
++        return std::nullopt;
+     }
+ 
+     UnwrappedTileID tileID = tileID_;
+     if (!normalizeTileCoordinates(tileID, x, y)) {
+-        return 0.0f;
++        return std::nullopt;
+     }
+ 
+     // Find the DEM tile matching the requested tile, or its closest available ancestor
+@@ -834,7 +838,7 @@ float RenderTerrain::getElevation(const UnwrappedTileID& tileID_, float x, float
+         }
+     }
+     if (!demRenderTile) {
+-        return 0.0f;
++        return std::nullopt;
+     }
+ 
+     const DEMData& demData = *demDataOf(*demRenderTile);
+@@ -927,20 +931,12 @@ std::optional<double> RenderTerrain::findElevationForLatLng(const LatLng& latLng
+     const auto localX = static_cast<float>((point.x - static_cast<double>(tx)) * util::EXTENT);
+     const auto localY = static_cast<float>((point.y - static_cast<double>(ty)) * util::EXTENT);
+ 
+-    // A DEM tile has to cover the point: getElevation answers 0 where none does.
+-    UnwrappedTileID covered = sampleTile;
+-    float coveredX = localX;
+-    float coveredY = localY;
+-    if (!normalizeTileCoordinates(covered, coveredX, coveredY)) {
+-        return std::nullopt;
++    // A DEM tile has to cover the point: getElevation answers 0 where none does. One search
++    // both finds that tile and samples it.
++    if (const auto elevation = findElevation(sampleTile, localX, localY)) {
++        return *elevation * getExaggeration();
+     }
+-    const bool found = std::any_of(renderTiles->begin(), renderTiles->end(), [&](const RenderTile& renderTile) {
+-        return demDataOf(renderTile) && (renderTile.id == covered || covered.isChildOf(renderTile.id));
+-    });
+-    if (!found) {
+-        return std::nullopt;
+-    }
+-    return getElevationWithExaggeration(sampleTile, localX, localY);
++    return std::nullopt;
+ }
+ 
+ std::optional<LatLng> RenderTerrain::raycast(const TransformState& state, const ScreenCoordinate& point) const {
+diff --git a/src/mln/renderer/render_terrain.hpp b/src/mln/renderer/render_terrain.hpp
+index a840ba2f32..d6980b3834 100644
+--- a/src/mln/renderer/render_terrain.hpp
++++ b/src/mln/renderer/render_terrain.hpp
+@@ -196,6 +196,8 @@ public:
+      * @return Elevation in meters (or 0 if no DEM data available)
+      */
+     float getElevation(const UnwrappedTileID& tileID, float x, float y) const;
++    /// As getElevation, but empty where no loaded DEM tile covers the coordinate (rather than 0).
++    std::optional<float> findElevation(const UnwrappedTileID& tileID, float x, float y) const;
+ 
+     /**
+      * @brief Get elevation with exaggeration applied
 diff --git a/src/mln/renderer/renderer_impl.cpp b/src/mln/renderer/renderer_impl.cpp
-index e14706abb6..fb4bc0733d 100644
+index e14706abb6..fe3d196ea4 100644
 --- a/src/mln/renderer/renderer_impl.cpp
 +++ b/src/mln/renderer/renderer_impl.cpp
-@@ -747,8 +747,14 @@ void Renderer::Impl::render(const RenderTree& renderTree, const std::shared_ptr<
+@@ -747,10 +747,15 @@ void Renderer::Impl::render(const RenderTree& renderTree, const std::shared_ptr<
      // DEM, so this is the channel; whether the camera acts on it is the map's call
      // (Map::setCenterClampedToGround). Gated so a still map does not post a message a frame.
      if (auto* terrain = orchestrator.getRenderTerrain()) {
 -        const double centerElevation = terrain->getElevationForLatLng(updateParameters->transformState.getLatLng());
 -        if (std::abs(centerElevation - lastReportedCenterElevation) > 0.25) {
+-            lastReportedCenterElevation = centerElevation;
+-            observer->onTerrainCenterElevationChanged(centerElevation);
++        // Only once a DEM tile covers the centre: getElevationForLatLng answers 0 m where none
++        // does, which is not sea level, and a clamped centre would drop toward it.
 +        const LatLng center = updateParameters->transformState.getLatLng();
-+        const double centerElevation = terrain->getElevationForLatLng(center);
-+        // getElevationForLatLng answers 0 m where no DEM tile covers the point, which is not sea
-+        // level: the first report waits for a tile under the centre.
-+        const bool changed = std::isnan(lastReportedCenterElevation)
-+                                 ? terrain->findElevationForLatLng(center).has_value()
-+                                 : std::abs(centerElevation - lastReportedCenterElevation) > 0.25;
-+        if (changed) {
-             lastReportedCenterElevation = centerElevation;
-             observer->onTerrainCenterElevationChanged(centerElevation);
++        if (const auto centerElevation = terrain->findElevationForLatLng(center)) {
++            if (std::isnan(lastReportedCenterElevation) ||
++                std::abs(*centerElevation - lastReportedCenterElevation) > 0.25) {
++                lastReportedCenterElevation = *centerElevation;
++                observer->onTerrainCenterElevationChanged(*centerElevation);
++            }
          }
+         // And under the eye: a camera dragged towards a slope rising in front of it ends up under
+         // the ground (the steeper the pitch, the less it sits above the center), and the map
 diff --git a/src/mln/renderer/renderer_impl.hpp b/src/mln/renderer/renderer_impl.hpp
 index c04ba93fb2..a1f374824a 100644
 --- a/src/mln/renderer/renderer_impl.hpp
@@ -44,10 +126,18 @@ index c04ba93fb2..a1f374824a 100644
      double lastReportedTargetElevation = std::numeric_limits<double>::quiet_NaN();
  
 diff --git a/test/renderer/terrain_camera.test.cpp b/test/renderer/terrain_camera.test.cpp
-index 9856372f4f..98d2cb3466 100644
+index 9856372f4f..a573c5fb19 100644
 --- a/test/renderer/terrain_camera.test.cpp
 +++ b/test/renderer/terrain_camera.test.cpp
-@@ -704,6 +704,33 @@ TEST(TerrainCamera, ClampDoesNotApplyAfterTerrainRemoval) {
+@@ -11,6 +11,7 @@
+ #include <mln/style/terrain.hpp>
+ #include <mln/util/constants.hpp>
+ #include <mln/util/image.hpp>
++#include <mln/util/projection.hpp>
+ #include <mln/util/run_loop.hpp>
+ 
+ #include <algorithm>
+@@ -704,6 +705,73 @@ TEST(TerrainCamera, ClampDoesNotApplyAfterTerrainRemoval) {
      EXPECT_NEAR(test.altitude(), 0.0, 0.001);
  }
  
@@ -76,6 +166,46 @@ index 9856372f4f..98d2cb3466 100644
 +    test.map.setCenterClampedToGround(true);
 +
 +    EXPECT_NEAR(test.renderAndGetAltitude(8), 500.0, 0.001);
++}
++
++// The same holds after the first report: a clamped centre moved onto ground whose DEM tile has
++// not arrived keeps its height until the tile does, rather than dropping toward sea level, and
++// then settles on the ground there.
++TEST(TerrainCamera, ClampKeepsTheCentreWhileTheGroundItMovedOntoLoads) {
++    TerrainTransitionTest test;
++    // Every DEM tile that covers the target, its ancestors included, as a coarser one would
++    // answer for it.
++    bool holdWest = true;
++    const auto coversWest = [&](const Resource::TileData& tile) {
++        const auto point = Projection::project(test.westTarget, static_cast<int32_t>(tile.z));
++        return tile.x == static_cast<int32_t>(std::floor(point.x)) &&
++               tile.y == static_cast<int32_t>(std::floor(point.y));
++    };
++    test.fileSource->tileResponse = [&](const Resource& resource) -> std::optional<Response> {
++        if (holdWest && resource.tileData && coversWest(*resource.tileData)) {
++            return std::nullopt;
++        }
++        const bool west = resource.tileData && resource.tileData->z == 2 && resource.tileData->x == 1;
++        Response res;
++        res.data = std::make_shared<std::string>(west ? test.highTile : test.lowTile);
++        return res;
++    };
++    ASSERT_TRUE(test.settleOnPlateau());
++
++    test.map.jumpTo(CameraOptions().withCenter(test.westTarget));
++    double lowest = test.altitude();
++    for (int i = 0; i < 30; ++i) {
++        test.renderFrame();
++        lowest = std::min(lowest, test.altitude());
++    }
++    EXPECT_NEAR(lowest, plateauMeters, 5.0) << "the centre dropped while its ground loaded";
++
++    holdWest = false;
++    const auto deadline = Clock::now() + Seconds(10);
++    while (Clock::now() < deadline && std::abs(test.altitude() - westPlateauMeters) >= 5.0) {
++        test.renderFrame();
++    }
++    EXPECT_NEAR(test.altitude(), westPlateauMeters, 5.0);
 +}
 +
  // A drape target is drawn into only by the source tiles that overlap its own tile, so the
