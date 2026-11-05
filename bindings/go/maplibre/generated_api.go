@@ -6020,6 +6020,49 @@ func copyTerrainElevation(raw C.mln_terrain_elevation) TerrainElevation {
 	return result
 }
 
+// TerrainLatLng corresponds to mln_terrain_lat_lng. The ground that the terrain
+// draws under a screen point.
+//
+// See mln_terrain_lat_lng in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+type TerrainLatLng struct {
+	// The ground's coordinate, with its longitude within [-180, 180].
+	Coordinate LatLng
+}
+
+func copyTerrainLatLng(raw C.mln_terrain_lat_lng) TerrainLatLng {
+	var result TerrainLatLng
+	result.Coordinate = copyLatLng(raw.coordinate)
+	return result
+}
+
+// TerrainScreenPoint corresponds to mln_terrain_screen_point. Where the terrain
+// draws a point on the ground.
+//
+// See mln_terrain_screen_point in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+type TerrainScreenPoint struct {
+	// The point, from the top-left corner in logical pixels. It may lie outside the
+	// viewport.
+	Point ScreenPoint
+	// Whether ground from a loaded DEM tile is drawn in front of the point and
+	// hides it, as a ridge hides the valley behind it.
+	//
+	// False is no proof that nothing hides the point. Ground that no loaded DEM
+	// tile covers never hides it, because the terrain draws a stand-in height there
+	// until the tile arrives. And a line of sight that the search for the ground
+	// doesn't see meet it, such as one that grazes a thin crest, reports the point
+	// as visible.
+	Occluded bool
+}
+
+func copyTerrainScreenPoint(raw C.mln_terrain_screen_point) TerrainScreenPoint {
+	var result TerrainScreenPoint
+	result.Point = copyScreenPoint(raw.point)
+	result.Occluded = bool(raw.occluded)
+	return result
+}
+
 // TextureImageInfo corresponds to mln_texture_image_info. The layout of the
 // pixels that RenderSessionHandle.ReadTexture() reads.
 //
@@ -9486,6 +9529,72 @@ func (receiver *RenderSessionHandle) Snapshot() (RenderSessionSnapshot, error) {
 	}, func(arena *bindingArena) RenderSessionSnapshot {
 		return copyRenderSessionSnapshot(outSnapshot)
 	})
+}
+
+// QueryLatLngForPixel finds the ground that the terrain draws under a screen
+// point.
+//
+// The query reads the last frame that the session rendered. Submit it from any
+// thread. It runs with the session's graphics work, so with
+// RenderDriverKindCallerGraphicsThread it completes once you service that work.
+//
+// point is in logical pixels from the top-left corner of the view. The query
+// follows the line of sight through it to the first ground that the loaded DEM
+// tiles draw, with the style's terrain exaggeration applied. Read the ground's
+// height with RenderSessionHandle.QueryTerrainElevation().
+//
+// Without terrain in the style, the coordinate is the one at sea level, as
+// MapProjectionHandle.LatLngForPixel() finds it for the frame's view.
+//
+// The completion delivers no value when point isn't finite, or, with terrain,
+// when the line of sight meets no ground: above the horizon, or over ground
+// that no loaded DEM tile covers, as before the tiles arrive.
+//
+// See mln_render_session_query_lat_lng_for_pixel in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+//
+// Errors:
+//   - StatusInvalidState when the session hasn't rendered a frame since it
+//     attached or changed its scale factor. The query fails then, rather than
+//     delivering no value, because there is no frame to read.
+func (receiver *RenderSessionHandle) QueryLatLngForPixel(point ScreenPoint) (*Future[*TerrainLatLng], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_render_session_query_lat_lng_for_pixel(C.mln_render_session(raw), nativeScreenPoint(point, arena), completion, diagnostic))
+	}, completionNullable(completionOf(copyTerrainLatLng)))
+}
+
+// QueryPixelForLatLng finds where the terrain draws a point on the ground.
+//
+// The query reads the last frame that the session rendered. Submit it from any
+// thread. It runs with the session's graphics work, so with
+// RenderDriverKindCallerGraphicsThread it completes once you service that work.
+//
+// The query lifts coordinate to the height that the terrain draws there, which
+// RenderSessionHandle.QueryTerrainElevation() reads, and finds the screen point
+// that draws it, in logical pixels from the top-left corner of the view. The
+// coordinate is taken in the copy of the world nearest the view's center.
+// occluded says whether ground from a loaded DEM tile is drawn in front of it.
+//
+// Without terrain in the style, the point is the one at sea level, as
+// MapProjectionHandle.PixelForLatLng() finds it for the frame's view, and
+// occluded is false.
+//
+// The completion delivers no value when the coordinate is behind the camera,
+// where no pixel draws it, when the screen point isn't finite, or, with
+// terrain, when no DEM tile that the session has loaded covers the coordinate.
+// coordinate needs a latitude within [-90, 90] and a finite longitude.
+//
+// See mln_render_session_query_pixel_for_lat_lng in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+//
+// Errors:
+//   - StatusInvalidState when the session hasn't rendered a frame since it
+//     attached or changed its scale factor. The query fails then, rather than
+//     delivering no value, because there is no frame to read.
+func (receiver *RenderSessionHandle) QueryPixelForLatLng(coordinate LatLng) (*Future[*TerrainScreenPoint], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_render_session_query_pixel_for_lat_lng(C.mln_render_session(raw), nativeLatLng(coordinate, arena), completion, diagnostic))
+	}, completionNullable(completionOf(copyTerrainScreenPoint)))
 }
 
 // QueryRenderedFeatures finds the features that the session drew in an area of

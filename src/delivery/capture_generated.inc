@@ -385,6 +385,34 @@ constexpr auto element_owns_handles(const mln_terrain_elevation*) noexcept
 }
 template <bool Writing>
 auto capture_element(
+  [[maybe_unused]] Arena<Writing>& arena, const mln_terrain_lat_lng& source
+) -> mln_terrain_lat_lng {
+  auto result = source;
+  return result;
+}
+inline auto discard_element(
+  [[maybe_unused]] const mln_terrain_lat_lng& value
+) noexcept -> void {}
+constexpr auto element_owns_handles(const mln_terrain_lat_lng*) noexcept
+  -> bool {
+  return false;
+}
+template <bool Writing>
+auto capture_element(
+  [[maybe_unused]] Arena<Writing>& arena, const mln_terrain_screen_point& source
+) -> mln_terrain_screen_point {
+  auto result = source;
+  return result;
+}
+inline auto discard_element(
+  [[maybe_unused]] const mln_terrain_screen_point& value
+) noexcept -> void {}
+constexpr auto element_owns_handles(const mln_terrain_screen_point*) noexcept
+  -> bool {
+  return false;
+}
+template <bool Writing>
+auto capture_element(
   [[maybe_unused]] Arena<Writing>& arena,
   const mln_texture_readback_result& source
 ) -> mln_texture_readback_result {

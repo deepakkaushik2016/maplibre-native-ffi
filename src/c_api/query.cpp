@@ -72,3 +72,25 @@ auto mln_render_session_query_terrain_elevation(
     );
   });
 }
+
+auto mln_render_session_query_lat_lng_for_pixel(
+  mln_render_session session, mln_screen_point point,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&]() -> mln_status {
+    return mln::core::render_session_query_lat_lng_for_pixel_start(
+      session, point, completion
+    );
+  });
+}
+
+auto mln_render_session_query_pixel_for_lat_lng(
+  mln_render_session session, mln_lat_lng coordinate,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&]() -> mln_status {
+    return mln::core::render_session_query_pixel_for_lat_lng_start(
+      session, coordinate, completion
+    );
+  });
+}

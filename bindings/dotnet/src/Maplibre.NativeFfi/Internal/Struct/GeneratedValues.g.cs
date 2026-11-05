@@ -2729,6 +2729,12 @@ internal static unsafe class GeneratedValues
     internal static TerrainElevation CopyTerrainElevation(mln_terrain_elevation value) =>
         new(value.meters);
 
+    internal static TerrainLatLng CopyTerrainLatLng(mln_terrain_lat_lng value) =>
+        new(CopyLatLng(value.coordinate));
+
+    internal static TerrainScreenPoint CopyTerrainScreenPoint(mln_terrain_screen_point value) =>
+        new(CopyScreenPoint(value.point), value.occluded != 0);
+
     internal static TextureImageInfo CopyTextureImageInfo(mln_texture_image_info value) =>
         new(value.width, value.height, value.stride, (ulong)value.byte_length);
 

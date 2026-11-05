@@ -1946,6 +1946,32 @@ internal actual object C {
       outDiagnostic.toCPointer(),
     )
 
+  actual fun mln_render_session_query_lat_lng_for_pixel(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_render_session_query_lat_lng_for_pixel(
+      session.toULong(),
+      point.toCPointer<mln_screen_point>()!!.pointed.readValue(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
+  actual fun mln_render_session_query_pixel_for_lat_lng(
+    session: Long,
+    coordinate: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_render_session_query_pixel_for_lat_lng(
+      session.toULong(),
+      coordinate.toCPointer<mln_lat_lng>()!!.pointed.readValue(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
   actual fun mln_render_session_query_rendered_features(
     session: Long,
     geometry: Long,

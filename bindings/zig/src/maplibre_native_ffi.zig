@@ -2345,6 +2345,72 @@ pub const RenderSession = struct {
         return call.invoke("mln_render_session_get_snapshot", .handle, self, null, diagnostic, .{call.sizedOut(RenderSessionSnapshot)});
     }
 
+    /// Finds the ground that the terrain draws under a screen point.
+    ///
+    /// The query reads the last frame that the session rendered. Submit it from any
+    /// thread. It runs with the session's graphics work, so with
+    /// `RenderDriverKind.caller_graphics_thread` it completes once you service that
+    /// work.
+    ///
+    /// `point` is in logical pixels from the top-left corner of the view. The query
+    /// follows the line of sight through it to the first ground that the loaded DEM
+    /// tiles draw, with the style's terrain exaggeration applied. Read the ground's
+    /// height with `RenderSession.queryTerrainElevation()`.
+    ///
+    /// Without terrain in the style, the coordinate is the one at sea level, as
+    /// `MapProjection.latLngForPixel()` finds it for the frame's view.
+    ///
+    /// The completion delivers no value when `point` isn't finite, or, with
+    /// terrain, when the line of sight meets no ground: above the horizon, or over
+    /// ground that no loaded DEM tile covers, as before the tiles arrive.
+    ///
+    /// See `mln_render_session_query_lat_lng_for_pixel` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    ///
+    /// Errors:
+    ///
+    /// - `error.InvalidState` when the session hasn't rendered a frame since it
+    ///   attached or changed its scale factor. The query fails then, rather than
+    ///   delivering no value, because there is no frame to read.
+    pub fn queryLatLngForPixel(self: RenderSession, point: ScreenPoint, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(?TerrainLatLng) {
+        return call.submit("mln_render_session_query_lat_lng_for_pixel", .handle, self, call.orNull(call.value(TerrainLatLng, c.mln_terrain_lat_lng)), null, diagnostic, .{point});
+    }
+
+    /// Finds where the terrain draws a point on the ground.
+    ///
+    /// The query reads the last frame that the session rendered. Submit it from any
+    /// thread. It runs with the session's graphics work, so with
+    /// `RenderDriverKind.caller_graphics_thread` it completes once you service that
+    /// work.
+    ///
+    /// The query lifts `coordinate` to the height that the terrain draws there,
+    /// which `RenderSession.queryTerrainElevation()` reads, and finds the screen
+    /// point that draws it, in logical pixels from the top-left corner of the view.
+    /// The coordinate is taken in the copy of the world nearest the view's center.
+    /// `occluded` says whether ground from a loaded DEM tile is drawn in front of
+    /// it.
+    ///
+    /// Without terrain in the style, the point is the one at sea level, as
+    /// `MapProjection.pixelForLatLng()` finds it for the frame's view, and
+    /// `occluded` is false.
+    ///
+    /// The completion delivers no value when the coordinate is behind the camera,
+    /// where no pixel draws it, when the screen point isn't finite, or, with
+    /// terrain, when no DEM tile that the session has loaded covers the coordinate.
+    /// `coordinate` needs a latitude within \[-90, 90\] and a finite longitude.
+    ///
+    /// See `mln_render_session_query_pixel_for_lat_lng` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    ///
+    /// Errors:
+    ///
+    /// - `error.InvalidState` when the session hasn't rendered a frame since it
+    ///   attached or changed its scale factor. The query fails then, rather than
+    ///   delivering no value, because there is no frame to read.
+    pub fn queryPixelForLatLng(self: RenderSession, coordinate: LatLng, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(?TerrainScreenPoint) {
+        return call.submit("mln_render_session_query_pixel_for_lat_lng", .handle, self, call.orNull(call.value(TerrainScreenPoint, c.mln_terrain_screen_point)), null, diagnostic, .{coordinate});
+    }
+
     /// Finds the features that the session drew in an area of the screen.
     ///
     /// The query reads the last frame that the session rendered. A feature that
@@ -9001,6 +9067,20 @@ pub const TerrainElevation = struct {
     }
 };
 
+/// The ground that the terrain draws under a screen point.
+///
+/// See `mln_terrain_lat_lng` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+pub const TerrainLatLng = struct {
+    /// The ground's coordinate, with its longitude within \[-180, 180\].
+    coordinate: LatLng = .{},
+    pub fn fromNative(raw: c.mln_terrain_lat_lng) TerrainLatLng {
+        return .{
+            .coordinate = LatLng.fromNative(raw.coordinate),
+        };
+    }
+};
+
 /// How a map loads 3D terrain: how much it builds in one frame, and how many
 /// terrain mesh tiles a frame may have.
 ///
@@ -9020,6 +9100,31 @@ pub const TerrainLoadMode = enum(u32) {
     _,
     pub const fromNative = marshal.EnumMethods(@This()).fromNative;
     pub const toNative = marshal.EnumMethods(@This()).toNative;
+};
+
+/// Where the terrain draws a point on the ground.
+///
+/// See `mln_terrain_screen_point` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+pub const TerrainScreenPoint = struct {
+    /// The point, from the top-left corner in logical pixels. It may lie
+    /// outside the viewport.
+    point: ScreenPoint = .{},
+    /// Whether ground from a loaded DEM tile is drawn in front of the point and
+    /// hides it, as a ridge hides the valley behind it.
+    ///
+    /// False is no proof that nothing hides the point. Ground that no loaded
+    /// DEM tile covers never hides it, because the terrain draws a stand-in
+    /// height there until the tile arrives. And a line of sight that the search
+    /// for the ground doesn't see meet it, such as one that grazes a thin
+    /// crest, reports the point as visible.
+    occluded: bool = false,
+    pub fn fromNative(raw: c.mln_terrain_screen_point) TerrainScreenPoint {
+        return .{
+            .point = ScreenPoint.fromNative(raw.point),
+            .occluded = raw.occluded,
+        };
+    }
 };
 
 /// The layout of the pixels that `RenderSession.readTexture()` reads.

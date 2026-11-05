@@ -326,6 +326,20 @@ static gpointer mln_render_session_get_cluster_leaves_decode(
   return maplibre_native_ffi_text_new(*view);
 }
 
+static gpointer mln_render_session_query_lat_lng_for_pixel_decode(
+  const mln_completion_result* result
+) {
+  if (result->value == NULL) return NULL;
+  return maplibre_native_ffi_terrain_lat_lng_from_native(result->value);
+}
+
+static gpointer mln_render_session_query_pixel_for_lat_lng_decode(
+  const mln_completion_result* result
+) {
+  if (result->value == NULL) return NULL;
+  return maplibre_native_ffi_terrain_screen_point_from_native(result->value);
+}
+
 static gpointer mln_render_session_query_rendered_features_decode(
   const mln_completion_result* result
 ) {
@@ -4845,6 +4859,79 @@ maplibre_native_ffi_render_session_get_snapshot(
   return maplibre_native_ffi_render_session_snapshot_from_native(
     &out_snapshot_
   );
+}
+
+void maplibre_native_ffi_render_session_query_lat_lng_for_pixel_async(
+  MaplibreNativeFfiRenderSession* self,
+  const MaplibreNativeFfiScreenPoint* point, GAsyncReadyCallback callback,
+  gpointer user_data
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_RENDER_SESSION(self));
+  g_return_if_fail(point != NULL);
+  MaplibreNativeFfiAsync async_;
+  maplibre_native_ffi_async_init(
+    &async_, self,
+    maplibre_native_ffi_render_session_query_lat_lng_for_pixel_async, callback,
+    user_data, FALSE
+  );
+  mln_screen_point point_native_;
+  maplibre_native_ffi_screen_point_to_native(
+    point, &point_native_, &async_.call
+  );
+  if (!maplibre_native_ffi_async_begin(
+        &async_, mln_render_session_query_lat_lng_for_pixel_decode,
+        (GDestroyNotify)maplibre_native_ffi_terrain_lat_lng_free
+      ))
+    return;
+  mln_status status_ = mln_render_session_query_lat_lng_for_pixel(
+    self->handle, point_native_, async_.completion_argument, &async_.diagnostic
+  );
+  maplibre_native_ffi_async_end(&async_, status_);
+}
+
+MaplibreNativeFfiTerrainLatLng*
+maplibre_native_ffi_render_session_query_lat_lng_for_pixel_finish(
+  MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
+) {
+  g_return_val_if_fail(g_task_is_valid(result, self), NULL);
+  return g_task_propagate_pointer(G_TASK(result), error);
+}
+
+void maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async(
+  MaplibreNativeFfiRenderSession* self,
+  const MaplibreNativeFfiLatLng* coordinate, GAsyncReadyCallback callback,
+  gpointer user_data
+) {
+  g_return_if_fail(MAPLIBRE_NATIVE_FFI_IS_RENDER_SESSION(self));
+  g_return_if_fail(coordinate != NULL);
+  MaplibreNativeFfiAsync async_;
+  maplibre_native_ffi_async_init(
+    &async_, self,
+    maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async, callback,
+    user_data, FALSE
+  );
+  mln_lat_lng coordinate_native_;
+  maplibre_native_ffi_lat_lng_to_native(
+    coordinate, &coordinate_native_, &async_.call
+  );
+  if (!maplibre_native_ffi_async_begin(
+        &async_, mln_render_session_query_pixel_for_lat_lng_decode,
+        (GDestroyNotify)maplibre_native_ffi_terrain_screen_point_free
+      ))
+    return;
+  mln_status status_ = mln_render_session_query_pixel_for_lat_lng(
+    self->handle, coordinate_native_, async_.completion_argument,
+    &async_.diagnostic
+  );
+  maplibre_native_ffi_async_end(&async_, status_);
+}
+
+MaplibreNativeFfiTerrainScreenPoint*
+maplibre_native_ffi_render_session_query_pixel_for_lat_lng_finish(
+  MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
+) {
+  g_return_val_if_fail(g_task_is_valid(result, self), NULL);
+  return g_task_propagate_pointer(G_TASK(result), error);
 }
 
 void maplibre_native_ffi_render_session_query_rendered_features_async(

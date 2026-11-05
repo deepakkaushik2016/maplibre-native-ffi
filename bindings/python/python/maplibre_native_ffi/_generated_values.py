@@ -5284,6 +5284,53 @@ class TerrainElevation:
 
 
 @dataclass(frozen=True, slots=True)
+class TerrainLatLng:
+    """The ground that the terrain draws under a screen point.
+
+    See `mln_terrain_lat_lng` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    """
+
+    coordinate: LatLng
+    """The ground's coordinate, with its longitude within \\[-180, 180\\]."""
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(coordinate=LatLng._from_native(raw["coordinate"]))
+
+
+@dataclass(frozen=True, slots=True)
+class TerrainScreenPoint:
+    """Where the terrain draws a point on the ground.
+
+    See `mln_terrain_screen_point` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    """
+
+    point: ScreenPoint
+    """The point, from the top-left corner in logical pixels. It may lie outside
+    the viewport.
+    """
+
+    occluded: bool
+    """Whether ground from a loaded DEM tile is drawn in front of the point and
+    hides it, as a ridge hides the valley behind it.
+
+    False is no proof that nothing hides the point. Ground that no loaded DEM
+    tile covers never hides it, because the terrain draws a stand-in height
+    there until the tile arrives. And a line of sight that the search for the
+    ground doesn't see meet it, such as one that grazes a thin crest, reports
+    the point as visible.
+    """
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(
+            point=ScreenPoint._from_native(raw["point"]), occluded=raw["occluded"]
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class TextureImageInfo:
     """The layout of the pixels that `RenderSessionHandle.read_texture()` reads.
 

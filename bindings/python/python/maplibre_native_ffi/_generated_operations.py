@@ -104,6 +104,8 @@ from ._generated_values import (
     StyleTransitionOptions,
     StyleVectorTileEncoding,
     TerrainElevation,
+    TerrainLatLng,
+    TerrainScreenPoint,
     TextureReadbackResult,
     VulkanBorrowedTextureDescriptor,
     VulkanBorrowedTextureReplacement,
@@ -2592,6 +2594,88 @@ class _RenderSessionHandleOperations(GeneratedOperations):
         [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/render__session_8h.html).
         """
         return RenderSessionSnapshot._from_native(self._native.get_snapshot())
+
+    def query_lat_lng_for_pixel(
+        self, point: ScreenPoint
+    ) -> Future[TerrainLatLng | None]:
+        """Finds the ground that the terrain draws under a screen point.
+
+        The query reads the last frame that the session rendered. Submit it
+        from any thread. It runs with the session's graphics work, so with
+        `RenderDriverKind.CALLER_GRAPHICS_THREAD` it completes once you
+        service that work.
+
+        `point` is in logical pixels from the top-left corner of the view.
+        The query follows the line of sight through it to the first ground
+        that the loaded DEM tiles draw, with the style's terrain exaggeration
+        applied. Read the ground's height with
+        `RenderSessionHandle.query_terrain_elevation()`.
+
+        Without terrain in the style, the coordinate is the one at sea level,
+        as `MapProjectionHandle.lat_lng_for_pixel()` finds it for the frame's
+        view.
+
+        The completion delivers no value when `point` isn't finite, or, with
+        terrain, when the line of sight meets no ground: above the horizon,
+        or over ground that no loaded DEM tile covers, as before the tiles
+        arrive.
+
+        See `mln_render_session_query_lat_lng_for_pixel` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+
+        Errors:
+
+        - `Status.INVALID_STATE` when the session hasn't rendered a frame
+          since it attached or changed its scale factor. The query fails
+          then, rather than delivering no value, because there is no frame to
+          read.
+        """
+        return map_future(
+            self._native.query_lat_lng_for_pixel(point),
+            lambda value: _maybe(TerrainLatLng._from_native, value),
+        )
+
+    def query_pixel_for_lat_lng(
+        self, coordinate: LatLng
+    ) -> Future[TerrainScreenPoint | None]:
+        """Finds where the terrain draws a point on the ground.
+
+        The query reads the last frame that the session rendered. Submit it
+        from any thread. It runs with the session's graphics work, so with
+        `RenderDriverKind.CALLER_GRAPHICS_THREAD` it completes once you
+        service that work.
+
+        The query lifts `coordinate` to the height that the terrain draws
+        there, which `RenderSessionHandle.query_terrain_elevation()` reads,
+        and finds the screen point that draws it, in logical pixels from the
+        top-left corner of the view. The coordinate is taken in the copy of
+        the world nearest the view's center. `occluded` says whether ground
+        from a loaded DEM tile is drawn in front of it.
+
+        Without terrain in the style, the point is the one at sea level, as
+        `MapProjectionHandle.pixel_for_lat_lng()` finds it for the frame's
+        view, and `occluded` is false.
+
+        The completion delivers no value when the coordinate is behind the
+        camera, where no pixel draws it, when the screen point isn't finite,
+        or, with terrain, when no DEM tile that the session has loaded covers
+        the coordinate. `coordinate` needs a latitude within \\[-90, 90\\] and
+        a finite longitude.
+
+        See `mln_render_session_query_pixel_for_lat_lng` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+
+        Errors:
+
+        - `Status.INVALID_STATE` when the session hasn't rendered a frame
+          since it attached or changed its scale factor. The query fails
+          then, rather than delivering no value, because there is no frame to
+          read.
+        """
+        return map_future(
+            self._native.query_pixel_for_lat_lng(coordinate),
+            lambda value: _maybe(TerrainScreenPoint._from_native, value),
+        )
 
     def query_rendered_features(
         self,

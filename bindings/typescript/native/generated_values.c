@@ -385,6 +385,40 @@ napi_value mln_ts_decode_terrain_elevation_optional(
   );
 }
 
+napi_value mln_ts_decode_terrain_lat_lng_optional(
+  napi_env env, const mln_completion_result* result
+) {
+  if (result->value == NULL || result->value_count == 0)
+    return mln_ts_undefined(env);
+  if (result->value_size < sizeof(mln_terrain_lat_lng)) {
+    napi_throw_range_error(env, NULL, "native completion stride is too small");
+    return NULL;
+  }
+  const char* value = (const char*)result->value;
+  size_t stride = result->value_size;
+  (void)stride;
+  return mln_ts_read_terrain_lat_lng(
+    env, &(*(const mln_terrain_lat_lng*)value), stride
+  );
+}
+
+napi_value mln_ts_decode_terrain_screen_point_optional(
+  napi_env env, const mln_completion_result* result
+) {
+  if (result->value == NULL || result->value_count == 0)
+    return mln_ts_undefined(env);
+  if (result->value_size < sizeof(mln_terrain_screen_point)) {
+    napi_throw_range_error(env, NULL, "native completion stride is too small");
+    return NULL;
+  }
+  const char* value = (const char*)result->value;
+  size_t stride = result->value_size;
+  (void)stride;
+  return mln_ts_read_terrain_screen_point(
+    env, &(*(const mln_terrain_screen_point*)value), stride
+  );
+}
+
 napi_value mln_ts_decode_texture_readback_result(
   napi_env env, const mln_completion_result* result
 ) {
@@ -2996,6 +3030,38 @@ napi_value mln_ts_read_terrain_elevation(
   if (!mln_ts_set(
         env, result, "meters", mln_ts_number(env, (double)(source->meters))
       ))
+    return NULL;
+  return result;
+}
+
+napi_value mln_ts_read_terrain_lat_lng(
+  napi_env env, const mln_terrain_lat_lng* source, size_t size
+) {
+  (void)size;
+  napi_value result = mln_ts_object(env);
+  if (result == NULL) return NULL;
+  if (!mln_ts_set(
+        env, result, "coordinate",
+        mln_ts_read_lat_lng(
+          env, &(source->coordinate), sizeof(source->coordinate)
+        )
+      ))
+    return NULL;
+  return result;
+}
+
+napi_value mln_ts_read_terrain_screen_point(
+  napi_env env, const mln_terrain_screen_point* source, size_t size
+) {
+  (void)size;
+  napi_value result = mln_ts_object(env);
+  if (result == NULL) return NULL;
+  if (!mln_ts_set(
+        env, result, "point",
+        mln_ts_read_screen_point(env, &(source->point), sizeof(source->point))
+      ))
+    return NULL;
+  if (!mln_ts_set(env, result, "occluded", mln_ts_bool(env, source->occluded)))
     return NULL;
   return result;
 }

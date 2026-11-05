@@ -100,6 +100,12 @@ napi_value mln_ts_decode_style_transition_options(
 napi_value mln_ts_decode_terrain_elevation_optional(
   napi_env env, const mln_completion_result* result
 );
+napi_value mln_ts_decode_terrain_lat_lng_optional(
+  napi_env env, const mln_completion_result* result
+);
+napi_value mln_ts_decode_terrain_screen_point_optional(
+  napi_env env, const mln_completion_result* result
+);
 napi_value mln_ts_decode_texture_readback_result(
   napi_env env, const mln_completion_result* result
 );
@@ -377,6 +383,12 @@ napi_value mln_ts_read_style_transition_options(
 );
 napi_value mln_ts_read_terrain_elevation(
   napi_env env, const mln_terrain_elevation* source, size_t size
+);
+napi_value mln_ts_read_terrain_lat_lng(
+  napi_env env, const mln_terrain_lat_lng* source, size_t size
+);
+napi_value mln_ts_read_terrain_screen_point(
+  napi_env env, const mln_terrain_screen_point* source, size_t size
 );
 napi_value mln_ts_read_texture_image_info(
   napi_env env, const mln_texture_image_info* source, size_t size

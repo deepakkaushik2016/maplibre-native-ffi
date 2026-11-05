@@ -877,6 +877,18 @@ maplibre_native_ffi_terrain_elevation_from_native(
 G_GNUC_INTERNAL void maplibre_native_ffi_terrain_elevation_read(
   MaplibreNativeFfiTerrainElevation* out, const mln_terrain_elevation* in
 );
+G_GNUC_INTERNAL MaplibreNativeFfiTerrainLatLng*
+maplibre_native_ffi_terrain_lat_lng_from_native(const mln_terrain_lat_lng* in);
+G_GNUC_INTERNAL void maplibre_native_ffi_terrain_lat_lng_read(
+  MaplibreNativeFfiTerrainLatLng* out, const mln_terrain_lat_lng* in
+);
+G_GNUC_INTERNAL MaplibreNativeFfiTerrainScreenPoint*
+maplibre_native_ffi_terrain_screen_point_from_native(
+  const mln_terrain_screen_point* in
+);
+G_GNUC_INTERNAL void maplibre_native_ffi_terrain_screen_point_read(
+  MaplibreNativeFfiTerrainScreenPoint* out, const mln_terrain_screen_point* in
+);
 G_GNUC_INTERNAL MaplibreNativeFfiTextureImageInfo*
 maplibre_native_ffi_texture_image_info_from_native(
   const mln_texture_image_info* in

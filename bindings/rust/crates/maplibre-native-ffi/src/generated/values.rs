@@ -6445,6 +6445,23 @@ impl FromNative<sys::mln_terrain_elevation> for TerrainElevation {
     }
 }
 
+/// The ground that the terrain draws under a screen point.
+///
+/// See `mln_terrain_lat_lng` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct TerrainLatLng {
+    /// The ground's coordinate, with its longitude within \[-180, 180\].
+    pub coordinate: LatLng,
+}
+impl FromNative<sys::mln_terrain_lat_lng> for TerrainLatLng {
+    unsafe fn from_native(raw: sys::mln_terrain_lat_lng) -> Result<Self> {
+        Ok(Self {
+            coordinate: unsafe { from_native(raw.coordinate) }?,
+        })
+    }
+}
+
 native_enum! {
 /// How a map loads 3D terrain: how much it builds in one frame, and how many
 /// terrain mesh tiles a frame may have.
@@ -6467,6 +6484,34 @@ pub enum TerrainLoadMode: u32 {
 impl Default for TerrainLoadMode {
     fn default() -> Self {
         Self::Quality
+    }
+}
+
+/// Where the terrain draws a point on the ground.
+///
+/// See `mln_terrain_screen_point` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct TerrainScreenPoint {
+    /// The point, from the top-left corner in logical pixels. It may lie
+    /// outside the viewport.
+    pub point: ScreenPoint,
+    /// Whether ground from a loaded DEM tile is drawn in front of the point and
+    /// hides it, as a ridge hides the valley behind it.
+    ///
+    /// False is no proof that nothing hides the point. Ground that no loaded
+    /// DEM tile covers never hides it, because the terrain draws a stand-in
+    /// height there until the tile arrives. And a line of sight that the search
+    /// for the ground doesn't see meet it, such as one that grazes a thin
+    /// crest, reports the point as visible.
+    pub occluded: bool,
+}
+impl FromNative<sys::mln_terrain_screen_point> for TerrainScreenPoint {
+    unsafe fn from_native(raw: sys::mln_terrain_screen_point) -> Result<Self> {
+        Ok(Self {
+            point: unsafe { from_native(raw.point) }?,
+            occluded: raw.occluded,
+        })
     }
 }
 

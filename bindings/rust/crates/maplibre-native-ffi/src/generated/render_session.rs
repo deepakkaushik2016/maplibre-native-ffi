@@ -437,6 +437,105 @@ impl RenderSessionHandle {
         Ok(unsafe { from_native(out_snapshot) }?)
     }
 
+    /// Finds the ground that the terrain draws under a screen point.
+    ///
+    /// The query reads the last frame that the session rendered. Submit it from
+    /// any thread. It runs with the session's graphics work, so with
+    /// `RenderDriverKind::CallerGraphicsThread` it completes once you service
+    /// that work.
+    ///
+    /// `point` is in logical pixels from the top-left corner of the view. The
+    /// query follows the line of sight through it to the first ground that the
+    /// loaded DEM tiles draw, with the style's terrain exaggeration applied.
+    /// Read the ground's height with
+    /// `RenderSessionHandle::query_terrain_elevation()`.
+    ///
+    /// Without terrain in the style, the coordinate is the one at sea level, as
+    /// `MapProjectionHandle::lat_lng_for_pixel()` finds it for the frame's
+    /// view.
+    ///
+    /// The completion delivers no value when `point` isn't finite, or, with
+    /// terrain, when the line of sight meets no ground: above the horizon, or
+    /// over ground that no loaded DEM tile covers, as before the tiles arrive.
+    ///
+    /// See `mln_render_session_query_lat_lng_for_pixel` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    ///
+    /// # Errors
+    ///
+    /// - `Status::InvalidState` when the session hasn't rendered a frame since
+    ///   it attached or changed its scale factor. The query fails then, rather
+    ///   than delivering no value, because there is no frame to read.
+    pub fn query_lat_lng_for_pixel(
+        &self,
+        point: ScreenPoint,
+    ) -> Result<NativeFuture<Option<TerrainLatLng>>> {
+        let mut call = self.inner.call();
+        let point = call.input(&point)?;
+        call.complete(
+            |session, completion, out_diagnostic| unsafe {
+                sys::mln_render_session_query_lat_lng_for_pixel(
+                    session,
+                    point,
+                    completion,
+                    out_diagnostic,
+                )
+            },
+            completion::optional::<sys::mln_terrain_lat_lng, _>,
+        )
+    }
+
+    /// Finds where the terrain draws a point on the ground.
+    ///
+    /// The query reads the last frame that the session rendered. Submit it from
+    /// any thread. It runs with the session's graphics work, so with
+    /// `RenderDriverKind::CallerGraphicsThread` it completes once you service
+    /// that work.
+    ///
+    /// The query lifts `coordinate` to the height that the terrain draws there,
+    /// which `RenderSessionHandle::query_terrain_elevation()` reads, and finds
+    /// the screen point that draws it, in logical pixels from the top-left
+    /// corner of the view. The coordinate is taken in the copy of the world
+    /// nearest the view's center. `occluded` says whether ground from a loaded
+    /// DEM tile is drawn in front of it.
+    ///
+    /// Without terrain in the style, the point is the one at sea level, as
+    /// `MapProjectionHandle::pixel_for_lat_lng()` finds it for the frame's
+    /// view, and `occluded` is false.
+    ///
+    /// The completion delivers no value when the coordinate is behind the
+    /// camera, where no pixel draws it, when the screen point isn't finite, or,
+    /// with terrain, when no DEM tile that the session has loaded covers the
+    /// coordinate. `coordinate` needs a latitude within \[-90, 90\] and a
+    /// finite longitude.
+    ///
+    /// See `mln_render_session_query_pixel_for_lat_lng` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    ///
+    /// # Errors
+    ///
+    /// - `Status::InvalidState` when the session hasn't rendered a frame since
+    ///   it attached or changed its scale factor. The query fails then, rather
+    ///   than delivering no value, because there is no frame to read.
+    pub fn query_pixel_for_lat_lng(
+        &self,
+        coordinate: LatLng,
+    ) -> Result<NativeFuture<Option<TerrainScreenPoint>>> {
+        let mut call = self.inner.call();
+        let coordinate = call.input(&coordinate)?;
+        call.complete(
+            |session, completion, out_diagnostic| unsafe {
+                sys::mln_render_session_query_pixel_for_lat_lng(
+                    session,
+                    coordinate,
+                    completion,
+                    out_diagnostic,
+                )
+            },
+            completion::optional::<sys::mln_terrain_screen_point, _>,
+        )
+    }
+
     /// Finds the features that the session drew in an area of the screen.
     ///
     /// The query reads the last frame that the session rendered. A feature that

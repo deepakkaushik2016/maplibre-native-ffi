@@ -1480,6 +1480,17 @@ internal unsafe struct mln_terrain_elevation
     public double meters;
 }
 
+internal unsafe struct mln_terrain_lat_lng
+{
+    public mln_lat_lng coordinate;
+}
+
+internal unsafe struct mln_terrain_screen_point
+{
+    public mln_screen_point point;
+    public byte occluded;
+}
+
 internal unsafe struct mln_texture_image_info
 {
     public uint width;

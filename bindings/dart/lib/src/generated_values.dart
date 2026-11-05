@@ -5850,6 +5850,53 @@ final class RenderSessionSnapshot extends _Value {
   ]);
 }
 
+/// The ground that the terrain draws under a screen point.
+///
+/// See `mln_terrain_lat_lng` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+final class TerrainLatLng extends _Value {
+  const TerrainLatLng({this.coordinate = const LatLng()});
+
+  /// The ground's coordinate, with its longitude within \[-180, 180\].
+  final LatLng coordinate;
+
+  @override
+  List<Object?> get _members => [coordinate];
+  @override
+  String toString() => _describe('TerrainLatLng', const ['coordinate']);
+}
+
+/// Where the terrain draws a point on the ground.
+///
+/// See `mln_terrain_screen_point` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+final class TerrainScreenPoint extends _Value {
+  const TerrainScreenPoint({
+    this.point = const ScreenPoint(),
+    this.occluded = false,
+  });
+
+  /// The point, from the top-left corner in logical pixels. It may lie outside
+  /// the viewport.
+  final ScreenPoint point;
+
+  /// Whether ground from a loaded DEM tile is drawn in front of the point and
+  /// hides it, as a ridge hides the valley behind it.
+  ///
+  /// False is no proof that nothing hides the point. Ground that no loaded DEM
+  /// tile covers never hides it, because the terrain draws a stand-in height
+  /// there until the tile arrives. And a line of sight that the search for the
+  /// ground doesn't see meet it, such as one that grazes a thin crest, reports
+  /// the point as visible.
+  final bool occluded;
+
+  @override
+  List<Object?> get _members => [point, occluded];
+  @override
+  String toString() =>
+      _describe('TerrainScreenPoint', const ['point', 'occluded']);
+}
+
 /// A rectangle of the screen, from its `min` corner to its `max` corner.
 ///
 /// See `mln_screen_box` in the

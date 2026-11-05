@@ -277,6 +277,30 @@ auto complete_terrain_elevation(
   });
 }
 
+// Delivers an optional query result, or no value when the query found none.
+template <auto Function, class Value>
+auto complete_optional_value(
+  const std::shared_ptr<Completion>& completion, mln_status status,
+  std::string diagnostic, std::any result
+) -> void {
+  auto* value = std::any_cast<std::optional<Value>>(&result);
+  if (status != MLN_STATUS_OK || value == nullptr) {
+    complete_failure(
+      completion, status == MLN_STATUS_OK ? MLN_STATUS_NATIVE_ERROR : status,
+      status == MLN_STATUS_OK ? "render query produced an invalid result"
+                              : std::move(diagnostic)
+    );
+    return;
+  }
+  completion->resolve([value = *value](const CompletionSink& descriptor) {
+    if (!value) {
+      CompletionValue<Function>::deliver_absent(descriptor);
+      return;
+    }
+    CompletionValue<Function>::deliver(descriptor, *value);
+  });
+}
+
 // Copies a query filter once it parses, so the submission rejects a filter
 // that the driver could not apply. An empty filter is no filter.
 auto copy_filter(const mln_buffer_view& filter, std::string& out)
@@ -576,6 +600,48 @@ auto render_session_query_terrain_elevation_start(
       return status;
     },
     completion, complete_terrain_elevation
+  );
+}
+
+// A point that isn't finite has no ground, as the renderer answers it, so it
+// is a query with no value rather than a malformed one.
+auto render_session_query_lat_lng_for_pixel_start(
+  mln_render_session session, mln_screen_point point,
+  const mln_completion* completion
+) -> mln_status {
+  return enqueue_driver_result_operation(
+    session,
+    [point](mln_render_session_object& target, std::any& result) {
+      auto ground = std::optional<mln_terrain_lat_lng>{};
+      const auto status =
+        render_session_query_lat_lng_for_pixel(target.self, point, ground);
+      if (status == MLN_STATUS_OK) result = ground;
+      return status;
+    },
+    completion,
+    complete_optional_value<
+      &mln_render_session_query_lat_lng_for_pixel, mln_terrain_lat_lng>
+  );
+}
+
+auto render_session_query_pixel_for_lat_lng_start(
+  mln_render_session session, mln_lat_lng coordinate,
+  const mln_completion* completion
+) -> mln_status {
+  const auto coordinate_status = validate_lat_lng(coordinate);
+  if (coordinate_status != MLN_STATUS_OK) return coordinate_status;
+  return enqueue_driver_result_operation(
+    session,
+    [coordinate](mln_render_session_object& target, std::any& result) {
+      auto pixel = std::optional<mln_terrain_screen_point>{};
+      const auto status =
+        render_session_query_pixel_for_lat_lng(target.self, coordinate, pixel);
+      if (status == MLN_STATUS_OK) result = pixel;
+      return status;
+    },
+    completion,
+    complete_optional_value<
+      &mln_render_session_query_pixel_for_lat_lng, mln_terrain_screen_point>
   );
 }
 

@@ -1799,6 +1799,14 @@ internal fun readRenderSessionSnapshot(source: Long): RenderSessionSnapshot =
   )
 
 @JvmSynthetic
+internal fun readTerrainLatLng(source: Long): TerrainLatLng =
+  TerrainLatLng(coordinate = readLatLng(source))
+
+@JvmSynthetic
+internal fun readTerrainScreenPoint(source: Long): TerrainScreenPoint =
+  TerrainScreenPoint(point = readScreenPoint(source), occluded = readBool(source + 16))
+
+@JvmSynthetic
 internal fun readRenderedFeature(source: Long): RenderedFeature =
   RenderedFeature(
     feature = readViewString(source),

@@ -4434,6 +4434,116 @@ maplibre_native_ffi_render_session_get_snapshot(
 );
 
 /**
+ * maplibre_native_ffi_render_session_query_lat_lng_for_pixel_async:
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Finds the ground that the terrain draws under a screen point.
+ *
+ * The query reads the last frame that the session rendered. Submit it from any
+ * thread. It runs with the session's graphics work, so with
+ * `MAPLIBRE_NATIVE_FFI_RENDER_DRIVER_CALLER_GRAPHICS_THREAD` it completes once
+ * you service that work.
+ *
+ * `point` is in logical pixels from the top-left corner of the view. The query
+ * follows the line of sight through it to the first ground that the loaded DEM
+ * tiles draw, with the style's terrain exaggeration applied. Read the ground's
+ * height with
+ * `maplibre_native_ffi_render_session_query_terrain_elevation_async()`.
+ *
+ * Without terrain in the style, the coordinate is the one at sea level, as
+ * `maplibre_native_ffi_map_projection_lat_lng_for_pixel()` finds it for the
+ * frame's view.
+ *
+ * The completion delivers no value when `point` isn't finite, or, with terrain,
+ * when the line of sight meets no ground: above the horizon, or over ground
+ * that no loaded DEM tile covers, as before the tiles arrive.
+ *
+ * See `mln_render_session_query_lat_lng_for_pixel` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ *
+ * It fails with these errors:
+ *
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` when the session hasn't rendered
+ *   a frame since it attached or changed its scale factor. The query fails
+ *   then, rather than delivering no value, because there is no frame to read.
+ */
+void maplibre_native_ffi_render_session_query_lat_lng_for_pixel_async(
+  MaplibreNativeFfiRenderSession* self,
+  const MaplibreNativeFfiScreenPoint* point, GAsyncReadyCallback callback,
+  gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_render_session_query_lat_lng_for_pixel_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_render_session_query_lat_lng_for_pixel_async` started.
+ *
+ * Returns: (transfer full) (nullable): the value
+ */
+MaplibreNativeFfiTerrainLatLng*
+maplibre_native_ffi_render_session_query_lat_lng_for_pixel_finish(
+  MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
+);
+
+/**
+ * maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async:
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Finds where the terrain draws a point on the ground.
+ *
+ * The query reads the last frame that the session rendered. Submit it from any
+ * thread. It runs with the session's graphics work, so with
+ * `MAPLIBRE_NATIVE_FFI_RENDER_DRIVER_CALLER_GRAPHICS_THREAD` it completes once
+ * you service that work.
+ *
+ * The query lifts `coordinate` to the height that the terrain draws there,
+ * which `maplibre_native_ffi_render_session_query_terrain_elevation_async()`
+ * reads, and finds the screen point that draws it, in logical pixels from the
+ * top-left corner of the view. The coordinate is taken in the copy of the world
+ * nearest the view's center. `occluded` says whether ground from a loaded DEM
+ * tile is drawn in front of it.
+ *
+ * Without terrain in the style, the point is the one at sea level, as
+ * `maplibre_native_ffi_map_projection_pixel_for_lat_lng()` finds it for the
+ * frame's view, and `occluded` is false.
+ *
+ * The completion delivers no value when the coordinate is behind the camera,
+ * where no pixel draws it, when the screen point isn't finite, or, with
+ * terrain, when no DEM tile that the session has loaded covers the coordinate.
+ * `coordinate` needs a latitude within \[-90, 90\] and a finite longitude.
+ *
+ * See `mln_render_session_query_pixel_for_lat_lng` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ *
+ * It fails with these errors:
+ *
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` when the session hasn't rendered
+ *   a frame since it attached or changed its scale factor. The query fails
+ *   then, rather than delivering no value, because there is no frame to read.
+ */
+void maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async(
+  MaplibreNativeFfiRenderSession* self,
+  const MaplibreNativeFfiLatLng* coordinate, GAsyncReadyCallback callback,
+  gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_render_session_query_pixel_for_lat_lng_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async` started.
+ *
+ * Returns: (transfer full) (nullable): the value
+ */
+MaplibreNativeFfiTerrainScreenPoint*
+maplibre_native_ffi_render_session_query_pixel_for_lat_lng_finish(
+  MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
+);
+
+/**
  * maplibre_native_ffi_render_session_query_rendered_features_async:
  * @options: (nullable): the value, or %NULL
  * @callback: (scope async) (nullable): the callback to call when the call finishes

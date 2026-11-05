@@ -19,6 +19,13 @@ extern const size_t mln_test_plateau_1000_png_size;
 extern const uint8_t mln_test_plateau_1600_png[];
 extern const size_t mln_test_plateau_1600_png_size;
 
+// A 32 by 32 Mapbox Terrain-RGB PNG of an east-west ridge along the tile's
+// middle row: 500 m at the tile's northern and southern edges, rising to
+// 1484.5 m on the two middle rows, so neighboring tiles join without a step.
+// Served at z11, it puts a crest every 13 km at 47 N.
+extern const uint8_t mln_test_ridge_png[];
+extern const size_t mln_test_ridge_png_size;
+
 // The encoded bytes of one DEM tile.
 typedef struct mln_test_dem_tile {
   const uint8_t* bytes;

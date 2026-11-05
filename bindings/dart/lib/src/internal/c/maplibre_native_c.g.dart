@@ -1823,6 +1823,16 @@ final class mln_terrain_elevation extends Struct {
   external double meters;
 }
 
+final class mln_terrain_lat_lng extends Struct {
+  external mln_lat_lng coordinate;
+}
+
+final class mln_terrain_screen_point extends Struct {
+  external mln_screen_point point;
+  @Bool()
+  external bool occluded;
+}
+
 final class mln_texture_image_info extends Struct {
   @Uint32()
   external int width;
@@ -4947,6 +4957,36 @@ external int mln_render_session_get_failure(
 external int mln_render_session_get_snapshot(
   int session,
   Pointer<mln_render_session_snapshot> out_snapshot,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(
+    mln_render_session,
+    mln_screen_point,
+    Pointer<mln_completion>,
+    Pointer<mln_diagnostic>,
+  )
+>()
+external int mln_render_session_query_lat_lng_for_pixel(
+  int session,
+  mln_screen_point point,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(
+    mln_render_session,
+    mln_lat_lng,
+    Pointer<mln_completion>,
+    Pointer<mln_diagnostic>,
+  )
+>()
+external int mln_render_session_query_pixel_for_lat_lng(
+  int session,
+  mln_lat_lng coordinate,
+  Pointer<mln_completion> completion,
   Pointer<mln_diagnostic> out_diagnostic,
 );
 

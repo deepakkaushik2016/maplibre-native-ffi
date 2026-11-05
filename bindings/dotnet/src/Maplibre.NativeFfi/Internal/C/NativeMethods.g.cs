@@ -1231,6 +1231,22 @@ internal static unsafe partial class NativeMethods
     );
 
     [LibraryImport(LibraryName)]
+    internal static partial mln_status mln_render_session_query_lat_lng_for_pixel(
+        MlnRenderSession session,
+        mln_screen_point point,
+        mln_completion* completion,
+        mln_diagnostic* out_diagnostic
+    );
+
+    [LibraryImport(LibraryName)]
+    internal static partial mln_status mln_render_session_query_pixel_for_lat_lng(
+        MlnRenderSession session,
+        mln_lat_lng coordinate,
+        mln_completion* completion,
+        mln_diagnostic* out_diagnostic
+    );
+
+    [LibraryImport(LibraryName)]
     internal static partial mln_status mln_render_session_query_rendered_features(
         MlnRenderSession session,
         mln_rendered_query_geometry* geometry,

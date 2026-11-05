@@ -253,6 +253,20 @@ struct CompletionResult<&mln_render_session_get_cluster_leaves> {
   static constexpr bool nullable = false;
 };
 template <>
+struct CompletionResult<&mln_render_session_query_lat_lng_for_pixel> {
+  static constexpr bool has_value = true;
+  using type = mln_terrain_lat_lng;
+  static constexpr bool array = false;
+  static constexpr bool nullable = true;
+};
+template <>
+struct CompletionResult<&mln_render_session_query_pixel_for_lat_lng> {
+  static constexpr bool has_value = true;
+  using type = mln_terrain_screen_point;
+  static constexpr bool array = false;
+  static constexpr bool nullable = true;
+};
+template <>
 struct CompletionResult<&mln_render_session_query_rendered_features> {
   static constexpr bool has_value = true;
   using type = mln_rendered_feature;

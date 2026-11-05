@@ -1777,6 +1777,28 @@ static jint mln_render_session_get_snapshot_jni(
   );
 }
 
+static jint mln_render_session_query_lat_lng_for_pixel_jni(
+  JNIEnv* env, jclass type, jlong session, jlong point, jlong completion,
+  jlong out_diagnostic
+) {
+  return (jint)mln_render_session_query_lat_lng_for_pixel(
+    (mln_render_session)session, MLN_JNI_RECORD(mln_screen_point, point),
+    MLN_JNI_POINTER(const mln_completion*, completion),
+    MLN_JNI_POINTER(mln_diagnostic*, out_diagnostic)
+  );
+}
+
+static jint mln_render_session_query_pixel_for_lat_lng_jni(
+  JNIEnv* env, jclass type, jlong session, jlong coordinate, jlong completion,
+  jlong out_diagnostic
+) {
+  return (jint)mln_render_session_query_pixel_for_lat_lng(
+    (mln_render_session)session, MLN_JNI_RECORD(mln_lat_lng, coordinate),
+    MLN_JNI_POINTER(const mln_completion*, completion),
+    MLN_JNI_POINTER(mln_diagnostic*, out_diagnostic)
+  );
+}
+
 static jint mln_render_session_query_rendered_features_jni(
   JNIEnv* env, jclass type, jlong session, jlong geometry, jlong options,
   jlong completion, jlong out_diagnostic
@@ -2724,6 +2746,10 @@ const JNINativeMethod mln_jni_methods[] = {
    (void*)mln_render_session_get_failure_jni},
   {"mln_render_session_get_snapshot", "(JJJ)I",
    (void*)mln_render_session_get_snapshot_jni},
+  {"mln_render_session_query_lat_lng_for_pixel", "(JJJJ)I",
+   (void*)mln_render_session_query_lat_lng_for_pixel_jni},
+  {"mln_render_session_query_pixel_for_lat_lng", "(JJJJ)I",
+   (void*)mln_render_session_query_pixel_for_lat_lng_jni},
   {"mln_render_session_query_rendered_features", "(JJJJJ)I",
    (void*)mln_render_session_query_rendered_features_jni},
   {"mln_render_session_query_source_features", "(JJJJJ)I",
@@ -3131,6 +3157,10 @@ const JNINativeMethod mln_jni_critical_methods[] = {
    (void*)mln_render_session_get_failure_jni},
   {"mln_render_session_get_snapshot", "(JJJ)I",
    (void*)mln_render_session_get_snapshot_critical},
+  {"mln_render_session_query_lat_lng_for_pixel", "(JJJJ)I",
+   (void*)mln_render_session_query_lat_lng_for_pixel_jni},
+  {"mln_render_session_query_pixel_for_lat_lng", "(JJJJ)I",
+   (void*)mln_render_session_query_pixel_for_lat_lng_jni},
   {"mln_render_session_query_rendered_features", "(JJJJJ)I",
    (void*)mln_render_session_query_rendered_features_jni},
   {"mln_render_session_query_source_features", "(JJJJJ)I",

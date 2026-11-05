@@ -1407,6 +1407,14 @@ auto render_session_query_terrain_elevation(
   mln_render_session session, mln_lat_lng point,
   std::optional<double>& out_result
 ) -> mln_status;
+auto render_session_query_lat_lng_for_pixel(
+  mln_render_session session, mln_screen_point point,
+  std::optional<mln_terrain_lat_lng>& out_result
+) -> mln_status;
+auto render_session_query_pixel_for_lat_lng(
+  mln_render_session session, mln_lat_lng coordinate,
+  std::optional<mln_terrain_screen_point>& out_result
+) -> mln_status;
 
 auto render_session_query_rendered_features_start(
   mln_render_session session, const mln_rendered_query_geometry* geometry,
@@ -1433,6 +1441,14 @@ auto render_session_get_cluster_expansion_zoom_start(
 ) -> mln_status;
 auto render_session_query_terrain_elevation_start(
   mln_render_session session, mln_lat_lng point,
+  const mln_completion* completion
+) -> mln_status;
+auto render_session_query_lat_lng_for_pixel_start(
+  mln_render_session session, mln_screen_point point,
+  const mln_completion* completion
+) -> mln_status;
+auto render_session_query_pixel_for_lat_lng_start(
+  mln_render_session session, mln_lat_lng coordinate,
   const mln_completion* completion
 ) -> mln_status;
 

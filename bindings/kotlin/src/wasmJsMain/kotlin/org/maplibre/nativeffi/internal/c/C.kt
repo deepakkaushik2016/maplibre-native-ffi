@@ -1589,6 +1589,32 @@ internal actual object C {
     outDiagnostic: Long,
   ): Int = mln_kw_mln_render_session_get_snapshot(session, word(outSnapshot), word(outDiagnostic))
 
+  actual fun mln_render_session_query_lat_lng_for_pixel(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_kw_mln_render_session_query_lat_lng_for_pixel(
+      session,
+      word(point),
+      word(completion),
+      word(outDiagnostic),
+    )
+
+  actual fun mln_render_session_query_pixel_for_lat_lng(
+    session: Long,
+    coordinate: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_kw_mln_render_session_query_pixel_for_lat_lng(
+      session,
+      word(coordinate),
+      word(completion),
+      word(outDiagnostic),
+    )
+
   actual fun mln_render_session_query_rendered_features(
     session: Long,
     geometry: Long,
@@ -3333,6 +3359,26 @@ private fun mln_kw_mln_render_session_get_failure(
 private fun mln_kw_mln_render_session_get_snapshot(p0: Long, p1: Int, p2: Int): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_render_session_get_snapshot(p0, p1, p2)",
+  )
+
+private fun mln_kw_mln_render_session_query_lat_lng_for_pixel(
+  p0: Long,
+  p1: Int,
+  p2: Int,
+  p3: Int,
+): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_render_session_query_lat_lng_for_pixel(p0, p1, p2, p3)",
+  )
+
+private fun mln_kw_mln_render_session_query_pixel_for_lat_lng(
+  p0: Long,
+  p1: Int,
+  p2: Int,
+  p3: Int,
+): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_render_session_query_pixel_for_lat_lng(p0, p1, p2, p3)",
   )
 
 private fun mln_kw_mln_render_session_query_rendered_features(

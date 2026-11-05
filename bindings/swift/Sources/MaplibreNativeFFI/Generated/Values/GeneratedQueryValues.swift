@@ -237,3 +237,47 @@ public struct TerrainElevation: Equatable, Hashable, Sendable {
     meters = raw.meters
   }
 }
+
+/// The ground that the terrain draws under a screen point.
+///
+/// See `mln_terrain_lat_lng` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+public struct TerrainLatLng: Equatable, Hashable, Sendable {
+  /// The ground's coordinate, with its longitude within \[-180, 180\].
+  public var coordinate: LatLng
+  public init(coordinate: LatLng = .init()) {
+    self.coordinate = coordinate
+  }
+
+  init(raw: mln_terrain_lat_lng) {
+    coordinate = LatLng(raw: raw.coordinate)
+  }
+}
+
+/// Where the terrain draws a point on the ground.
+///
+/// See `mln_terrain_screen_point` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+public struct TerrainScreenPoint: Equatable, Hashable, Sendable {
+  /// The point, from the top-left corner in logical pixels. It may lie outside
+  /// the viewport.
+  public var point: ScreenPoint
+  /// Whether ground from a loaded DEM tile is drawn in front of the point and
+  /// hides it, as a ridge hides the valley behind it.
+  ///
+  /// False is no proof that nothing hides the point. Ground that no loaded DEM
+  /// tile covers never hides it, because the terrain draws a stand-in height
+  /// there until the tile arrives. And a line of sight that the search for the
+  /// ground doesn't see meet it, such as one that grazes a thin crest, reports
+  /// the point as visible.
+  public var occluded: Bool
+  public init(point: ScreenPoint = .init(), occluded: Bool = false) {
+    self.point = point
+    self.occluded = occluded
+  }
+
+  init(raw: mln_terrain_screen_point) {
+    point = ScreenPoint(raw: raw.point)
+    occluded = raw.occluded
+  }
+}

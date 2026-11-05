@@ -1598,6 +1598,28 @@ fn generated_copy_mln_terrain_elevation(
     Ok(dict.into_any().unbind())
 }
 
+fn generated_copy_mln_terrain_lat_lng(
+    py: Python<'_>,
+    value: &sys::mln_terrain_lat_lng,
+) -> PyResult<Py<PyAny>> {
+    let dict = PyDict::new(py);
+    dict.set_item(
+        "coordinate",
+        generated_copy_mln_lat_lng(py, &value.coordinate)?,
+    )?;
+    Ok(dict.into_any().unbind())
+}
+
+fn generated_copy_mln_terrain_screen_point(
+    py: Python<'_>,
+    value: &sys::mln_terrain_screen_point,
+) -> PyResult<Py<PyAny>> {
+    let dict = PyDict::new(py);
+    dict.set_item("point", generated_copy_mln_screen_point(py, &value.point)?)?;
+    dict.set_item("occluded", generated_value(py, value.occluded)?)?;
+    Ok(dict.into_any().unbind())
+}
+
 fn generated_copy_mln_texture_image_info(
     py: Python<'_>,
     value: &sys::mln_texture_image_info,
@@ -8198,6 +8220,68 @@ impl RenderSessionHandle {
             })
         }?;
         generated_copy_mln_render_session_snapshot(py, &out_snapshot)
+    }
+    #[pyo3(signature = (point))]
+    fn query_lat_lng_for_pixel(
+        &self,
+        py: Python<'_>,
+        point: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let point_value = generated_input_mln_screen_point(&point.clone(), storage)?;
+        let handle = self.input();
+        let convert = |py: Python<'_>, result: &sys::mln_completion_result| {
+            if result.value.is_null() {
+                return Ok(py.None());
+            }
+            let value = completion_value::<sys::mln_terrain_lat_lng>(result)?;
+            generated_copy_mln_terrain_lat_lng(py, &value)
+        };
+        unsafe {
+            call.complete(
+                |completion, diagnostic| {
+                    sys::mln_render_session_query_lat_lng_for_pixel(
+                        handle,
+                        point_value,
+                        completion,
+                        diagnostic,
+                    )
+                },
+                convert,
+            )
+        }
+    }
+    #[pyo3(signature = (coordinate))]
+    fn query_pixel_for_lat_lng(
+        &self,
+        py: Python<'_>,
+        coordinate: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let coordinate_value = generated_input_mln_lat_lng(&coordinate.clone(), storage)?;
+        let handle = self.input();
+        let convert = |py: Python<'_>, result: &sys::mln_completion_result| {
+            if result.value.is_null() {
+                return Ok(py.None());
+            }
+            let value = completion_value::<sys::mln_terrain_screen_point>(result)?;
+            generated_copy_mln_terrain_screen_point(py, &value)
+        };
+        unsafe {
+            call.complete(
+                |completion, diagnostic| {
+                    sys::mln_render_session_query_pixel_for_lat_lng(
+                        handle,
+                        coordinate_value,
+                        completion,
+                        diagnostic,
+                    )
+                },
+                convert,
+            )
+        }
     }
     #[pyo3(signature = (geometry, options=None))]
     fn query_rendered_features(

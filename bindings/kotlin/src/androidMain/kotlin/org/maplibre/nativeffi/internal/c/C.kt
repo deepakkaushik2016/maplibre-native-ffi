@@ -1213,6 +1213,22 @@ internal actual object C {
   ): Int
 
   @JvmStatic
+  actual external fun mln_render_session_query_lat_lng_for_pixel(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
+  actual external fun mln_render_session_query_pixel_for_lat_lng(
+    session: Long,
+    coordinate: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
   actual external fun mln_render_session_query_rendered_features(
     session: Long,
     geometry: Long,

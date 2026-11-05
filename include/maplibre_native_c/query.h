@@ -139,6 +139,32 @@ typedef struct mln_terrain_elevation {
   double meters;
 } mln_terrain_elevation;
 
+/** The ground that the terrain draws under a screen point. */
+typedef struct mln_terrain_lat_lng {
+  /** The ground's coordinate, with its longitude within [-180, 180]. */
+  mln_lat_lng coordinate;
+} mln_terrain_lat_lng;
+
+/** Where the terrain draws a point on the ground. */
+typedef struct mln_terrain_screen_point {
+  /**
+   * The point, from the top-left corner in logical pixels. It may lie outside
+   * the viewport.
+   */
+  mln_screen_point point;
+  /**
+   * Whether ground from a loaded DEM tile is drawn in front of the point and
+   * hides it, as a ridge hides the valley behind it.
+   *
+   * False is no proof that nothing hides the point. Ground that no loaded DEM
+   * tile covers never hides it, because the terrain draws a stand-in height
+   * there until the tile arrives. And a line of sight that the search for the
+   * ground doesn't see meet it, such as one that grazes a thin crest, reports
+   * the point as visible.
+   */
+  bool occluded;
+} mln_terrain_screen_point;
+
 /**
  * Finds the features that the session drew in an area of the screen.
  *
@@ -265,6 +291,72 @@ MLN_API mln_status mln_render_session_get_cluster_expansion_zoom(
 MLN_BINDING("execution=query;result=mln_terrain_elevation;nullable=true")
 MLN_API mln_status mln_render_session_query_terrain_elevation(
   mln_render_session session, mln_lat_lng point,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
+ * Finds the ground that the terrain draws under a screen point.
+ *
+ * The query reads the last frame that the session rendered. Submit it from any
+ * thread. It runs with the session's graphics work, so with
+ * MLN_RENDER_DRIVER_CALLER_GRAPHICS_THREAD it completes once you service that
+ * work.
+ *
+ * `point` is in logical pixels from the top-left corner of the view. The query
+ * follows the line of sight through it to the first ground that the loaded DEM
+ * tiles draw, with the style's terrain exaggeration applied. Read the ground's
+ * height with mln_render_session_query_terrain_elevation().
+ *
+ * Without terrain in the style, the coordinate is the one at sea level, as
+ * mln_map_projection_lat_lng_for_pixel() finds it for the frame's view.
+ *
+ * The completion delivers no value when `point` isn't finite, or, with
+ * terrain, when the line of sight meets no ground: above the horizon, or over
+ * ground that no loaded DEM tile covers, as before the tiles arrive.
+ *
+ * Completes with:
+ * - MLN_STATUS_INVALID_STATE when the session hasn't rendered a frame since it
+ *   attached or changed its scale factor. The query fails then, rather than
+ *   delivering no value, because there is no frame to read.
+ */
+MLN_BINDING("execution=query;result=mln_terrain_lat_lng;nullable=true")
+MLN_API mln_status mln_render_session_query_lat_lng_for_pixel(
+  mln_render_session session, mln_screen_point point,
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
+ * Finds where the terrain draws a point on the ground.
+ *
+ * The query reads the last frame that the session rendered. Submit it from any
+ * thread. It runs with the session's graphics work, so with
+ * MLN_RENDER_DRIVER_CALLER_GRAPHICS_THREAD it completes once you service that
+ * work.
+ *
+ * The query lifts `coordinate` to the height that the terrain draws there,
+ * which mln_render_session_query_terrain_elevation() reads, and finds the
+ * screen point that draws it, in logical pixels from the top-left corner of the
+ * view. The coordinate is taken in the copy of the world nearest the view's
+ * center. `occluded` says whether ground from a loaded DEM tile is drawn in
+ * front of it.
+ *
+ * Without terrain in the style, the point is the one at sea level, as
+ * mln_map_projection_pixel_for_lat_lng() finds it for the frame's view, and
+ * `occluded` is false.
+ *
+ * The completion delivers no value when the coordinate is behind the camera,
+ * where no pixel draws it, when the screen point isn't finite, or, with
+ * terrain, when no DEM tile that the session has loaded covers the coordinate.
+ * `coordinate` needs a latitude within [-90, 90] and a finite longitude.
+ *
+ * Completes with:
+ * - MLN_STATUS_INVALID_STATE when the session hasn't rendered a frame since it
+ *   attached or changed its scale factor. The query fails then, rather than
+ *   delivering no value, because there is no frame to read.
+ */
+MLN_BINDING("execution=query;result=mln_terrain_screen_point;nullable=true")
+MLN_API mln_status mln_render_session_query_pixel_for_lat_lng(
+  mln_render_session session, mln_lat_lng coordinate,
   const mln_completion* completion, mln_diagnostic* out_diagnostic
 ) MLN_NOEXCEPT;
 

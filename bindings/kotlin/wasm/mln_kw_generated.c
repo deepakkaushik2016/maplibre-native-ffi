@@ -1566,6 +1566,26 @@ int32_t mln_kw_mln_render_session_get_snapshot(
   );
 }
 
+int32_t mln_kw_mln_render_session_query_lat_lng_for_pixel(
+  int64_t session, uintptr_t point, uintptr_t completion,
+  uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_render_session_query_lat_lng_for_pixel(
+    (mln_render_session)session, *(const mln_screen_point*)(uintptr_t)point,
+    (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
+  );
+}
+
+int32_t mln_kw_mln_render_session_query_pixel_for_lat_lng(
+  int64_t session, uintptr_t coordinate, uintptr_t completion,
+  uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_render_session_query_pixel_for_lat_lng(
+    (mln_render_session)session, *(const mln_lat_lng*)(uintptr_t)coordinate,
+    (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
+  );
+}
+
 int32_t mln_kw_mln_render_session_query_rendered_features(
   int64_t session, uintptr_t geometry, uintptr_t options, uintptr_t completion,
   uintptr_t out_diagnostic

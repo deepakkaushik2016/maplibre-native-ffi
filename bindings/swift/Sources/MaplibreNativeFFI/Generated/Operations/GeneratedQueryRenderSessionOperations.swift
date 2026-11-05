@@ -123,6 +123,111 @@ public extension RenderSessionHandle {
     }
   }
 
+  /// Finds the ground that the terrain draws under a screen point.
+  ///
+  /// The query reads the last frame that the session rendered. Submit it from
+  /// any thread. It runs with the session's graphics work, so with
+  /// `RenderDriverKind.callerGraphicsThread` it completes once you service that
+  /// work.
+  ///
+  /// `point` is in logical pixels from the top-left corner of the view. The
+  /// query follows the line of sight through it to the first ground that the
+  /// loaded DEM tiles draw, with the style's terrain exaggeration applied. Read
+  /// the ground's height with `RenderSessionHandle.queryTerrainElevation()`.
+  ///
+  /// Without terrain in the style, the coordinate is the one at sea level, as
+  /// `MapProjectionHandle.latLngForPixel()` finds it for the frame's view.
+  ///
+  /// The completion delivers no value when `point` isn't finite, or, with
+  /// terrain, when the line of sight meets no ground: above the horizon, or
+  /// over ground that no loaded DEM tile covers, as before the tiles arrive.
+  ///
+  /// See `mln_render_session_query_lat_lng_for_pixel` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidState` when the session hasn't rendered a frame since it
+  ///   attached or changed its scale factor. The query fails then, rather than
+  ///   delivering no value, because there is no frame to read.
+  func queryLatLngForPixel(point bindingArg0: ScreenPoint) async throws
+    -> TerrainLatLng?
+  {
+    try await nativeStart(convert: { result in
+      if result.pointee
+        .value_count ==
+        0
+      {
+        return nil
+      }; return try TerrainLatLng(raw: NativeCompletion.value(
+        result,
+        as: mln_terrain_lat_lng.self
+      ))
+    }) { raw, _, completion, diagnostic in
+      mln_render_session_query_lat_lng_for_pixel(
+        raw,
+        bindingArg0.nativeValue(),
+        completion,
+        diagnostic
+      )
+    }
+  }
+
+  /// Finds where the terrain draws a point on the ground.
+  ///
+  /// The query reads the last frame that the session rendered. Submit it from
+  /// any thread. It runs with the session's graphics work, so with
+  /// `RenderDriverKind.callerGraphicsThread` it completes once you service that
+  /// work.
+  ///
+  /// The query lifts `coordinate` to the height that the terrain draws there,
+  /// which `RenderSessionHandle.queryTerrainElevation()` reads, and finds the
+  /// screen point that draws it, in logical pixels from the top-left corner of
+  /// the view. The coordinate is taken in the copy of the world nearest the
+  /// view's center. `occluded` says whether ground from a loaded DEM tile is
+  /// drawn in front of it.
+  ///
+  /// Without terrain in the style, the point is the one at sea level, as
+  /// `MapProjectionHandle.pixelForLatLng()` finds it for the frame's view, and
+  /// `occluded` is false.
+  ///
+  /// The completion delivers no value when the coordinate is behind the camera,
+  /// where no pixel draws it, when the screen point isn't finite, or, with
+  /// terrain, when no DEM tile that the session has loaded covers the
+  /// coordinate. `coordinate` needs a latitude within \[-90, 90\] and a finite
+  /// longitude.
+  ///
+  /// See `mln_render_session_query_pixel_for_lat_lng` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidState` when the session hasn't rendered a frame since it
+  ///   attached or changed its scale factor. The query fails then, rather than
+  ///   delivering no value, because there is no frame to read.
+  func queryPixelForLatLng(coordinate bindingArg0: LatLng) async throws
+    -> TerrainScreenPoint?
+  {
+    try await nativeStart(convert: { result in
+      if result.pointee
+        .value_count ==
+        0
+      {
+        return nil
+      }; return try TerrainScreenPoint(raw: NativeCompletion.value(
+        result,
+        as: mln_terrain_screen_point.self
+      ))
+    }) { raw, _, completion, diagnostic in
+      mln_render_session_query_pixel_for_lat_lng(
+        raw,
+        bindingArg0.nativeValue(),
+        completion,
+        diagnostic
+      )
+    }
+  }
+
   /// Finds the features that the session drew in an area of the screen.
   ///
   /// The query reads the last frame that the session rendered. A feature that

@@ -2914,6 +2914,72 @@ auto render_session_query_terrain_elevation(
   return MLN_STATUS_OK;
 }
 
+auto render_session_query_lat_lng_for_pixel(
+  mln_render_session session, mln_screen_point point,
+  std::optional<mln_terrain_lat_lng>& out_result
+) -> mln_status {
+  mln_render_session_object* live = nullptr;
+  const auto status = validate_live_attached_render_session(session, live);
+  if (status != MLN_STATUS_OK) {
+    return status;
+  }
+  mln::gfx::RendererBackend* backend = nullptr;
+  if (
+    const auto backend_status = validate_renderer_backend(live, backend);
+    backend_status != MLN_STATUS_OK
+  ) {
+    return backend_status;
+  }
+
+  auto current = ScopedCurrentScheduler{live->scheduler};
+  auto guard = mln::gfx::BackendScope{*backend};
+  const auto ground =
+    live->renderer->queryTerrainLatLng(mln::ScreenCoordinate{point.x, point.y});
+  out_result.reset();
+  if (ground) {
+    out_result = mln_terrain_lat_lng{
+      .coordinate = {
+        .latitude = ground->latitude(), .longitude = ground->longitude()
+      }
+    };
+  }
+  return MLN_STATUS_OK;
+}
+
+auto render_session_query_pixel_for_lat_lng(
+  mln_render_session session, mln_lat_lng coordinate,
+  std::optional<mln_terrain_screen_point>& out_result
+) -> mln_status {
+  mln_render_session_object* live = nullptr;
+  const auto status = validate_live_attached_render_session(session, live);
+  if (status != MLN_STATUS_OK) {
+    return status;
+  }
+  mln::gfx::RendererBackend* backend = nullptr;
+  if (
+    const auto backend_status = validate_renderer_backend(live, backend);
+    backend_status != MLN_STATUS_OK
+  ) {
+    return backend_status;
+  }
+
+  auto current = ScopedCurrentScheduler{live->scheduler};
+  auto guard = mln::gfx::BackendScope{*backend};
+  const auto pixel = live->renderer->queryTerrainPixel(
+    mln::LatLng{coordinate.latitude, coordinate.longitude}
+  );
+  out_result.reset();
+  // A huge exaggeration can lift the ground past what the engine's float
+  // holds, and a point at infinity is drawn nowhere.
+  if (pixel) {
+    out_result = mln_terrain_screen_point{
+      .point = {.x = pixel->point.x, .y = pixel->point.y},
+      .occluded = pixel->occluded
+    };
+  }
+  return MLN_STATUS_OK;
+}
+
 namespace {
 auto publish_frame_result(
   const std::shared_ptr<mln_render_session_object>& session,

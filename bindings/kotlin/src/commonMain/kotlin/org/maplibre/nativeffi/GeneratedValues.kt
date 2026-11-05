@@ -7356,6 +7356,38 @@ public data class RenderSessionSnapshot(
 }
 
 /**
+ * The ground that the terrain draws under a screen point.
+ *
+ * See `mln_terrain_lat_lng` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+public data class TerrainLatLng(
+  /** The ground's coordinate, with its longitude within &#91;-180, 180&#93;. */
+  public val coordinate: LatLng,
+)
+
+/**
+ * Where the terrain draws a point on the ground.
+ *
+ * See `mln_terrain_screen_point` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+public data class TerrainScreenPoint(
+  /** The point, from the top-left corner in logical pixels. It may lie outside the viewport. */
+  public val point: ScreenPoint,
+  /**
+   * Whether ground from a loaded DEM tile is drawn in front of the point and hides it, as a ridge
+   * hides the valley behind it.
+   *
+   * False is no proof that nothing hides the point. Ground that no loaded DEM tile covers never
+   * hides it, because the terrain draws a stand-in height there until the tile arrives. And a line
+   * of sight that the search for the ground doesn't see meet it, such as one that grazes a thin
+   * crest, reports the point as visible.
+   */
+  public val occluded: Boolean,
+)
+
+/**
  * A rectangle of the screen, from its `min` corner to its `max` corner.
  *
  * See `mln_screen_box` in the

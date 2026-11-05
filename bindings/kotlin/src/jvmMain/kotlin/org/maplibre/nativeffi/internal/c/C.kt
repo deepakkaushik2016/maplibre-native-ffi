@@ -1058,6 +1058,24 @@ internal actual object C {
     )
   private val mln_render_session_get_snapshot =
     Ffm.downcall("mln_render_session_get_snapshot", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG)
+  private val mln_render_session_query_lat_lng_for_pixel =
+    Ffm.downcall(
+      "mln_render_session_query_lat_lng_for_pixel",
+      JAVA_INT,
+      JAVA_LONG,
+      mln_screen_point,
+      JAVA_LONG,
+      JAVA_LONG,
+    )
+  private val mln_render_session_query_pixel_for_lat_lng =
+    Ffm.downcall(
+      "mln_render_session_query_pixel_for_lat_lng",
+      JAVA_INT,
+      JAVA_LONG,
+      mln_lat_lng,
+      JAVA_LONG,
+      JAVA_LONG,
+    )
   private val mln_render_session_query_rendered_features =
     Ffm.downcall(
       "mln_render_session_query_rendered_features",
@@ -3062,6 +3080,32 @@ internal actual object C {
     outSnapshot: Long,
     outDiagnostic: Long,
   ): Int = mln_render_session_get_snapshot.invokeExact(session, outSnapshot, outDiagnostic) as Int
+
+  actual fun mln_render_session_query_lat_lng_for_pixel(
+    session: Long,
+    point: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_render_session_query_lat_lng_for_pixel.invokeExact(
+      session,
+      Ffm.value(point, mln_screen_point),
+      completion,
+      outDiagnostic,
+    ) as Int
+
+  actual fun mln_render_session_query_pixel_for_lat_lng(
+    session: Long,
+    coordinate: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_render_session_query_pixel_for_lat_lng.invokeExact(
+      session,
+      Ffm.value(coordinate, mln_lat_lng),
+      completion,
+      outDiagnostic,
+    ) as Int
 
   actual fun mln_render_session_query_rendered_features(
     session: Long,

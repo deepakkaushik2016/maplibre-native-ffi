@@ -765,6 +765,16 @@ export interface NativeOperations {
   ): void;
   mln_render_session_get_failure(session: bigint): string;
   mln_render_session_get_snapshot(session: bigint): RenderSessionSnapshot;
+  mln_render_session_query_lat_lng_for_pixel(
+    session: bigint,
+    point: ScreenPoint,
+    completion: NativeCompletion,
+  ): void;
+  mln_render_session_query_pixel_for_lat_lng(
+    session: bigint,
+    coordinate: LatLng,
+    completion: NativeCompletion,
+  ): void;
   mln_render_session_query_rendered_features(
     session: bigint,
     geometry: RenderedQueryGeometry,

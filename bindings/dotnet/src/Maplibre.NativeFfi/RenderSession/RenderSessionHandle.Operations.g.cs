@@ -538,6 +538,111 @@ public sealed unsafe partial class RenderSessionHandle
     }
 
     /// <summary>
+    /// Finds the ground that the terrain draws under a screen point.
+    /// </summary>
+    /// <remarks>
+    /// <para>The query reads the last frame that the session rendered. Submit
+    /// it from any thread. It runs with the session's graphics work, so with
+    /// <c>RenderDriverKind.CallerGraphicsThread</c> it completes once you
+    /// service that work.</para>
+    /// <para><c>point</c> is in logical pixels from the top-left corner of the
+    /// view. The query follows the line of sight through it to the first ground
+    /// that the loaded DEM tiles draw, with the style's terrain exaggeration
+    /// applied. Read the ground's height with
+    /// <c>RenderSessionHandle.QueryTerrainElevationAsync()</c>.</para>
+    /// <para>Without terrain in the style, the coordinate is the one at sea
+    /// level, as <c>MapProjectionHandle.LatLngForPixel()</c> finds it for the
+    /// frame's view.</para>
+    /// <para>The completion delivers no value when <c>point</c> isn't finite,
+    /// or, with terrain, when the line of sight meets no ground: above the
+    /// horizon, or over ground that no loaded DEM tile covers, as before the
+    /// tiles arrive.</para>
+    /// <para>See <c>mln_render_session_query_lat_lng_for_pixel</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html">C API reference</see>.</para>
+    /// <para>Errors:</para>
+    /// <list type="bullet">
+    /// <item><description><c>Status.InvalidState</c> when the session hasn't
+    /// rendered a frame since it attached or changed its scale factor. The
+    /// query fails then, rather than delivering no value, because there is no
+    /// frame to read.</description></item>
+    /// </list>
+    /// </remarks>
+    public Task<TerrainLatLng?> QueryLatLngForPixelAsync(ScreenPoint point)
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_render_session_query_lat_lng_for_pixel(
+            Handle,
+            NativeScreenPoint(point),
+            NativeCompletion.Start<TerrainLatLng?>(
+                &nativeCompletion,
+                static nativeResult =>
+                    NativeCompletion.OptionalValue<mln_terrain_lat_lng, TerrainLatLng>(
+                        nativeResult,
+                        CopyTerrainLatLng
+                    ),
+                out var nativePending
+            ),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
+    /// Finds where the terrain draws a point on the ground.
+    /// </summary>
+    /// <remarks>
+    /// <para>The query reads the last frame that the session rendered. Submit
+    /// it from any thread. It runs with the session's graphics work, so with
+    /// <c>RenderDriverKind.CallerGraphicsThread</c> it completes once you
+    /// service that work.</para>
+    /// <para>The query lifts <c>coordinate</c> to the height that the terrain
+    /// draws there, which
+    /// <c>RenderSessionHandle.QueryTerrainElevationAsync()</c> reads, and finds
+    /// the screen point that draws it, in logical pixels from the top-left
+    /// corner of the view. The coordinate is taken in the copy of the world
+    /// nearest the view's center. <c>occluded</c> says whether ground from a
+    /// loaded DEM tile is drawn in front of it.</para>
+    /// <para>Without terrain in the style, the point is the one at sea level,
+    /// as <c>MapProjectionHandle.PixelForLatLng()</c> finds it for the frame's
+    /// view, and <c>occluded</c> is false.</para>
+    /// <para>The completion delivers no value when the coordinate is behind the
+    /// camera, where no pixel draws it, when the screen point isn't finite, or,
+    /// with terrain, when no DEM tile that the session has loaded covers the
+    /// coordinate. <c>coordinate</c> needs a latitude within [-90, 90] and a
+    /// finite longitude.</para>
+    /// <para>See <c>mln_render_session_query_pixel_for_lat_lng</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html">C API reference</see>.</para>
+    /// <para>Errors:</para>
+    /// <list type="bullet">
+    /// <item><description><c>Status.InvalidState</c> when the session hasn't
+    /// rendered a frame since it attached or changed its scale factor. The
+    /// query fails then, rather than delivering no value, because there is no
+    /// frame to read.</description></item>
+    /// </list>
+    /// </remarks>
+    public Task<TerrainScreenPoint?> QueryPixelForLatLngAsync(LatLng coordinate)
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_render_session_query_pixel_for_lat_lng(
+            Handle,
+            NativeLatLng(coordinate),
+            NativeCompletion.Start<TerrainScreenPoint?>(
+                &nativeCompletion,
+                static nativeResult =>
+                    NativeCompletion.OptionalValue<mln_terrain_screen_point, TerrainScreenPoint>(
+                        nativeResult,
+                        CopyTerrainScreenPoint
+                    ),
+                out var nativePending
+            ),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Finds the features that the session drew in an area of the screen.
     /// </summary>
     /// <remarks>

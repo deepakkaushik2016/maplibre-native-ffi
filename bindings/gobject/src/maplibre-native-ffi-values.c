@@ -21529,6 +21529,82 @@ maplibre_native_ffi_terrain_elevation_from_native(
 }
 
 G_DEFINE_BOXED_TYPE(
+  MaplibreNativeFfiTerrainLatLng, maplibre_native_ffi_terrain_lat_lng,
+  maplibre_native_ffi_terrain_lat_lng_copy,
+  maplibre_native_ffi_terrain_lat_lng_free
+)
+
+MaplibreNativeFfiTerrainLatLng* maplibre_native_ffi_terrain_lat_lng_copy(
+  const MaplibreNativeFfiTerrainLatLng* self
+) {
+  g_return_val_if_fail(self != NULL, NULL);
+  return g_memdup2(self, sizeof *self);
+}
+
+void maplibre_native_ffi_terrain_lat_lng_free(
+  MaplibreNativeFfiTerrainLatLng* self
+) {
+  g_free(self);
+}
+
+G_STATIC_ASSERT(
+  sizeof(MaplibreNativeFfiTerrainLatLng) == sizeof(mln_terrain_lat_lng)
+);
+SAME_MEMBER(MaplibreNativeFfiTerrainLatLng, mln_terrain_lat_lng, coordinate);
+
+void maplibre_native_ffi_terrain_lat_lng_read(
+  MaplibreNativeFfiTerrainLatLng* out, const mln_terrain_lat_lng* in
+) {
+  memcpy(out, in, sizeof *out);
+}
+
+MaplibreNativeFfiTerrainLatLng* maplibre_native_ffi_terrain_lat_lng_from_native(
+  const mln_terrain_lat_lng* in
+) {
+  MaplibreNativeFfiTerrainLatLng* self =
+    g_new0(MaplibreNativeFfiTerrainLatLng, 1);
+  maplibre_native_ffi_terrain_lat_lng_read(self, in);
+  return self;
+}
+
+G_DEFINE_BOXED_TYPE(
+  MaplibreNativeFfiTerrainScreenPoint, maplibre_native_ffi_terrain_screen_point,
+  maplibre_native_ffi_terrain_screen_point_copy,
+  maplibre_native_ffi_terrain_screen_point_free
+)
+
+MaplibreNativeFfiTerrainScreenPoint*
+maplibre_native_ffi_terrain_screen_point_copy(
+  const MaplibreNativeFfiTerrainScreenPoint* self
+) {
+  g_return_val_if_fail(self != NULL, NULL);
+  return g_memdup2(self, sizeof *self);
+}
+
+void maplibre_native_ffi_terrain_screen_point_free(
+  MaplibreNativeFfiTerrainScreenPoint* self
+) {
+  g_free(self);
+}
+
+void maplibre_native_ffi_terrain_screen_point_read(
+  MaplibreNativeFfiTerrainScreenPoint* out, const mln_terrain_screen_point* in
+) {
+  maplibre_native_ffi_screen_point_read(&out->point, &in->point);
+  out->occluded = (in->occluded) ? TRUE : FALSE;
+}
+
+MaplibreNativeFfiTerrainScreenPoint*
+maplibre_native_ffi_terrain_screen_point_from_native(
+  const mln_terrain_screen_point* in
+) {
+  MaplibreNativeFfiTerrainScreenPoint* self =
+    g_new0(MaplibreNativeFfiTerrainScreenPoint, 1);
+  maplibre_native_ffi_terrain_screen_point_read(self, in);
+  return self;
+}
+
+G_DEFINE_BOXED_TYPE(
   MaplibreNativeFfiTextureImageInfo, maplibre_native_ffi_texture_image_info,
   maplibre_native_ffi_texture_image_info_copy,
   maplibre_native_ffi_texture_image_info_free

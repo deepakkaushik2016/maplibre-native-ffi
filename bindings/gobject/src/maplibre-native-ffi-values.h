@@ -1538,6 +1538,37 @@ typedef struct {
 } MaplibreNativeFfiTerrainElevation;
 
 /**
+ * MaplibreNativeFfiTerrainLatLng:
+ * @coordinate: The ground's coordinate, with its longitude within \[-180,
+ *   180\].
+ *
+ * The ground that the terrain draws under a screen point.
+ *
+ * See `mln_terrain_lat_lng` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+typedef struct {
+  MaplibreNativeFfiLatLng coordinate;
+} MaplibreNativeFfiTerrainLatLng;
+
+/**
+ * MaplibreNativeFfiTerrainScreenPoint:
+ * @point: The point, from the top-left corner in logical pixels. It may lie
+ *   outside the viewport.
+ * @occluded: Whether ground from a loaded DEM tile is drawn in front of the
+ *   point and hides it, as a ridge hides the valley behind it.
+ *
+ * Where the terrain draws a point on the ground.
+ *
+ * See `mln_terrain_screen_point` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+typedef struct {
+  MaplibreNativeFfiScreenPoint point;
+  gboolean occluded;
+} MaplibreNativeFfiTerrainScreenPoint;
+
+/**
  * MaplibreNativeFfiTextureImageInfo:
  * @width: width
  * @height: height
@@ -15543,6 +15574,66 @@ void maplibre_native_ffi_terrain_elevation_free(
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(
   MaplibreNativeFfiTerrainElevation, maplibre_native_ffi_terrain_elevation_free
+)
+
+GType maplibre_native_ffi_terrain_lat_lng_get_type(void) G_GNUC_CONST;
+#define MAPLIBRE_NATIVE_FFI_TYPE_TERRAIN_LAT_LNG \
+  (maplibre_native_ffi_terrain_lat_lng_get_type())
+
+/**
+ * maplibre_native_ffi_terrain_lat_lng_copy:
+ *
+ * Copies the value.
+ *
+ * Returns: (transfer full): the copy
+ */
+MaplibreNativeFfiTerrainLatLng* maplibre_native_ffi_terrain_lat_lng_copy(
+  const MaplibreNativeFfiTerrainLatLng* self
+);
+
+/**
+ * maplibre_native_ffi_terrain_lat_lng_free:
+ * @self: (transfer full) (nullable): the value
+ *
+ * Frees the value.
+ */
+void maplibre_native_ffi_terrain_lat_lng_free(
+  MaplibreNativeFfiTerrainLatLng* self
+);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(
+  MaplibreNativeFfiTerrainLatLng, maplibre_native_ffi_terrain_lat_lng_free
+)
+
+GType maplibre_native_ffi_terrain_screen_point_get_type(void) G_GNUC_CONST;
+#define MAPLIBRE_NATIVE_FFI_TYPE_TERRAIN_SCREEN_POINT \
+  (maplibre_native_ffi_terrain_screen_point_get_type())
+
+/**
+ * maplibre_native_ffi_terrain_screen_point_copy:
+ *
+ * Copies the value.
+ *
+ * Returns: (transfer full): the copy
+ */
+MaplibreNativeFfiTerrainScreenPoint*
+maplibre_native_ffi_terrain_screen_point_copy(
+  const MaplibreNativeFfiTerrainScreenPoint* self
+);
+
+/**
+ * maplibre_native_ffi_terrain_screen_point_free:
+ * @self: (transfer full) (nullable): the value
+ *
+ * Frees the value.
+ */
+void maplibre_native_ffi_terrain_screen_point_free(
+  MaplibreNativeFfiTerrainScreenPoint* self
+);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(
+  MaplibreNativeFfiTerrainScreenPoint,
+  maplibre_native_ffi_terrain_screen_point_free
 )
 
 GType maplibre_native_ffi_texture_image_info_get_type(void) G_GNUC_CONST;

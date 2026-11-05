@@ -1,14 +1,17 @@
 ---
 title: Query
 description:
-  Find the features on the map or in a source, and the terrain's height.
-# Scope: querying rendered features, source features, and terrain height.
+  Find the features on the map or in a source, the terrain's height, and the
+  ground under a screen point.
+# Scope: querying rendered features, source features, terrain height, and
+# screen points on the terrain.
 ---
 
 import Snippet from "../../../components/Snippet.astro";
 
 This guide shows how to find the features the map draws, or the features a
-source has loaded, and how to read the height of the terrain.
+source has loaded, how to read the height of the terrain, and how to convert
+between screen points and the ground the terrain draws.
 
 Queries run through the map's render session. A rendered query reads the last
 frame, so after a camera or style change, render a frame before you query.
@@ -43,3 +46,24 @@ exaggeration.
 The query has no value where the style has no terrain, or where the session
 hasn't loaded the ground yet. Before the session's first frame it fails instead,
 since there is no frame to read.
+
+## Find the ground under a screen point
+
+A projection from [](api:mln_map_projection_create) converts between screen
+points and coordinates at sea level. Over terrain, the ground a tap touches lies
+elsewhere: the line of sight meets the terrain before it reaches sea level. To
+find the ground the last frame drew under a screen point, use
+[](api:mln_render_session_query_lat_lng_for_pixel). To find where the last frame
+drew a coordinate on the ground, for a callout or a marker, use
+[](api:mln_render_session_query_pixel_for_lat_lng). Without terrain in the
+style, both give the sea-level answers that a projection of the frame's view
+gives.
+
+The pixel query also says whether the point is `occluded`: whether ground from a
+loaded DEM tile is drawn in front of it, as a ridge hides the valley behind it.
+Ground the session hasn't loaded yet never hides a point, so a point that isn't
+occluded can still be out of sight.
+
+Like the height query, both have no value where the session hasn't loaded the
+ground. The coordinate query also has none above the horizon, and the pixel
+query none behind the camera. Before the session's first frame, both fail.
