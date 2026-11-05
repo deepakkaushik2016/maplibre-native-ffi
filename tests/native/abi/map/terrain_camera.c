@@ -275,9 +275,10 @@ static eye_meters read_eye(mln_map map, double latitude) {
 // --- The load mode -------------------------------------------------------
 
 // A plateau, and a vector source whose minzoom is deeper than the far field of
-// a steep view, so the view covers it out to the horizon with more tiles than
-// any load mode lets it ask for. Its layer starts hidden, so the terrain
-// settles before the source asks for anything.
+// a steep view. With the level of detail off, the view covers that source at
+// its minzoom out to the horizon, with more tiles than any load mode lets it
+// ask for. Its layer starts hidden, so the terrain settles before the source
+// asks for anything.
 static const char deep_source_style[] =
   "{\"version\":8,\"center\":[-120.68,38.26],\"zoom\":13,\"pitch\":70,"
   "\"sources\":{\"dem\":{\"type\":\"raster-dem\",\"tiles\":"
@@ -296,6 +297,16 @@ static int parcel_tiles_requested(mln_terrain_load_mode mode) {
   };
   mln_runtime runtime = create_terrain_runtime(&provider);
   mln_map map = create_static_map(runtime);
+  // A pitched view with the level of detail on leaves out the far tiles that
+  // it wants coarser than the source's minzoom, so it covers too few to cap.
+  const mln_map_tile_options flat_detail = {
+    .size = sizeof(mln_map_tile_options),
+    .fields = MLN_MAP_TILE_OPTION_LOD_PITCH_THRESHOLD,
+    .lod_pitch_threshold = 180.0,
+  };
+  MLN_TEST_AWAIT_OK(
+    mln_map_set_tile_options(map, &flat_detail, &completion.descriptor, NULL)
+  );
   const mln_map_terrain_options options = {
     .size = sizeof(mln_map_terrain_options),
     .fields = MLN_MAP_TERRAIN_OPTION_LOAD_MODE,
