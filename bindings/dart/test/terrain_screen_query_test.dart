@@ -17,10 +17,11 @@ final _plateauPng = base64Decode(
 
 const _plateau = LatLng(latitude: 47.27, longitude: 11.39);
 
-final _plateauStyle = {
+Map<String, Object?> _plateauStyle({double pitch = 0}) => {
   'version': 8,
   'center': [_plateau.longitude, _plateau.latitude],
   'zoom': 10,
+  'pitch': pitch,
   'sources': {
     'dem': {
       'type': 'raster-dem',
@@ -34,9 +35,9 @@ final _plateauStyle = {
   'layers': <Object?>[],
 };
 
-/// Attaches a session to a static map of the plateau, which renders no frame
-/// until it is asked for a still image.
-Future<(MapHandle, WorkerSession)> _openPlateau() async {
+/// Attaches a session to a static map of the plateau, seen at [pitch], which
+/// renders no frame until it is asked for a still image.
+Future<(MapHandle, WorkerSession)> _openPlateau({double pitch = 0}) async {
   final fixture = await openRuntime(
     provider: ResourceProvider(
       callback: (request, handle) => handle.complete(
@@ -56,7 +57,7 @@ Future<(MapHandle, WorkerSession)> _openPlateau() async {
       ),
     ),
   );
-  await expectCommitted(map.setStyleJson(_plateauStyle));
+  await expectCommitted(map.setStyleJson(_plateauStyle(pitch: pitch)));
   return (map, await WorkerSession.attach(map));
 }
 
@@ -89,6 +90,33 @@ void main() {
       'the pixel query',
     );
     expect(elsewhere, isNull);
+  });
+
+  // Seen at pitch 60, a finger below and left of the center touches the
+  // plateau 1000 m up, well short of where it would meet sea level.
+  test('a pitched finger touches the plateau, not sea level', () async {
+    final (map, worker) = await _openPlateau(pitch: 60);
+    await within(map.requestStillImage(), 'the still image');
+
+    const finger = ScreenPoint(x: 8, y: 24);
+    final ground = await within(
+      worker.session.queryLatLngForPixel(finger),
+      'the coordinate query',
+    );
+    final drawn = await within(
+      worker.session.queryPixelForLatLng(ground!.coordinate),
+      'the pixel query',
+    );
+    expect(drawn?.point.x, closeTo(finger.x, 0.01));
+    expect(drawn?.point.y, closeTo(finger.y, 0.01));
+
+    final projection = MapProjectionHandle.create(map.getSnapshot().view);
+    final seaLevel = projection.latLngForPixel(finger);
+    projection.close();
+    expect(
+      (ground.coordinate.latitude - seaLevel.latitude).abs(),
+      greaterThan(0.005),
+    );
   });
 
   // Null means the frame drew no ground there. Before the first frame there is
