@@ -38,6 +38,14 @@ Map<String, Object?> _plateauStyle({double pitch = 0}) => {
 /// Attaches a session to a static map of the plateau, seen at [pitch], which
 /// renders no frame until it is asked for a still image.
 Future<(MapHandle, WorkerSession)> _openPlateau({double pitch = 0}) async {
+  final (map, worker, _) = await _openPlateauFixture(pitch: pitch);
+  return (map, worker);
+}
+
+/// [_openPlateau], with the runtime fixture whose events a test awaits.
+Future<(MapHandle, WorkerSession, RuntimeFixture)> _openPlateauFixture({
+  double pitch = 0,
+}) async {
   final fixture = await openRuntime(
     provider: ResourceProvider(
       callback: (request, handle) => handle.complete(
@@ -58,7 +66,7 @@ Future<(MapHandle, WorkerSession)> _openPlateau({double pitch = 0}) async {
     ),
   );
   await expectCommitted(map.setStyleJson(_plateauStyle(pitch: pitch)));
-  return (map, await WorkerSession.attach(map));
+  return (map, await WorkerSession.attach(map), fixture);
 }
 
 void main() {
@@ -117,6 +125,31 @@ void main() {
       (ground.coordinate.latitude - seaLevel.latitude).abs(),
       greaterThan(0.005),
     );
+  });
+
+  // A finger goes down on the plateau with an anchored pan that doesn't move,
+  // and the next frame finds the height of the ground it grabbed, which comes
+  // as an event with the height in its payload.
+  test('a grab reports the height of its ground as an event', () async {
+    final (map, _, fixture) = await _openPlateauFixture();
+    await within(map.requestStillImage(), 'the still image');
+
+    await expectCommitted(
+      map.applyCameraDelta(
+        const CameraDelta(
+          offset: ScreenPoint(),
+          anchor: ScreenPoint(x: 8, y: 24),
+          gesturePhase: GesturePhase.begin,
+        ),
+      ),
+    );
+    await within(map.requestStillImage(), 'the still image after the grab');
+    final event = await within(
+      fixture.awaitEventType(RuntimeEventType.mapTerrainGrabbedGround),
+      'the grabbed ground event',
+    );
+    final payload = event.payload as RuntimeEventPayloadTerrainGrabbedGround;
+    expect(payload.value.elevationMeters, closeTo(1000, 1));
   });
 
   // Null means the frame drew no ground there. Before the first frame there is

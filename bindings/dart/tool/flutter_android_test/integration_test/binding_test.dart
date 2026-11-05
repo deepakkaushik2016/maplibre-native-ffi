@@ -14,6 +14,7 @@ import '../../../test/resource_transform_test.dart' as resource_transform;
 import '../../../test/style_terrain_test.dart' as style_terrain;
 import '../../../test/terrain_camera_test.dart' as terrain_camera;
 import '../../../test/terrain_elevation_test.dart' as terrain_elevation;
+import '../../../test/terrain_screen_query_test.dart' as terrain_screen_query;
 import '../../../test/values_test.dart' as values;
 
 // Suites that collect garbage through the VM service or run standalone VM
@@ -34,6 +35,7 @@ void main() {
   style_terrain.main();
   terrain_camera.main();
   terrain_elevation.main();
+  terrain_screen_query.main();
 }
 
 typedef _GetEnv =
