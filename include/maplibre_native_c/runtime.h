@@ -154,8 +154,8 @@ typedef enum mln_runtime_event_type : uint32_t {
    *
    * Until it arrives, the pan moves the ground at the height of the camera's
    * center, and once it arrives the map puts the grabbed ground back under the
-   * finger. It comes only when the height differs from the last one this map
-   * reported.
+   * finger. It comes only when the height differs by at least a centimeter
+   * from the last one this map reported.
    */
   MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND = 26,
 } mln_runtime_event_type;

@@ -291,8 +291,9 @@ static double elevation_at(const ridge_view* view, mln_lat_lng point) {
 
 // The frame after a grab reports the grabbed ground's height, once: the moves
 // that carry on with the same ground report nothing more. A grab of the same
-// ground along the same line of sight finds the same height and reports
-// nothing new; a grab of other ground does.
+// ground along the same line of sight finds the same height, to within the
+// last bits of a double, and reports nothing new; a grab of other ground
+// does.
 static void a_grab_reports_its_ground_height_once(void) {
   ridge_view view = {0};
   open_ridge_view(

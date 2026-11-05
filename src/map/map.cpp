@@ -1087,9 +1087,9 @@ class StillImageFrameFilter {
 
 // Hands the height of a gesture's grabbed ground to the map, which puts the
 // ground under the finger with it, and reports it as an event when it differs
-// from the last one reported. The renderer reports each grab once, so this
-// runs once per grab rather than once per frame. Runs on the map's run loop,
-// like the delegate.
+// by a centimeter or more from the last one reported. The renderer reports each
+// grab once, so this runs once per grab rather than once per frame. Runs on the
+// map's run loop, like the delegate.
 class GrabbedGroundReporter {
  public:
   GrabbedGroundReporter(
@@ -1100,7 +1100,10 @@ class GrabbedGroundReporter {
 
   void report(uint64_t grab_id, double elevation_meters) {
     delegate_.onTerrainGrabbedGroundElevation(grab_id, elevation_meters);
-    if (elevation_meters == last_reported_) return;
+    // The same ground grabbed again along the same line of sight can read a
+    // height that differs in the last bits of the double.
+    constexpr double unchanged_meters = 0.01;
+    if (std::abs(elevation_meters - last_reported_) < unchanged_meters) return;
     last_reported_ = elevation_meters;
     auto& events = *event_state_;
     if (!mln::core::event_selected(

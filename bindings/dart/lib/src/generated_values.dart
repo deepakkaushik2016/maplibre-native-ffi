@@ -1144,8 +1144,8 @@ final class RuntimeEventType extends _Enum {
   ///
   /// Until it arrives, the pan moves the ground at the height of the camera's
   /// center, and once it arrives the map puts the grabbed ground back under the
-  /// finger. It comes only when the height differs from the last one this map
-  /// reported.
+  /// finger. It comes only when the height differs by at least a centimeter
+  /// from the last one this map reported.
   static const mapTerrainGrabbedGround = RuntimeEventType.fromRawValue(26);
   @override
   String toString() => switch (rawValue) {

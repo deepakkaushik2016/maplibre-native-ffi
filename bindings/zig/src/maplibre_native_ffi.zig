@@ -8427,8 +8427,8 @@ pub const RuntimeEventType = enum(u32) {
     ///
     /// Until it arrives, the pan moves the ground at the height of the camera's
     /// center, and once it arrives the map puts the grabbed ground back under
-    /// the finger. It comes only when the height differs from the last one this
-    /// map reported.
+    /// the finger. It comes only when the height differs by at least a
+    /// centimeter from the last one this map reported.
     map_terrain_grabbed_ground = 26,
     _,
     pub const fromNative = marshal.EnumMethods(@This()).fromNative;
