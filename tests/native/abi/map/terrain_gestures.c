@@ -205,6 +205,51 @@ static void a_drag_keeps_the_ground_under_the_finger(void) {
   close_ridge_view(&view);
 }
 
+// A two-finger pinch that zooms in a level, turns 15 degrees, and moves its
+// focal point up and to the right, in 20 steps with a frame after each. Each
+// step is one delta: the focal point's movement as offset, the step's scale
+// and rotation, and where the focal point is now as anchor. Every frame draws
+// the ground the focal point grabbed under the focal point.
+static void a_pinch_keeps_the_ground_under_its_focal_point(void) {
+  ridge_view view = {0};
+  open_ridge_view(&view, true, MLN_RUNTIME_EVENT_FLAG_NONE);
+  mln_screen_point focal = on_the_face;
+  touch_down(&view, focal);
+  render_frame(&view);
+  const mln_lat_lng grabbed = ground_under(&view, focal);
+
+  double farthest = 0.0;
+  enum { steps = 20 };
+  const mln_screen_point step = {.x = 60.0 / steps, .y = -40.0 / steps};
+  for (int index = 0; index < steps; ++index) {
+    focal = (mln_screen_point){.x = focal.x + step.x, .y = focal.y + step.y};
+    const mln_camera_delta pinch = {
+      .size = sizeof(mln_camera_delta),
+      .fields = MLN_CAMERA_DELTA_OFFSET | MLN_CAMERA_DELTA_SCALE |
+                MLN_CAMERA_DELTA_BEARING | MLN_CAMERA_DELTA_ANCHOR,
+      .offset = step,
+      .scale = pow(2.0, 1.0 / steps),
+      .bearing = 15.0 / steps,
+      .anchor = focal,
+      .gesture_phase = MLN_GESTURE_PHASE_UPDATE,
+    };
+    apply_delta(&view, &pinch);
+    render_frame(&view);
+    farthest = fmax(farthest, drawn_distance(&view, grabbed, focal));
+  }
+  lift(&view);
+  mln_test_render_until_idle(view.runtime, view.map, &view.fixture);
+
+  TEST_ASSERT_LESS_THAN_DOUBLE_MESSAGE(
+    2.0, farthest, "the grabbed ground left the focal point"
+  );
+  TEST_ASSERT_LESS_THAN_DOUBLE_MESSAGE(
+    2.0, drawn_distance(&view, grabbed, focal),
+    "the ground left the focal point after the fingers lifted"
+  );
+  close_ridge_view(&view);
+}
+
 typedef struct grab_events {
   size_t count;
   double elevation_meters;
@@ -288,5 +333,6 @@ static void a_grab_reports_its_ground_height_once(void) {
 
 MLN_TEST_GROUP {
   RUN_TEST(a_drag_keeps_the_ground_under_the_finger);
+  RUN_TEST(a_pinch_keeps_the_ground_under_its_focal_point);
   RUN_TEST(a_grab_reports_its_ground_height_once);
 }

@@ -2346,11 +2346,13 @@ type CameraDelta struct {
 	// point that scale, bearing, and pitch keep in place. It needs offset or one of
 	// them, and it combines with offset only in a delta without a duration.
 	//
-	// With offset alone, the ground under anchor minus offset, where the finger
-	// was, moves under anchor. Over terrain that is the ground drawn there, at its
-	// own height, so a drag keeps the ground it grabbed under the finger. During a
-	// gesture, a delta whose finger starts where the last one left it keeps the
-	// ground that the gesture first grabbed.
+	// With offset, the ground under anchor minus offset, where the finger was,
+	// moves under anchor. Over terrain that is the ground drawn there, at its own
+	// height, so a drag keeps the ground it grabbed under the finger. With a scale,
+	// bearing, or pitch too, as a pinch sends them, the change turns about where
+	// the focal point was before the pan moves it, so a pinch keeps its ground
+	// under the focal point as well. During a gesture, a delta that starts where
+	// the last one left the finger keeps the ground that the gesture first grabbed.
 	Anchor *ScreenPoint
 	// How the gesture keeps moving after this delta. Only a delta in the
 	// GesturePhaseEnd phase carries it.
@@ -7707,10 +7709,10 @@ func (receiver *MapHandle) AnchorCenterOnTerrain() (*Future[CommandCompletion], 
 //
 // delta can pan the map's content by an offset on the screen, scale the zoom,
 // and add to the bearing and pitch. An anchor keeps one screen point in place
-// while the scale, bearing, or pitch changes, and with an offset alone it pans
-// the ground under the finger, as a drag does. An anchor needs an offset or one
-// of those changes, and combines with an offset only when the delta has no
-// animation. The function finishes when the map applies the delta, before an
+// while the scale, bearing, or pitch changes, and with an offset it pans the
+// ground under the finger, as a drag or a pinch does. An anchor needs an offset
+// or one of those changes, and combines with an offset only when the delta has
+// no animation. The function finishes when the map applies the delta, before an
 // animation ends.
 //
 // A delta that replaces an animated one starts from where that animation left

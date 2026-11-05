@@ -1088,11 +1088,11 @@ export class MapHandle extends Owner {
    *
    * `delta` can pan the map's content by an offset on the screen, scale the
    * zoom, and add to the bearing and pitch. An anchor keeps one screen point in
-   * place while the scale, bearing, or pitch changes, and with an offset alone
-   * it pans the ground under the finger, as a drag does. An anchor needs an
-   * offset or one of those changes, and combines with an offset only when the
-   * delta has no animation. The function finishes when the map applies the
-   * delta, before an animation ends.
+   * place while the scale, bearing, or pitch changes, and with an offset it
+   * pans the ground under the finger, as a drag or a pinch does. An anchor
+   * needs an offset or one of those changes, and combines with an offset only
+   * when the delta has no animation. The function finishes when the map applies
+   * the delta, before an animation ends.
    *
    * A delta that replaces an animated one starts from where that animation left
    * the camera, so the rest of the replaced change never happens. To reach an
@@ -3763,11 +3763,11 @@ export class MapHandleDiscarding {
    *
    * `delta` can pan the map's content by an offset on the screen, scale the
    * zoom, and add to the bearing and pitch. An anchor keeps one screen point in
-   * place while the scale, bearing, or pitch changes, and with an offset alone
-   * it pans the ground under the finger, as a drag does. An anchor needs an
-   * offset or one of those changes, and combines with an offset only when the
-   * delta has no animation. The function finishes when the map applies the
-   * delta, before an animation ends.
+   * place while the scale, bearing, or pitch changes, and with an offset it
+   * pans the ground under the finger, as a drag or a pinch does. An anchor
+   * needs an offset or one of those changes, and combines with an offset only
+   * when the delta has no animation. The function finishes when the map applies
+   * the delta, before an animation ends.
    *
    * A delta that replaces an animated one starts from where that animation left
    * the camera, so the rest of the replaced change never happens. To reach an

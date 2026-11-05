@@ -5727,12 +5727,10 @@ auto map_apply_camera_delta(
         [copied, momentum, end](MapObject& live) -> void {
           // The pan and the scale, bearing, and pitch change are separate
           // MapLibre transitions, because an explicit center overrides an
-          // anchor. The ease reads the camera after the pan, so an immediate
-          // pan moves the camera that the anchor refers to. The transaction
-          // around this work publishes both in one snapshot and announces one
-          // render update for them. With momentum, the command's end is the
-          // momentum's, and the delta's own changes, which can't animate,
-          // apply before it starts.
+          // anchor. The transaction around this work publishes both in one
+          // snapshot and announces one render update for them. With momentum,
+          // the command's end is the momentum's, and the delta's own changes,
+          // which can't animate, apply before it starts.
           const auto source_kind = gesture_source(copied.gesture_phase);
           const auto source = CameraSourceScope{*live.event_state, source_kind};
           const auto pans = (copied.fields & MLN_CAMERA_DELTA_OFFSET) != 0U;
@@ -5768,24 +5766,44 @@ auto map_apply_camera_delta(
               events.gesture_changed_pitch = true;
             }
           }
-          if (pans) {
-            const auto replacing =
-              TransitionReplacementScope{*live.event_state, end};
-            const auto offset = to_native_screen_point(copied.offset);
-            // An anchored pan moves the ground where the finger was, which
-            // MapLibre takes as the anchor, to where the delta leaves it.
-            auto finger = std::optional<mln::ScreenCoordinate>{};
-            if ((copied.fields & MLN_CAMERA_DELTA_ANCHOR) != 0U && !eases) {
-              const auto anchor = to_native_screen_point(copied.anchor);
-              finger =
-                mln::ScreenCoordinate{anchor.x - offset.x, anchor.y - offset.y};
-            }
-            live.map->moveBy(offset, parts, finger);
+          const auto offset = to_native_screen_point(copied.offset);
+          // An anchored pan moves the ground where the finger was, which
+          // MapLibre takes as the anchor, to where the delta leaves it.
+          auto finger = std::optional<mln::ScreenCoordinate>{};
+          if (pans && (copied.fields & MLN_CAMERA_DELTA_ANCHOR) != 0U) {
+            const auto anchor = to_native_screen_point(copied.anchor);
+            finger =
+              mln::ScreenCoordinate{anchor.x - offset.x, anchor.y - offset.y};
           }
-          if (eases) {
+          if (finger) {
+            // A pinch: the scale, bearing, and pitch change about where the
+            // focal point was, which keeps the ground the gesture grabbed
+            // there on its line of sight and the grab with it, and then the
+            // pan puts that ground under the focal point. On a flat map this
+            // is the pan followed by the change about the anchor.
+            if (eases) {
+              const auto replacing =
+                TransitionReplacementScope{*live.event_state, end};
+              auto target = camera_delta_target(*live.map, copied);
+              target.withAnchor(*finger);
+              live.map->easeTo(target, parts);
+            }
             const auto replacing =
               TransitionReplacementScope{*live.event_state, end};
-            live.map->easeTo(camera_delta_target(*live.map, copied), parts);
+            live.map->moveBy(offset, parts, finger);
+          } else {
+            // The ease reads the camera after the pan, so an immediate pan
+            // moves the camera that the anchor refers to.
+            if (pans) {
+              const auto replacing =
+                TransitionReplacementScope{*live.event_state, end};
+              live.map->moveBy(offset, parts);
+            }
+            if (eases) {
+              const auto replacing =
+                TransitionReplacementScope{*live.event_state, end};
+              live.map->easeTo(camera_delta_target(*live.map, copied), parts);
+            }
           }
           if (momentum) {
             start_gesture_momentum(live, *momentum, animation, command, end);

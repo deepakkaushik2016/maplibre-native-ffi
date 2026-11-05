@@ -375,11 +375,14 @@ export interface CameraDelta {
    * or one of them, and it combines with `offset` only in a delta without a
    * duration.
    *
-   * With `offset` alone, the ground under `anchor` minus `offset`, where the
-   * finger was, moves under `anchor`. Over terrain that is the ground drawn
-   * there, at its own height, so a drag keeps the ground it grabbed under the
-   * finger. During a gesture, a delta whose finger starts where the last one
-   * left it keeps the ground that the gesture first grabbed.
+   * With `offset`, the ground under `anchor` minus `offset`, where the finger
+   * was, moves under `anchor`. Over terrain that is the ground drawn there, at
+   * its own height, so a drag keeps the ground it grabbed under the finger.
+   * With a scale, bearing, or pitch too, as a pinch sends them, the change
+   * turns about where the focal point was before the pan moves it, so a pinch
+   * keeps its ground under the focal point as well. During a gesture, a delta
+   * that starts where the last one left the finger keeps the ground that the
+   * gesture first grabbed.
    */
   anchor?: ScreenPoint;
   /**

@@ -38,12 +38,14 @@ public sealed record CameraDelta
     /// <c>offset</c> only in a delta without a duration.
     /// </summary>
     /// <remarks>
-    /// With <c>offset</c> alone, the ground under <c>anchor</c> minus
-    /// <c>offset</c>, where the finger was, moves under <c>anchor</c>. Over
-    /// terrain that is the ground drawn there, at its own height, so a drag
-    /// keeps the ground it grabbed under the finger. During a gesture, a delta
-    /// whose finger starts where the last one left it keeps the ground that the
-    /// gesture first grabbed.
+    /// With <c>offset</c>, the ground under <c>anchor</c> minus <c>offset</c>,
+    /// where the finger was, moves under <c>anchor</c>. Over terrain that is
+    /// the ground drawn there, at its own height, so a drag keeps the ground it
+    /// grabbed under the finger. With a scale, bearing, or pitch too, as a
+    /// pinch sends them, the change turns about where the focal point was
+    /// before the pan moves it, so a pinch keeps its ground under the focal
+    /// point as well. During a gesture, a delta that starts where the last one
+    /// left the finger keeps the ground that the gesture first grabbed.
     /// </remarks>
     public ScreenPoint? Anchor { get; init; }
 
