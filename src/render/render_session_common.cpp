@@ -2970,8 +2970,9 @@ auto render_session_query_pixel_for_lat_lng(
   );
   out_result.reset();
   // A huge exaggeration can lift the ground past what the engine's float
-  // holds, and a point at infinity is drawn nowhere.
-  if (pixel) {
+  // holds, and a point at infinity is drawn nowhere. As for the elevation
+  // query, a pixel that isn't finite is no value.
+  if (pixel && std::isfinite(pixel->point.x) && std::isfinite(pixel->point.y)) {
     out_result = mln_terrain_screen_point{
       .point = {.x = pixel->point.x, .y = pixel->point.y},
       .occluded = pixel->occluded
