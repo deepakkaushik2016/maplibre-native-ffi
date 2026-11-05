@@ -2340,6 +2340,28 @@ static PFN_vkVoidFunction vulkan_device_proc(
   return NULL;
 }
 
+// The device function that Vulkan 1.2 names `core`, or, on a device that
+// resolves only the name an extension gave it before then, `extension`; null
+// with the reason recorded when the device has neither.
+static PFN_vkVoidFunction vulkan_device_proc_core_or(
+  mln_test_graphics* graphics, const char* core, const char* extension
+) {
+#if !defined(__EMSCRIPTEN__)
+  if (graphics->context.backend == MLN_TEST_GRAPHICS_BACKEND_VULKAN) {
+    VkDevice device = (VkDevice)graphics->context.vulkan_device;
+    PFN_vkVoidFunction proc = graphics->vk.get_device_proc_addr(device, core);
+    if (proc == NULL)
+      proc = graphics->vk.get_device_proc_addr(device, extension);
+    if (proc == NULL)
+      set_error("the Vulkan device lacks both %s and %s", core, extension);
+    return proc;
+  }
+#else
+  (void)extension;
+#endif
+  return vulkan_device_proc(graphics, core);
+}
+
 // Creates a timeline semaphore at zero, which `export_info` may make
 // exportable, or zero with the reason recorded.
 static VkSemaphore vulkan_timeline_create_with(
@@ -2383,8 +2405,10 @@ void mln_test_graphics_vulkan_timeline_destroy(
 bool mln_test_graphics_vulkan_timeline_signal(
   mln_test_graphics* graphics, uint64_t semaphore, uint64_t value
 ) {
-  PFN_vkSignalSemaphoreKHR signal = (PFN_vkSignalSemaphoreKHR)
-    vulkan_device_proc(graphics, "vkSignalSemaphoreKHR");
+  PFN_vkSignalSemaphore signal =
+    (PFN_vkSignalSemaphore)vulkan_device_proc_core_or(
+      graphics, "vkSignalSemaphore", "vkSignalSemaphoreKHR"
+    );
   if (signal == NULL) return false;
   const VkSemaphoreSignalInfo info = {
     .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
@@ -2404,8 +2428,8 @@ int mln_test_graphics_vulkan_timeline_wait(
   mln_test_graphics* graphics, uint64_t semaphore, uint64_t value,
   uint64_t timeout_nanoseconds
 ) {
-  PFN_vkWaitSemaphoresKHR wait = (PFN_vkWaitSemaphoresKHR)vulkan_device_proc(
-    graphics, "vkWaitSemaphoresKHR"
+  PFN_vkWaitSemaphores wait = (PFN_vkWaitSemaphores)vulkan_device_proc_core_or(
+    graphics, "vkWaitSemaphores", "vkWaitSemaphoresKHR"
   );
   if (wait == NULL) return -1;
   const VkSemaphore waited = (VkSemaphore)(uintptr_t)semaphore;
