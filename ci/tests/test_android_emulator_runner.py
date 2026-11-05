@@ -248,6 +248,30 @@ class AndroidSerialTest(unittest.TestCase):
         self.assertEqual(result.stdout, "device-1\n")
         self.assertFalse(self.arguments.exists())
 
+    def test_an_old_emulator_that_android_serial_names_is_warned_about(self):
+        (self.sdk / "emulator/source.properties").write_text("Pkg.Revision=36.6.11\n")
+        result = self.serial("x86_64", ANDROID_SERIAL="emulator-5560")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "emulator-5560\n")
+        self.assertIn(
+            "WARNING: ANDROID_SERIAL names emulator-5560, and the Android emulator"
+            " in this SDK is at revision 36.6.11, below 37.3.5",
+            result.stderr,
+        )
+        self.assertFalse(self.arguments.exists())
+
+    def test_a_device_that_android_serial_names_is_not_warned_about(self):
+        for revision in ("36.6.11", "37.3.5"):
+            with self.subTest(revision=revision):
+                (self.sdk / "emulator/source.properties").write_text(
+                    f"Pkg.Revision={revision}\n"
+                )
+                result = self.serial("x86_64", ANDROID_SERIAL="device-1")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertNotIn("WARNING", result.stderr)
+        result = self.serial("x86_64", ANDROID_SERIAL="emulator-5560")
+        self.assertNotIn("WARNING", result.stderr)
+
     def test_a_device_with_another_abi_or_api_level_is_refused(self):
         for environment in ({"FAKE_ABI": "arm64-v8a"}, {"FAKE_API": "26"}):
             with self.subTest(**environment):
