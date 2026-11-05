@@ -3608,9 +3608,16 @@ void maplibre_native_ffi_camera_delta_set_pitch(
 /**
  * MaplibreNativeFfiCameraDelta:anchor: (setter set_anchor) (getter get_anchor)
  *
- * The screen point that `scale`, `bearing`, and `pitch` keep in place. It needs
- * one of them, and it combines with `offset` only in a delta without a
+ * Where the delta leaves the finger, or the fingers' focal point: the screen
+ * point that `scale`, `bearing`, and `pitch` keep in place. It needs `offset`
+ * or one of them, and it combines with `offset` only in a delta without a
  * duration.
+ *
+ * With `offset` alone, the ground under `anchor` minus `offset`, where the
+ * finger was, moves under `anchor`. Over terrain that is the ground drawn
+ * there, at its own height, so a drag keeps the ground it grabbed under the
+ * finger. During a gesture, a delta whose finger starts where the last one left
+ * it keeps the ground that the gesture first grabbed.
  */
 /**
  * maplibre_native_ffi_camera_delta_get_anchor: (get-property anchor)

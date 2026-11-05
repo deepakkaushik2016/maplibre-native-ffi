@@ -2322,8 +2322,15 @@ type CameraDelta struct {
 	Bearing *float64
 	// Degrees to add to the pitch.
 	Pitch *float64
-	// The screen point that scale, bearing, and pitch keep in place. It needs one
-	// of them, and it combines with offset only in a delta without a duration.
+	// Where the delta leaves the finger, or the fingers' focal point: the screen
+	// point that scale, bearing, and pitch keep in place. It needs offset or one of
+	// them, and it combines with offset only in a delta without a duration.
+	//
+	// With offset alone, the ground under anchor minus offset, where the finger
+	// was, moves under anchor. Over terrain that is the ground drawn there, at its
+	// own height, so a drag keeps the ground it grabbed under the finger. During a
+	// gesture, a delta whose finger starts where the last one left it keeps the
+	// ground that the gesture first grabbed.
 	Anchor *ScreenPoint
 	// How the gesture keeps moving after this delta. Only a delta in the
 	// GesturePhaseEnd phase carries it.
@@ -7660,10 +7667,11 @@ func (receiver *MapHandle) AnchorCenterOnTerrain() (*Future[CommandCompletion], 
 //
 // delta can pan the map's content by an offset on the screen, scale the zoom,
 // and add to the bearing and pitch. An anchor keeps one screen point in place
-// while the scale, bearing, or pitch changes. An anchor needs one of those
-// changes, and combines with an offset only when the delta has no animation.
-// The function finishes when the map applies the delta, before an animation
-// ends.
+// while the scale, bearing, or pitch changes, and with an offset alone it pans
+// the ground under the finger, as a drag does. An anchor needs an offset or one
+// of those changes, and combines with an offset only when the delta has no
+// animation. The function finishes when the map applies the delta, before an
+// animation ends.
 //
 // A delta that replaces an animated one starts from where that animation left
 // the camera, so the rest of the replaced change never happens. To reach an

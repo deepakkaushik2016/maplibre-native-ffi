@@ -32,10 +32,19 @@ public sealed record CameraDelta
     public double? Pitch { get; init; }
 
     /// <summary>
-    /// The screen point that <c>scale</c>, <c>bearing</c>, and <c>pitch</c>
-    /// keep in place. It needs one of them, and it combines with <c>offset</c>
-    /// only in a delta without a duration.
+    /// Where the delta leaves the finger, or the fingers' focal point: the
+    /// screen point that <c>scale</c>, <c>bearing</c>, and <c>pitch</c> keep in
+    /// place. It needs <c>offset</c> or one of them, and it combines with
+    /// <c>offset</c> only in a delta without a duration.
     /// </summary>
+    /// <remarks>
+    /// With <c>offset</c> alone, the ground under <c>anchor</c> minus
+    /// <c>offset</c>, where the finger was, moves under <c>anchor</c>. Over
+    /// terrain that is the ground drawn there, at its own height, so a drag
+    /// keeps the ground it grabbed under the finger. During a gesture, a delta
+    /// whose finger starts where the last one left it keeps the ground that the
+    /// gesture first grabbed.
+    /// </remarks>
     public ScreenPoint? Anchor { get; init; }
 
     /// <summary>

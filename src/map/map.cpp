@@ -5536,9 +5536,11 @@ auto validate_camera_delta(const mln_camera_delta* delta) -> mln_status {
     return MLN_STATUS_INVALID_ARGUMENT;
   }
   if ((fields & MLN_CAMERA_DELTA_ANCHOR) != 0U) {
-    if ((fields & camera_delta_anchored_fields) == 0U) {
+    if (
+      (fields & (camera_delta_anchored_fields | MLN_CAMERA_DELTA_OFFSET)) == 0U
+    ) {
       set_thread_error(
-        "a camera delta anchor requires scale, bearing, or pitch"
+        "a camera delta anchor requires an offset, scale, bearing, or pitch"
       );
       return MLN_STATUS_INVALID_ARGUMENT;
     }
@@ -5715,7 +5717,16 @@ auto map_apply_camera_delta(
           if (pans) {
             const auto replacing =
               TransitionReplacementScope{*live.event_state, end};
-            live.map->moveBy(to_native_screen_point(copied.offset), parts);
+            const auto offset = to_native_screen_point(copied.offset);
+            // An anchored pan moves the ground where the finger was, which
+            // MapLibre takes as the anchor, to where the delta leaves it.
+            auto finger = std::optional<mln::ScreenCoordinate>{};
+            if ((copied.fields & MLN_CAMERA_DELTA_ANCHOR) != 0U && !eases) {
+              const auto anchor = to_native_screen_point(copied.anchor);
+              finger =
+                mln::ScreenCoordinate{anchor.x - offset.x, anchor.y - offset.y};
+            }
+            live.map->moveBy(offset, parts, finger);
           }
           if (eases) {
             const auto replacing =

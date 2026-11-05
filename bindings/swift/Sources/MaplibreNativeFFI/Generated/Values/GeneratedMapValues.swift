@@ -326,9 +326,16 @@ public struct CameraDelta: Sendable {
   public var bearing: Double?
   /// Degrees to add to the pitch.
   public var pitch: Double?
-  /// The screen point that `scale`, `bearing`, and `pitch` keep in place. It
-  /// needs one of them, and it combines with `offset` only in a delta without a
-  /// duration.
+  /// Where the delta leaves the finger, or the fingers' focal point: the screen
+  /// point that `scale`, `bearing`, and `pitch` keep in place. It needs
+  /// `offset` or one of them, and it combines with `offset` only in a delta
+  /// without a duration.
+  ///
+  /// With `offset` alone, the ground under `anchor` minus `offset`, where the
+  /// finger was, moves under `anchor`. Over terrain that is the ground drawn
+  /// there, at its own height, so a drag keeps the ground it grabbed under the
+  /// finger. During a gesture, a delta whose finger starts where the last one
+  /// left it keeps the ground that the gesture first grabbed.
   public var anchor: ScreenPoint?
   /// How the gesture keeps moving after this delta. Only a delta in the
   /// `GesturePhase.end` phase carries it.

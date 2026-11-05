@@ -577,6 +577,44 @@ static void an_immediate_anchored_pan_keeps_the_dragged_coordinate(void) {
   mln_test_destroy_runtime(runtime);
 }
 
+// A one-finger drag passes the finger's movement as offset and where it moved
+// to as anchor, without a scale, bearing, or pitch. On a pitched map the
+// coordinate the finger held stays under it: a pan of the center would move
+// ground off the center's row by a different distance on the screen.
+static void an_anchored_pan_keeps_the_coordinate_under_the_finger(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = create_square_map(runtime, 256);
+  mln_camera_options start = {.size = sizeof(mln_camera_options)};
+  start.fields =
+    MLN_CAMERA_OPTION_CENTER | MLN_CAMERA_OPTION_ZOOM | MLN_CAMERA_OPTION_PITCH;
+  start.center.latitude = 10.0;
+  start.center.longitude = 20.0;
+  start.zoom = 12.0;
+  start.pitch = 60.0;
+  jump(map, start);
+  const mln_screen_point offset = {.x = 30.0, .y = -50.0};
+  const mln_screen_point anchor = {.x = 40.0, .y = 150.0};
+  const mln_lat_lng held = coordinate_at(
+    map, (mln_screen_point){.x = anchor.x - offset.x, .y = anchor.y - offset.y}
+  );
+
+  mln_camera_delta delta = {.size = sizeof(mln_camera_delta)};
+  delta.fields = MLN_CAMERA_DELTA_OFFSET | MLN_CAMERA_DELTA_ANCHOR;
+  delta.offset = offset;
+  delta.anchor = anchor;
+  MLN_TEST_AWAIT_OK(
+    mln_map_apply_camera_delta(map, &delta, &completion.descriptor, NULL)
+  );
+
+  mln_map_projection projection = mln_test_map_create_projection(map);
+  const mln_screen_point kept = projected_pixel(projection, held);
+  TEST_ASSERT_DOUBLE_WITHIN(0.01, anchor.x, kept.x);
+  TEST_ASSERT_DOUBLE_WITHIN(0.01, anchor.y, kept.y);
+  mln_map_projection_release(projection);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 static mln_status submit_delta_row(
   void* context, const void* descriptor, mln_diagnostic* diagnostic
 ) {
@@ -716,7 +754,7 @@ static const mln_test_validation_case delta_cases[] = {
   {"infinite bearing", delta_infinite_bearing, MLN_STATUS_INVALID_ARGUMENT,
    "bearing and pitch must be finite"},
   {"anchor alone", delta_anchor_alone, MLN_STATUS_INVALID_ARGUMENT,
-   "requires scale, bearing, or pitch"},
+   "requires an offset, scale, bearing, or pitch"},
   {"animated anchored pan", delta_animated_anchored_pan,
    MLN_STATUS_INVALID_ARGUMENT, "only in an immediate delta"},
   {"momentum outside the end phase", delta_momentum_outside_end,
@@ -1408,6 +1446,7 @@ MLN_TEST_GROUP {
   RUN_TEST(queued_immediate_deltas_compose_exactly);
   RUN_TEST(every_camera_delta_field_follows_its_convention);
   RUN_TEST(an_immediate_anchored_pan_keeps_the_dragged_coordinate);
+  RUN_TEST(an_anchored_pan_keeps_the_coordinate_under_the_finger);
   RUN_TEST(camera_fits_round_trip_through_the_visible_bounds);
   RUN_TEST(a_fit_command_moves_the_camera_where_the_query_fits);
   RUN_TEST(a_fit_command_fits_the_map_that_earlier_commands_leave);
