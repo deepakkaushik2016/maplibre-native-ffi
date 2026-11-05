@@ -9,9 +9,9 @@
 #include "support/test_support.h"
 
 // The phone's view at pitch 60 from 3 km south of a crest of the ridge
-// fixture, looking north over it.
+// fixture, looking north over it, at zoom 13.
 static const char ridge_style_format[] =
-  "{\"version\":8,\"center\":[11.39,%.6f],\"zoom\":13,\"pitch\":60,"
+  "{\"version\":8,\"center\":[11.39,%.6f],\"zoom\":%.2f,\"pitch\":60,"
   "\"sources\":{\"dem\":{\"type\":\"raster-dem\",\"tiles\":"
   "[\"custom://dem/{z}/{x}/{y}.png\"],\"encoding\":\"mapbox\","
   "\"tileSize\":256,\"maxzoom\":11}},\"terrain\":{\"source\":\"dem\"},"
@@ -30,15 +30,14 @@ typedef struct ridge_view {
   mln_test_render_fixture fixture;
 } ridge_view;
 
-// A continuous map of the ridge, settled. With `clamped`, the camera's center
-// keeps to the ground, as the app's map does. `event_mask` selects the events
-// the map queues.
-static void open_ridge_view(
-  ridge_view* view, bool clamped, mln_runtime_event_flags event_mask
+// A continuous map of the DEM `tile` at `zoom`, settled. With `clamped`, the
+// camera's center keeps to the ground, as the app's map does. `event_mask`
+// selects the events the map queues.
+static void open_view_of(
+  ridge_view* view, mln_test_dem_tile tile, double zoom, bool clamped,
+  mln_runtime_event_flags event_mask
 ) {
-  view->tile = (mln_test_dem_tile){
-    .bytes = mln_test_ridge_png, .size = mln_test_ridge_png_size
-  };
+  view->tile = tile;
   const mln_resource_provider provider = mln_test_dem_provider(&view->tile);
   view->runtime = mln_test_create_runtime();
   MLN_TEST_OK(mln_test_set_resource_provider(view->runtime, &provider));
@@ -57,7 +56,8 @@ static void open_ridge_view(
   ));
   char style[sizeof(ridge_style_format) + 32];
   const int written = snprintf(
-    style, sizeof(style), ridge_style_format, crest_latitude - 3.0 / 111.32
+    style, sizeof(style), ridge_style_format, crest_latitude - 3.0 / 111.32,
+    zoom
   );
   TEST_ASSERT_TRUE(written > 0 && (size_t)written < sizeof(style));
   mln_test_load_style_and_wait(view->map, mln_buffer_view_from_cstr(style));
@@ -72,6 +72,18 @@ static void open_ridge_view(
     )
   );
   mln_test_render_until_idle(view->runtime, view->map, &view->fixture);
+}
+
+static void open_ridge_view(
+  ridge_view* view, bool clamped, mln_runtime_event_flags event_mask
+) {
+  open_view_of(
+    view,
+    (mln_test_dem_tile){
+      .bytes = mln_test_ridge_png, .size = mln_test_ridge_png_size
+    },
+    13.0, clamped, event_mask
+  );
 }
 
 static void close_ridge_view(ridge_view* view) {
@@ -332,8 +344,69 @@ static void a_grab_reports_its_ground_height_once(void) {
   close_ridge_view(&view);
 }
 
+static void set_exaggeration(const ridge_view* view, double exaggeration) {
+  char terrain[64];
+  const int written = snprintf(
+    terrain, sizeof(terrain), "{\"source\":\"dem\",\"exaggeration\":%.6f}",
+    exaggeration
+  );
+  TEST_ASSERT_TRUE(written > 0 && (size_t)written < sizeof(terrain));
+  MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(
+    view->map, mln_buffer_view_from_cstr(terrain), &completion.descriptor, NULL
+  ));
+  mln_test_render_until_idle(view->runtime, view->map, &view->fixture);
+}
+
+// Grabs the ground under a point high on the screen and lifts the finger, and
+// returns the grab events that the grab's frame queued.
+static grab_events grab_once(const ridge_view* view) {
+  const mln_screen_point high = {.x = 195, .y = 200};
+  touch_down(view, high);
+  render_frame(view);
+  const grab_events events = drain_grabs(view);
+  lift(view);
+  return events;
+}
+
+// A grab reports a height that differs from the last one reported by a
+// centimeter or more. Every grab of the 1000 m plateau reads the plateau's
+// height times the exaggeration, so an exaggeration a few millionths above 1
+// moves the grabbed ground by a fraction of a centimeter. The raycast finds
+// the ground to within a thousandth of a pixel along the ground, so the view
+// is at zoom 18, where that is under a millimeter, and grabs where the line of
+// sight is low. So close, the camera keeps its center on the ground, or it
+// would be inside the plateau.
+static void a_grab_reports_a_change_of_a_centimeter_or_more(void) {
+  ridge_view view = {0};
+  open_view_of(
+    &view,
+    (mln_test_dem_tile){
+      .bytes = mln_test_plateau_1000_png, .size = mln_test_plateau_1000_png_size
+    },
+    18.0, true, MLN_RUNTIME_EVENT_FLAG_MAP_TERRAIN_GRABBED_GROUND
+  );
+  drain_grabs(&view);
+  grab_events events = grab_once(&view);
+  TEST_ASSERT_EQUAL_size_t_MESSAGE(1, events.count, "the first grab");
+  TEST_ASSERT_DOUBLE_WITHIN(0.001, 1000.0, events.elevation_meters);
+
+  set_exaggeration(&view, 1.000005);
+  TEST_ASSERT_EQUAL_size_t_MESSAGE(
+    0, grab_once(&view).count, "ground half a centimeter higher"
+  );
+
+  set_exaggeration(&view, 1.00002);
+  events = grab_once(&view);
+  TEST_ASSERT_EQUAL_size_t_MESSAGE(
+    1, events.count, "ground two centimeters higher"
+  );
+  TEST_ASSERT_DOUBLE_WITHIN(0.001, 1000.02, events.elevation_meters);
+  close_ridge_view(&view);
+}
+
 MLN_TEST_GROUP {
   RUN_TEST(a_drag_keeps_the_ground_under_the_finger);
   RUN_TEST(a_pinch_keeps_the_ground_under_its_focal_point);
   RUN_TEST(a_grab_reports_its_ground_height_once);
+  RUN_TEST(a_grab_reports_a_change_of_a_centimeter_or_more);
 }

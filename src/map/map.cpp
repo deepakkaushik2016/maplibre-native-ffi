@@ -1101,7 +1101,10 @@ class GrabbedGroundReporter {
   void report(uint64_t grab_id, double elevation_meters) {
     delegate_.onTerrainGrabbedGroundElevation(grab_id, elevation_meters);
     // The same ground grabbed again along the same line of sight can read a
-    // height that differs in the last bits of the double.
+    // height that differs in the last bits of the double: about 1e-12 m on the
+    // Android emulator. A centimeter is ten orders of magnitude above that
+    // noise and far below any real change in the ground's height, so a smaller
+    // change is no change.
     constexpr double unchanged_meters = 0.01;
     if (std::abs(elevation_meters - last_reported_) < unchanged_meters) return;
     last_reported_ = elevation_meters;
