@@ -209,7 +209,7 @@ static void a_drag_keeps_the_ground_under_the_finger(void) {
 // focal point up and to the right, in 20 steps with a frame after each. Each
 // step is one delta: the focal point's movement as offset, the step's scale
 // and rotation, and where the focal point is now as anchor. Every frame draws
-// the ground the focal point grabbed under the focal point.
+// the ground the focal point grabbed within half a pixel of the focal point.
 static void a_pinch_keeps_the_ground_under_its_focal_point(void) {
   ridge_view view = {0};
   open_ridge_view(&view, true, MLN_RUNTIME_EVENT_FLAG_NONE);
@@ -241,10 +241,10 @@ static void a_pinch_keeps_the_ground_under_its_focal_point(void) {
   mln_test_render_until_idle(view.runtime, view.map, &view.fixture);
 
   TEST_ASSERT_LESS_THAN_DOUBLE_MESSAGE(
-    2.0, farthest, "the grabbed ground left the focal point"
+    0.5, farthest, "the grabbed ground left the focal point"
   );
   TEST_ASSERT_LESS_THAN_DOUBLE_MESSAGE(
-    2.0, drawn_distance(&view, grabbed, focal),
+    0.5, drawn_distance(&view, grabbed, focal),
     "the ground left the focal point after the fingers lifted"
   );
   close_ridge_view(&view);
