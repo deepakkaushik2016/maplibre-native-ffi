@@ -2447,6 +2447,41 @@ int mln_test_graphics_vulkan_timeline_wait(
   return -1;
 }
 
+bool mln_test_graphics_vulkan_sync_files_supported(
+  mln_test_graphics* graphics
+) {
+#if !defined(__EMSCRIPTEN__)
+  if (graphics->context.backend != MLN_TEST_GRAPHICS_BACKEND_VULKAN)
+    return false;
+  PFN_vkGetPhysicalDeviceExternalSemaphoreProperties get_properties =
+    (PFN_vkGetPhysicalDeviceExternalSemaphoreProperties)vulkan_proc(
+      graphics, "vkGetPhysicalDeviceExternalSemaphoreProperties"
+    );
+  if (get_properties == NULL) return false;
+  const VkPhysicalDeviceExternalSemaphoreInfo sync_fd = {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO,
+    .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT,
+  };
+  VkExternalSemaphoreProperties properties = {
+    .sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES,
+  };
+  get_properties(
+    (VkPhysicalDevice)graphics->context.vulkan_physical_device, &sync_fd,
+    &properties
+  );
+  const VkExternalSemaphoreFeatureFlags both =
+    VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT |
+    VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT;
+  VkDevice device = (VkDevice)graphics->context.vulkan_device;
+  return (properties.externalSemaphoreFeatures & both) == both &&
+         graphics->vk.get_device_proc_addr(device, "vkGetSemaphoreFdKHR") &&
+         graphics->vk.get_device_proc_addr(device, "vkImportSemaphoreFdKHR");
+#else
+  (void)graphics;
+  return false;
+#endif
+}
+
 #if defined(_WIN32)
 uint64_t mln_test_graphics_vulkan_d3d12_fence_create(
   mln_test_graphics* graphics, uint64_t* out_handle

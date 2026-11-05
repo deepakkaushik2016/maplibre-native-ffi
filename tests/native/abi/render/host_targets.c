@@ -535,13 +535,20 @@ static void vulkan_images_go_to_their_owner_between_frames(void) {
 
 #if !defined(_WIN32) && \
   (defined(MLN_FFI_TEST_BACKEND_VULKAN) || defined(MLN_FFI_TEST_OPENGL_EGL))
-// Builds whose CI drivers hand out sync files: Android's for Vulkan. Mesa's
-// software drivers need udmabuf for them, which CI's Linux kernels lack.
-#if defined(__ANDROID__) && defined(MLN_FFI_TEST_BACKEND_VULKAN)
-#define SYNC_FILES_REQUIRED 1
+// Whether the session must hand out sync files: a Vulkan device that exports
+// and imports them has them, as Android's GPUs do. The Android emulator's
+// Android 14 image and Mesa's software drivers, which need udmabuf for them,
+// have none, and neither need an EGL display's.
+static bool sync_files_required(mln_test_render_fixture* fixture) {
+#if defined(MLN_FFI_TEST_BACKEND_VULKAN)
+  return mln_test_graphics_vulkan_sync_files_supported(
+    mln_test_render_fixture_graphics(fixture)
+  );
 #else
-#define SYNC_FILES_REQUIRED 0
+  (void)fixture;
+  return false;
 #endif
+}
 
 static void sync_files_order_frame_reads_and_slot_reuse(void) {
   mln_runtime runtime = mln_test_create_runtime();
@@ -563,7 +570,9 @@ static void sync_files_order_frame_reads_and_slot_reuse(void) {
   );
   if (capabilities.producer_sync_kind != MLN_GPU_SYNC_SYNC_FD) {
     TEST_ASSERT_FALSE_MESSAGE(
-      SYNC_FILES_REQUIRED, "this target's driver hands out no sync files"
+      sync_files_required(&fixture),
+      "the Vulkan device exports and imports sync files, but the session "
+      "hands out none"
     );
     TEST_ASSERT_EQUAL_UINT32(
       MLN_GPU_SYNC_CPU_COMPLETE, capabilities.producer_sync_kind

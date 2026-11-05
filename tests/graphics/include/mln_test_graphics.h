@@ -173,6 +173,14 @@ MLN_TEST_GRAPHICS_API int mln_test_graphics_vulkan_timeline_wait(
   uint64_t value, uint64_t timeout_nanoseconds
 );
 
+// Whether a Vulkan graphics object's device exports and imports its
+// semaphores' payloads as sync files: the device reports both for
+// VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT and resolves the
+// VK_KHR_external_semaphore_fd commands. False for any other backend.
+MLN_TEST_GRAPHICS_API bool mln_test_graphics_vulkan_sync_files_supported(
+  mln_test_graphics* MLN_TEST_GRAPHICS_NONNULL graphics
+);
+
 // Creates a timeline VkSemaphore at zero that a Vulkan graphics object's
 // device shares as a D3D12 fence, stores the fence's NT handle in *out_handle,
 // and returns the semaphore's handle's bit pattern, or zero on failure. Close
