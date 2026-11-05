@@ -99,6 +99,15 @@ it slows, so it can match how your platform scrolls.
 
 <Snippet page="camera" region="gesture" />
 
+Over terrain, also send where the finger is now as the anchor of a drag's delta,
+and the pinch's movement as the offset of its delta. The map then grabs the
+ground drawn under the finger, or under the pinch's center, at that ground's own
+height, and keeps it there for the rest of the gesture, as long as each delta
+starts where the last one left the finger. The frame after the grab finds the
+ground's height, which [](api:MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND)
+reports. Until then the map moves the ground at the height of the camera's
+center.
+
 ## Convert coordinates
 
 A [](api:mln_map_projection) converts between screen points and coordinates for
