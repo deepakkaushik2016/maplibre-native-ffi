@@ -1489,6 +1489,21 @@ typedef struct {
 } MaplibreNativeFfiRuntimeEventOfflineRegionTileCountLimit;
 
 /**
+ * MaplibreNativeFfiRuntimeEventTerrainGrabbedGround:
+ * @elevation_meters: The grabbed ground's height in meters above sea level, as
+ *   the terrain draws it, with the style's terrain exaggeration applied.
+ *
+ * The details of
+ * `MAPLIBRE_NATIVE_FFI_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND`.
+ *
+ * See `mln_runtime_event_terrain_grabbed_ground` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+ */
+typedef struct {
+  gdouble elevation_meters;
+} MaplibreNativeFfiRuntimeEventTerrainGrabbedGround;
+
+/**
  * MaplibreNativeFfiStyleExpressionInfo:
  * @is_feature_constant: True when the result doesn't depend on the feature or
  *   its state.
@@ -13367,6 +13382,39 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(
   maplibre_native_ffi_runtime_event_sprite_free
 )
 
+GType maplibre_native_ffi_runtime_event_terrain_grabbed_ground_get_type(
+  void
+) G_GNUC_CONST;
+#define MAPLIBRE_NATIVE_FFI_TYPE_RUNTIME_EVENT_TERRAIN_GRABBED_GROUND \
+  (maplibre_native_ffi_runtime_event_terrain_grabbed_ground_get_type())
+
+/**
+ * maplibre_native_ffi_runtime_event_terrain_grabbed_ground_copy:
+ *
+ * Copies the value.
+ *
+ * Returns: (transfer full): the copy
+ */
+MaplibreNativeFfiRuntimeEventTerrainGrabbedGround*
+maplibre_native_ffi_runtime_event_terrain_grabbed_ground_copy(
+  const MaplibreNativeFfiRuntimeEventTerrainGrabbedGround* self
+);
+
+/**
+ * maplibre_native_ffi_runtime_event_terrain_grabbed_ground_free:
+ * @self: (transfer full) (nullable): the value
+ *
+ * Frees the value.
+ */
+void maplibre_native_ffi_runtime_event_terrain_grabbed_ground_free(
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround* self
+);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround,
+  maplibre_native_ffi_runtime_event_terrain_grabbed_ground_free
+)
+
 /**
  * MaplibreNativeFfiRuntimeEventPayload:
  *
@@ -13653,6 +13701,29 @@ gboolean maplibre_native_ffi_runtime_event_payload_is_sprite(
  */
 MaplibreNativeFfiRuntimeEventSprite*
 maplibre_native_ffi_runtime_event_payload_get_sprite(
+  const MaplibreNativeFfiRuntimeEventPayload* self
+);
+
+/**
+ * maplibre_native_ffi_runtime_event_payload_is_terrain_grabbed_ground:
+ *
+ * Whether the value holds `maplibre_native_ffi_runtime_event_payload_get_terrain_grabbed_ground`.
+ *
+ * Returns: whether the value holds the variant
+ */
+gboolean maplibre_native_ffi_runtime_event_payload_is_terrain_grabbed_ground(
+  const MaplibreNativeFfiRuntimeEventPayload* self
+);
+
+/**
+ * maplibre_native_ffi_runtime_event_payload_get_terrain_grabbed_ground:
+ *
+ * The `terrain_grabbed_ground` variant.
+ *
+ * Returns: (transfer none): the value
+ */
+MaplibreNativeFfiRuntimeEventTerrainGrabbedGround*
+maplibre_native_ffi_runtime_event_payload_get_terrain_grabbed_ground(
   const MaplibreNativeFfiRuntimeEventPayload* self
 );
 

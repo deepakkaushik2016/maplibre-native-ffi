@@ -81,4 +81,16 @@ public enum RuntimeEventType : uint
     MapSpriteRequested = 23,
     MapSpriteLoaded = 24,
     MapSpriteError = 25,
+
+    /// <summary>
+    /// The map learned the height of the ground that a gesture's anchored pan
+    /// grabbed, from the frame after the grab.
+    /// </summary>
+    /// <remarks>
+    /// Until it arrives, the pan moves the ground at the height of the camera's
+    /// center, and once it arrives the map puts the grabbed ground back under
+    /// the finger. It comes only when the height differs from the last one this
+    /// map reported.
+    /// </remarks>
+    MapTerrainGrabbedGround = 26,
 }

@@ -2610,6 +2610,10 @@ internal fun readRuntimeEvent(source: Long): RuntimeEvent =
             )
           10u -> RuntimeEventPayload.Glyphs(readRuntimeEventGlyphs(source + w(40, 48, 36)))
           11u -> RuntimeEventPayload.Sprite(readRuntimeEventSprite(source + w(40, 48, 36)))
+          12u ->
+            RuntimeEventPayload.TerrainGrabbedGround(
+              readRuntimeEventTerrainGrabbedGround(source + w(40, 48, 36)),
+            )
           0u -> RuntimeEventPayload.None
           else ->
             RuntimeEventPayload.Unknown(
@@ -2835,6 +2839,10 @@ internal fun readRuntimeEventGlyphs(source: Long): RuntimeEventGlyphs =
 @JvmSynthetic
 internal fun readRuntimeEventSprite(source: Long): RuntimeEventSprite =
   RuntimeEventSprite(id = readViewString(source), url = readViewString(source + w(8, 16)))
+
+@JvmSynthetic
+internal fun readRuntimeEventTerrainGrabbedGround(source: Long): RuntimeEventTerrainGrabbedGround =
+  RuntimeEventTerrainGrabbedGround(elevationMeters = readF64(source))
 
 @JvmSynthetic
 internal fun readCameraVelocity(source: Long): CameraVelocity =

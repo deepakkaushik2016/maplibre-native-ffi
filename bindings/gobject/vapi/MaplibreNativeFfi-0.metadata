@@ -42,6 +42,7 @@ RuntimeEventOfflineRegionResponseError struct
 RuntimeEventOfflineRegionStatus struct
 RuntimeEventOfflineRegionTileCountLimit struct
 RuntimeEventRenderFrame struct
+RuntimeEventTerrainGrabbedGround struct
 ScreenBox struct
 ScreenPoint struct
 StyleExpressionInfo struct

@@ -37,7 +37,8 @@ public enum RuntimeEventFlag : ulong
     MapSpriteRequested = 8388608,
     MapSpriteLoaded = 16777216,
     MapSpriteError = 33554432,
-    AllMapEvents = 66191358,
+    MapTerrainGrabbedGround = 67108864,
+    AllMapEvents = 133300222,
     AllRuntimeEvents = 917504,
-    All = 67108862,
+    All = 134217726,
 }

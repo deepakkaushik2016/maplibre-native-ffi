@@ -807,6 +807,17 @@ class SessionFrameObserver final : public mln::RendererObserver {
     }
   }
 
+  // Reported once per grab, on the frame after it, whether or not the
+  // frame's own callbacks reach the map: the map puts the grabbed ground
+  // under the finger once it knows the ground's height.
+  void onTerrainGrabbedGroundElevation(
+    uint64_t grab_id, double elevation_meters
+  ) override {
+    if (delegate_ != nullptr) {
+      delegate_->onTerrainGrabbedGroundElevation(grab_id, elevation_meters);
+    }
+  }
+
   void onStyleImageMissing(
     const std::string& id, const StyleImageMissingCallback& done
   ) override {

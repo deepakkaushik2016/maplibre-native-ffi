@@ -1210,8 +1210,12 @@ public struct RuntimeEvent: Equatable, Hashable, Sendable {
             .glyphs)) case MLN_RUNTIME_EVENT_PAYLOAD_SPRITE
                   .rawValue: return try .sprite(RuntimeEventSprite(raw: raw
             .payload
-            .sprite)) case MLN_RUNTIME_EVENT_PAYLOAD_NONE
-                  .rawValue: return .none default: return .unknown(
+            .sprite)) case MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND
+                  .rawValue: return .terrainGrabbedGround(
+          RuntimeEventTerrainGrabbedGround(raw: raw
+            .payload.terrain_grabbed_ground)
+        ) case MLN_RUNTIME_EVENT_PAYLOAD_NONE
+        .rawValue: return .none default: return .unknown(
           raw.payload_type.rawValue,
           recordBytes
             .map {
@@ -1307,10 +1311,13 @@ public struct RuntimeEventFlag: OptionSet, NativeOpenValue, Equatable, Hashable,
     .init(rawValue: 16_777_216)
   public static let mapSpriteError: RuntimeEventFlag =
     .init(rawValue: 33_554_432)
-  public static let allMapEvents: RuntimeEventFlag = .init(rawValue: 66_191_358)
+  public static let mapTerrainGrabbedGround: RuntimeEventFlag =
+    .init(rawValue: 67_108_864)
+  public static let allMapEvents: RuntimeEventFlag =
+    .init(rawValue: 133_300_222)
   public static let allRuntimeEvents: RuntimeEventFlag =
     .init(rawValue: 917_504)
-  public static let all: RuntimeEventFlag = .init(rawValue: 67_108_862)
+  public static let all: RuntimeEventFlag = .init(rawValue: 134_217_726)
 }
 
 /// The details of a glyph event.
@@ -1488,6 +1495,7 @@ public enum RuntimeEventPayload: Equatable, Hashable, Sendable {
   case offlineRegionTileCountLimit(RuntimeEventOfflineRegionTileCountLimit)
   case glyphs(RuntimeEventGlyphs)
   case sprite(RuntimeEventSprite)
+  case terrainGrabbedGround(RuntimeEventTerrainGrabbedGround)
   case none
   case unknown(UInt32, Data)
 }
@@ -1609,6 +1617,23 @@ public struct RuntimeEventStyleImage: Equatable, Hashable, Sendable {
   }
 }
 
+/// The details of `RuntimeEventType.mapTerrainGrabbedGround`.
+///
+/// See `mln_runtime_event_terrain_grabbed_ground` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+public struct RuntimeEventTerrainGrabbedGround: Equatable, Hashable, Sendable {
+  /// The grabbed ground's height in meters above sea level, as the terrain
+  /// draws it, with the style's terrain exaggeration applied.
+  public var elevationMeters: Double
+  public init(elevationMeters: Double = 0) {
+    self.elevationMeters = elevationMeters
+  }
+
+  init(raw: mln_runtime_event_terrain_grabbed_ground) {
+    elevationMeters = raw.elevation_meters
+  }
+}
+
 /// The details of `RuntimeEventType.mapTileAction`.
 ///
 /// See `mln_runtime_event_tile_action` in the
@@ -1702,6 +1727,15 @@ public struct RuntimeEventType: RawRepresentable, CustomStringConvertible,
   public static let mapSpriteRequested: RuntimeEventType = .init(rawValue: 23)
   public static let mapSpriteLoaded: RuntimeEventType = .init(rawValue: 24)
   public static let mapSpriteError: RuntimeEventType = .init(rawValue: 25)
+  /// The map learned the height of the ground that a gesture's anchored pan
+  /// grabbed, from the frame after the grab.
+  ///
+  /// Until it arrives, the pan moves the ground at the height of the camera's
+  /// center, and once it arrives the map puts the grabbed ground back under the
+  /// finger. It comes only when the height differs from the last one this map
+  /// reported.
+  public static let mapTerrainGrabbedGround: RuntimeEventType =
+    .init(rawValue: 26)
   public var description: String {
     switch rawValue {
     case 1: return "mapCameraWillChange"
@@ -1729,6 +1763,7 @@ public struct RuntimeEventType: RawRepresentable, CustomStringConvertible,
     case 23: return "mapSpriteRequested"
     case 24: return "mapSpriteLoaded"
     case 25: return "mapSpriteError"
+    case 26: return "mapTerrainGrabbedGround"
     default: return "RuntimeEventType(\(rawValue))"
     }
   }

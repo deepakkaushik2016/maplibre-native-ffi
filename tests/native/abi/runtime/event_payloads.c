@@ -10,6 +10,7 @@
 #include "support/map.h"
 #include "support/resources.h"
 #include "support/style.h"
+#include "support/terrain.h"
 #include "support/test_support.h"
 
 // A binding copies an undeclared payload kind as the bytes from the payload to
@@ -245,6 +246,7 @@ typedef enum scenario {
   SCENARIO_OFFLINE,
   SCENARIO_SOURCE_DESCRIPTION,
   SCENARIO_SPRITES_AND_GLYPHS,
+  SCENARIO_TERRAIN_GRAB,
   // No local input reaches the event; the row's reason says why.
   SCENARIO_UNREACHABLE,
 } scenario;
@@ -410,6 +412,15 @@ static void check_sprite(
 
 enum { MAP = MLN_RUNTIME_EVENT_SOURCE_MAP };
 
+static void check_terrain_grabbed_ground(
+  const recorded_event* record, const scenario_context* context
+) {
+  (void)context;
+  TEST_ASSERT_DOUBLE_WITHIN(
+    1.0, 1000.0, record->event.payload.terrain_grabbed_ground.elevation_meters
+  );
+}
+
 // A row that names only its type, scenario, and source has no payload or
 // message.
 static const payload_row payload_rows[] = {
@@ -488,6 +499,10 @@ static const payload_row payload_rows[] = {
    MLN_RUNTIME_EVENT_PAYLOAD_SPRITE, sizeof(mln_runtime_event_sprite),
    .message = MESSAGE_TEXT, .expected_message = unrouted_message,
    .check = check_sprite},
+  {MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND, SCENARIO_TERRAIN_GRAB, MAP,
+   MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND,
+   sizeof(mln_runtime_event_terrain_grabbed_ground),
+   .check = check_terrain_grabbed_ground},
 };
 
 static const size_t payload_row_count =
@@ -1192,6 +1207,52 @@ static void sprites_and_glyphs_name_the_resource_they_report(void) {
   mln_test_provider_destroy(provider);
 }
 
+// The 1000 m plateau under the terrain, seen from above.
+static const char plateau_style_json[] =
+  "{\"version\":8,\"center\":[11.39,47.27],\"zoom\":10,"
+  "\"sources\":{\"dem\":{\"type\":\"raster-dem\",\"tiles\":"
+  "[\"custom://dem/{z}/{x}/{y}.png\"],\"encoding\":\"mapbox\","
+  "\"tileSize\":256,\"maxzoom\":12}},\"terrain\":{\"source\":\"dem\"},"
+  "\"layers\":[]}";
+
+// A finger goes down on the plateau with an anchored pan that doesn't move,
+// and the next frame finds the height of the ground it grabbed.
+static void a_grab_reports_its_ground_height(void) {
+  const mln_test_dem_tile tile = {
+    .bytes = mln_test_plateau_1000_png, .size = mln_test_plateau_1000_png_size
+  };
+  const mln_resource_provider provider = mln_test_dem_provider(&tile);
+  mln_runtime runtime = mln_test_create_runtime();
+  MLN_TEST_OK(mln_test_set_resource_provider(runtime, &provider));
+  mln_map map = create_static_map(runtime, MLN_RUNTIME_EVENT_FLAG_ALL);
+  const scenario_context context = {.runtime = runtime, .map = map};
+  mln_test_load_style_and_wait(map, MLN_BUFFER_LITERAL(plateau_style_json));
+  mln_test_render_fixture fixture = {0};
+  TEST_ASSERT_TRUE(mln_test_render_fixture_create_offscreen(map, &fixture));
+  MLN_TEST_OK(render_still_image(&fixture, map, NULL, 0));
+  mln_test_drain_all(runtime);
+  event_log* log = &scenario_log;
+  log_reset(log);
+
+  const mln_camera_delta down = {
+    .size = sizeof(mln_camera_delta),
+    .fields = MLN_CAMERA_DELTA_OFFSET | MLN_CAMERA_DELTA_ANCHOR,
+    .anchor = {.x = 20.0, .y = 40.0},
+    .gesture_phase = MLN_GESTURE_PHASE_BEGIN,
+  };
+  MLN_TEST_AWAIT_OK(
+    mln_map_apply_camera_delta(map, &down, &completion.descriptor, NULL)
+  );
+  MLN_TEST_OK(render_still_image(&fixture, map, NULL, 0));
+  MLN_TEST_OK(mln_test_map_fence(map));
+  log_drain(runtime, log);
+  check_scenario_rows(SCENARIO_TERRAIN_GRAB, log, &context);
+
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 static bool sprite_error_logged(void* context) {
   scenario_context* scenario = context;
   log_drain_quietly(scenario->runtime, &scenario_log);
@@ -1279,5 +1340,6 @@ MLN_TEST_GROUP {
   RUN_TEST(a_source_reports_the_description_its_tilejson_brings);
   RUN_TEST(sprites_and_glyphs_name_the_resource_they_report);
   RUN_TEST(a_failed_sprite_names_itself_to_a_failed_still_image);
+  RUN_TEST(a_grab_reports_its_ground_height);
   RUN_TEST(a_map_created_with_an_empty_mask_queues_nothing);
 }

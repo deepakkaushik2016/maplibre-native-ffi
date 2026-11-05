@@ -2844,6 +2844,10 @@ RuntimeEventSprite _readRuntimeEventSprite(
   url: utf8.decode(_copyBufferView(source.url)),
 );
 
+RuntimeEventTerrainGrabbedGround _readRuntimeEventTerrainGrabbedGround(
+  raw.mln_runtime_event_terrain_grabbed_ground source,
+) => RuntimeEventTerrainGrabbedGround(elevationMeters: source.elevation_meters);
+
 RuntimeEvent _readRuntimeEvent(
   raw.mln_runtime_event source, {
   Uint8List Function()? rawRecord,
@@ -2892,6 +2896,11 @@ RuntimeEvent _readRuntimeEvent(
     ),
     11 => RuntimeEventPayloadSprite(
       _readRuntimeEventSprite(source.payload.sprite),
+    ),
+    12 => RuntimeEventPayloadTerrainGrabbedGround(
+      _readRuntimeEventTerrainGrabbedGround(
+        source.payload.terrain_grabbed_ground,
+      ),
     ),
     0 => const RuntimeEventPayloadNone(),
     final tag => RuntimeEventPayloadUnknown(

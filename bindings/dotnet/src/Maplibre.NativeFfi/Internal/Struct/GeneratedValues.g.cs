@@ -2267,6 +2267,10 @@ internal static unsafe class GeneratedValues
                     new RuntimeEvent.PayloadValue.Sprite(
                         CopyRuntimeEventSprite(value.payload.sprite)
                     ),
+                mln_runtime_event_payload_type.MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND =>
+                    new RuntimeEvent.PayloadValue.TerrainGrabbedGround(
+                        CopyRuntimeEventTerrainGrabbedGround(value.payload.terrain_grabbed_ground)
+                    ),
                 mln_runtime_event_payload_type.MLN_RUNTIME_EVENT_PAYLOAD_NONE =>
                     new RuntimeEvent.PayloadValue.None(),
                 _ => new RuntimeEvent.PayloadValue.Unknown(
@@ -2385,6 +2389,10 @@ internal static unsafe class GeneratedValues
     internal static RuntimeEventStyleImage CopyRuntimeEventStyleImage(
         mln_runtime_event_style_image value
     ) => new(RuntimeStructs.CopyUtf8((sbyte*)value.image_id.data, value.image_id.size));
+
+    internal static RuntimeEventTerrainGrabbedGround CopyRuntimeEventTerrainGrabbedGround(
+        mln_runtime_event_terrain_grabbed_ground value
+    ) => new(value.elevation_meters);
 
     internal static RuntimeEventTileAction CopyRuntimeEventTileAction(
         mln_runtime_event_tile_action value

@@ -148,6 +148,16 @@ typedef enum mln_runtime_event_type : uint32_t {
   MLN_RUNTIME_EVENT_MAP_SPRITE_REQUESTED = 23,
   MLN_RUNTIME_EVENT_MAP_SPRITE_LOADED = 24,
   MLN_RUNTIME_EVENT_MAP_SPRITE_ERROR = 25,
+  /**
+   * The map learned the height of the ground that a gesture's anchored pan
+   * grabbed, from the frame after the grab.
+   *
+   * Until it arrives, the pan moves the ground at the height of the camera's
+   * center, and once it arrives the map puts the grabbed ground back under the
+   * finger. It comes only when the height differs from the last one this map
+   * reported.
+   */
+  MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND = 26,
 } mln_runtime_event_type;
 
 /** An event type, as a bit in a set. */
@@ -202,6 +212,8 @@ typedef enum MLN_BINDING("kind=bitmask") mln_runtime_event_flag : uint64_t {
     << MLN_RUNTIME_EVENT_MAP_SPRITE_LOADED,
   MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_ERROR = 1ULL
     << MLN_RUNTIME_EVENT_MAP_SPRITE_ERROR,
+  MLN_RUNTIME_EVENT_FLAG_MAP_TERRAIN_GRABBED_GROUND = 1ULL
+    << MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND,
   MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS =
       MLN_RUNTIME_EVENT_FLAG_MAP_CAMERA_WILL_CHANGE |
     MLN_RUNTIME_EVENT_FLAG_MAP_CAMERA_IS_CHANGING |
@@ -223,7 +235,8 @@ typedef enum MLN_BINDING("kind=bitmask") mln_runtime_event_flag : uint64_t {
     MLN_RUNTIME_EVENT_FLAG_MAP_GLYPHS_ERROR |
     MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_REQUESTED |
     MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_LOADED |
-    MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_ERROR,
+    MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_ERROR |
+    MLN_RUNTIME_EVENT_FLAG_MAP_TERRAIN_GRABBED_GROUND,
   MLN_RUNTIME_EVENT_FLAG_ALL_RUNTIME_EVENTS =
       MLN_RUNTIME_EVENT_FLAG_OFFLINE_REGION_STATUS_CHANGED |
     MLN_RUNTIME_EVENT_FLAG_OFFLINE_REGION_RESPONSE_ERROR |
@@ -255,6 +268,7 @@ typedef enum mln_runtime_event_payload_type : uint32_t {
   MLN_RUNTIME_EVENT_PAYLOAD_OFFLINE_REGION_TILE_COUNT_LIMIT = 9,
   MLN_RUNTIME_EVENT_PAYLOAD_GLYPHS = 10,
   MLN_RUNTIME_EVENT_PAYLOAD_SPRITE = 11,
+  MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND = 12,
 } mln_runtime_event_payload_type;
 
 /** Whether a camera change jumps or animates. */
@@ -498,6 +512,15 @@ typedef struct mln_runtime_event_sprite {
   mln_buffer_view url;
 } mln_runtime_event_sprite;
 
+/** The details of MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND. */
+typedef struct mln_runtime_event_terrain_grabbed_ground {
+  /**
+   * The grabbed ground's height in meters above sea level, as the terrain
+   * draws it, with the style's terrain exaggeration applied.
+   */
+  double elevation_meters;
+} mln_runtime_event_terrain_grabbed_ground;
+
 /** The details of MLN_RUNTIME_EVENT_OFFLINE_REGION_STATUS_CHANGED. */
 typedef struct mln_runtime_event_offline_region_status {
   mln_offline_region_id region_id;
@@ -550,6 +573,8 @@ typedef union mln_runtime_event_payload {
     MLN_BINDING("variant=MLN_RUNTIME_EVENT_PAYLOAD_GLYPHS");
   mln_runtime_event_sprite sprite
     MLN_BINDING("variant=MLN_RUNTIME_EVENT_PAYLOAD_SPRITE");
+  mln_runtime_event_terrain_grabbed_ground terrain_grabbed_ground
+    MLN_BINDING("variant=MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND");
 } mln_runtime_event_payload;
 
 /** An event that a runtime or one of its maps raised. */

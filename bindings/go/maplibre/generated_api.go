@@ -1155,6 +1155,7 @@ const (
 	RuntimeEventFlagMapSpriteRequested                  RuntimeEventFlag = RuntimeEventFlag(C.MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_REQUESTED)
 	RuntimeEventFlagMapSpriteLoaded                     RuntimeEventFlag = RuntimeEventFlag(C.MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_LOADED)
 	RuntimeEventFlagMapSpriteError                      RuntimeEventFlag = RuntimeEventFlag(C.MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_ERROR)
+	RuntimeEventFlagMapTerrainGrabbedGround             RuntimeEventFlag = RuntimeEventFlag(C.MLN_RUNTIME_EVENT_FLAG_MAP_TERRAIN_GRABBED_GROUND)
 	RuntimeEventFlagAllMapEvents                        RuntimeEventFlag = RuntimeEventFlag(C.MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS)
 	RuntimeEventFlagAllRuntimeEvents                    RuntimeEventFlag = RuntimeEventFlag(C.MLN_RUNTIME_EVENT_FLAG_ALL_RUNTIME_EVENTS)
 	RuntimeEventFlagAll                                 RuntimeEventFlag = RuntimeEventFlag(C.MLN_RUNTIME_EVENT_FLAG_ALL)
@@ -1163,7 +1164,7 @@ const (
 func (value RuntimeEventFlag) Has(flags RuntimeEventFlag) bool { return value&flags == flags }
 
 func (value RuntimeEventFlag) String() string {
-	return bindingFlagString(uint64(value), []bindingFlag{{2, "RuntimeEventFlagMapCameraWillChange"}, {4, "RuntimeEventFlagMapCameraIsChanging"}, {8, "RuntimeEventFlagMapCameraDidChange"}, {16, "RuntimeEventFlagMapStyleLoaded"}, {32, "RuntimeEventFlagMapLoadingStarted"}, {64, "RuntimeEventFlagMapLoadingFinished"}, {128, "RuntimeEventFlagMapLoadingFailed"}, {256, "RuntimeEventFlagMapIdle"}, {512, "RuntimeEventFlagMapRenderError"}, {1024, "RuntimeEventFlagMapRenderFrameStarted"}, {2048, "RuntimeEventFlagMapRenderFrameFinished"}, {4096, "RuntimeEventFlagMapRenderMapStarted"}, {8192, "RuntimeEventFlagMapRenderMapFinished"}, {16384, "RuntimeEventFlagMapStyleImageMissing"}, {32768, "RuntimeEventFlagMapTileAction"}, {65536, "RuntimeEventFlagMapSourceChanged"}, {131072, "RuntimeEventFlagOfflineRegionStatusChanged"}, {262144, "RuntimeEventFlagOfflineRegionResponseError"}, {524288, "RuntimeEventFlagOfflineRegionTileCountLimitExceeded"}, {1048576, "RuntimeEventFlagMapGlyphsRequested"}, {2097152, "RuntimeEventFlagMapGlyphsLoaded"}, {4194304, "RuntimeEventFlagMapGlyphsError"}, {8388608, "RuntimeEventFlagMapSpriteRequested"}, {16777216, "RuntimeEventFlagMapSpriteLoaded"}, {33554432, "RuntimeEventFlagMapSpriteError"}})
+	return bindingFlagString(uint64(value), []bindingFlag{{2, "RuntimeEventFlagMapCameraWillChange"}, {4, "RuntimeEventFlagMapCameraIsChanging"}, {8, "RuntimeEventFlagMapCameraDidChange"}, {16, "RuntimeEventFlagMapStyleLoaded"}, {32, "RuntimeEventFlagMapLoadingStarted"}, {64, "RuntimeEventFlagMapLoadingFinished"}, {128, "RuntimeEventFlagMapLoadingFailed"}, {256, "RuntimeEventFlagMapIdle"}, {512, "RuntimeEventFlagMapRenderError"}, {1024, "RuntimeEventFlagMapRenderFrameStarted"}, {2048, "RuntimeEventFlagMapRenderFrameFinished"}, {4096, "RuntimeEventFlagMapRenderMapStarted"}, {8192, "RuntimeEventFlagMapRenderMapFinished"}, {16384, "RuntimeEventFlagMapStyleImageMissing"}, {32768, "RuntimeEventFlagMapTileAction"}, {65536, "RuntimeEventFlagMapSourceChanged"}, {131072, "RuntimeEventFlagOfflineRegionStatusChanged"}, {262144, "RuntimeEventFlagOfflineRegionResponseError"}, {524288, "RuntimeEventFlagOfflineRegionTileCountLimitExceeded"}, {1048576, "RuntimeEventFlagMapGlyphsRequested"}, {2097152, "RuntimeEventFlagMapGlyphsLoaded"}, {4194304, "RuntimeEventFlagMapGlyphsError"}, {8388608, "RuntimeEventFlagMapSpriteRequested"}, {16777216, "RuntimeEventFlagMapSpriteLoaded"}, {33554432, "RuntimeEventFlagMapSpriteError"}, {67108864, "RuntimeEventFlagMapTerrainGrabbedGround"}})
 }
 
 // RuntimeEventSourceType corresponds to mln_runtime_event_source_type. The kind
@@ -1238,6 +1239,14 @@ const (
 	RuntimeEventTypeMapSpriteRequested                  RuntimeEventType = RuntimeEventType(C.MLN_RUNTIME_EVENT_MAP_SPRITE_REQUESTED)
 	RuntimeEventTypeMapSpriteLoaded                     RuntimeEventType = RuntimeEventType(C.MLN_RUNTIME_EVENT_MAP_SPRITE_LOADED)
 	RuntimeEventTypeMapSpriteError                      RuntimeEventType = RuntimeEventType(C.MLN_RUNTIME_EVENT_MAP_SPRITE_ERROR)
+	// The map learned the height of the ground that a gesture's anchored pan
+	// grabbed, from the frame after the grab.
+	//
+	// Until it arrives, the pan moves the ground at the height of the camera's
+	// center, and once it arrives the map puts the grabbed ground back under the
+	// finger. It comes only when the height differs from the last one this map
+	// reported.
+	RuntimeEventTypeMapTerrainGrabbedGround RuntimeEventType = RuntimeEventType(C.MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND)
 )
 
 func (value RuntimeEventType) String() string {
@@ -1292,6 +1301,8 @@ func (value RuntimeEventType) String() string {
 		return "RuntimeEventTypeMapSpriteLoaded"
 	case 25:
 		return "RuntimeEventTypeMapSpriteError"
+	case 26:
+		return "RuntimeEventTypeMapTerrainGrabbedGround"
 	}
 	return fmt.Sprintf("RuntimeEventType(%d)", value)
 }
@@ -2019,6 +2030,15 @@ func (RuntimeEventPayloadSpriteVariant) bindingTag() uint32 {
 	return uint32(C.MLN_RUNTIME_EVENT_PAYLOAD_SPRITE)
 }
 func (RuntimeEventPayloadSpriteVariant) isRuntimeEventPayload() {}
+
+type RuntimeEventPayloadTerrainGrabbedGroundVariant struct {
+	Value RuntimeEventTerrainGrabbedGround
+}
+
+func (RuntimeEventPayloadTerrainGrabbedGroundVariant) bindingTag() uint32 {
+	return uint32(C.MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND)
+}
+func (RuntimeEventPayloadTerrainGrabbedGroundVariant) isRuntimeEventPayload() {}
 
 // AnchoredMomentum corresponds to mln_anchored_momentum. How a gesture's zoom,
 // bearing, or pitch keeps changing after release.
@@ -5302,6 +5322,8 @@ func copyRuntimeEvent(raw C.mln_runtime_event) RuntimeEvent {
 			return RuntimeEventPayloadGlyphsVariant{Value: copyRuntimeEventGlyphs(bindingUnionLoad[C.mln_runtime_event_glyphs](raw.payload[:]))}
 		case C.MLN_RUNTIME_EVENT_PAYLOAD_SPRITE:
 			return RuntimeEventPayloadSpriteVariant{Value: copyRuntimeEventSprite(bindingUnionLoad[C.mln_runtime_event_sprite](raw.payload[:]))}
+		case C.MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND:
+			return RuntimeEventPayloadTerrainGrabbedGroundVariant{Value: copyRuntimeEventTerrainGrabbedGround(bindingUnionLoad[C.mln_runtime_event_terrain_grabbed_ground](raw.payload[:]))}
 		case C.MLN_RUNTIME_EVENT_PAYLOAD_NONE:
 			return nil
 		}
@@ -5512,6 +5534,24 @@ type RuntimeEventStyleImage struct{ ImageID string }
 func copyRuntimeEventStyleImage(raw C.mln_runtime_event_style_image) RuntimeEventStyleImage {
 	var result RuntimeEventStyleImage
 	result.ImageID = bindingString(raw.image_id.data, uint64(raw.image_id.size))
+	return result
+}
+
+// RuntimeEventTerrainGrabbedGround corresponds to
+// mln_runtime_event_terrain_grabbed_ground. The details of
+// RuntimeEventTypeMapTerrainGrabbedGround.
+//
+// See mln_runtime_event_terrain_grabbed_ground in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html
+type RuntimeEventTerrainGrabbedGround struct {
+	// The grabbed ground's height in meters above sea level, as the terrain draws
+	// it, with the style's terrain exaggeration applied.
+	ElevationMeters float64
+}
+
+func copyRuntimeEventTerrainGrabbedGround(raw C.mln_runtime_event_terrain_grabbed_ground) RuntimeEventTerrainGrabbedGround {
+	var result RuntimeEventTerrainGrabbedGround
+	result.ElevationMeters = float64(raw.elevation_meters)
 	return result
 }
 

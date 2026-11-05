@@ -59,6 +59,9 @@ public readonly partial record struct RuntimeEvent(
 
         public sealed record Sprite(RuntimeEventSprite Value) : PayloadValue;
 
+        public sealed record TerrainGrabbedGround(RuntimeEventTerrainGrabbedGround Value)
+            : PayloadValue;
+
         public sealed record None : PayloadValue;
 
         public sealed record Unknown : PayloadValue

@@ -2256,6 +2256,7 @@ public class RuntimeEventFlag(@get:JvmName("getRawValue") public val rawValue: U
         8388608uL to "MAP_SPRITE_REQUESTED",
         16777216uL to "MAP_SPRITE_LOADED",
         33554432uL to "MAP_SPRITE_ERROR",
+        67108864uL to "MAP_TERRAIN_GRABBED_GROUND",
       ),
     )
 
@@ -2377,16 +2378,21 @@ public class RuntimeEventFlag(@get:JvmName("getRawValue") public val rawValue: U
     public val MAP_SPRITE_ERROR: RuntimeEventFlag = RuntimeEventFlag(MAP_SPRITE_ERROR_VALUE)
     /** The `rawValue` of [MAP_SPRITE_ERROR]. */
     public const val MAP_SPRITE_ERROR_VALUE: ULong = 33554432uL
+    @JvmField
+    public val MAP_TERRAIN_GRABBED_GROUND: RuntimeEventFlag =
+      RuntimeEventFlag(MAP_TERRAIN_GRABBED_GROUND_VALUE)
+    /** The `rawValue` of [MAP_TERRAIN_GRABBED_GROUND]. */
+    public const val MAP_TERRAIN_GRABBED_GROUND_VALUE: ULong = 67108864uL
     @JvmField public val ALL_MAP_EVENTS: RuntimeEventFlag = RuntimeEventFlag(ALL_MAP_EVENTS_VALUE)
     /** The `rawValue` of [ALL_MAP_EVENTS]. */
-    public const val ALL_MAP_EVENTS_VALUE: ULong = 66191358uL
+    public const val ALL_MAP_EVENTS_VALUE: ULong = 133300222uL
     @JvmField
     public val ALL_RUNTIME_EVENTS: RuntimeEventFlag = RuntimeEventFlag(ALL_RUNTIME_EVENTS_VALUE)
     /** The `rawValue` of [ALL_RUNTIME_EVENTS]. */
     public const val ALL_RUNTIME_EVENTS_VALUE: ULong = 917504uL
     @JvmField public val ALL: RuntimeEventFlag = RuntimeEventFlag(ALL_VALUE)
     /** The `rawValue` of [ALL]. */
-    public const val ALL_VALUE: ULong = 67108862uL
+    public const val ALL_VALUE: ULong = 134217726uL
 
     /**
      * Returns the constant whose `rawValue` is [rawValue], or a new flag set that holds its bits.
@@ -2421,6 +2427,7 @@ public class RuntimeEventFlag(@get:JvmName("getRawValue") public val rawValue: U
         MAP_SPRITE_REQUESTED_VALUE -> MAP_SPRITE_REQUESTED
         MAP_SPRITE_LOADED_VALUE -> MAP_SPRITE_LOADED
         MAP_SPRITE_ERROR_VALUE -> MAP_SPRITE_ERROR
+        MAP_TERRAIN_GRABBED_GROUND_VALUE -> MAP_TERRAIN_GRABBED_GROUND
         ALL_MAP_EVENTS_VALUE -> ALL_MAP_EVENTS
         ALL_RUNTIME_EVENTS_VALUE -> ALL_RUNTIME_EVENTS
         ALL_VALUE -> ALL
@@ -2510,6 +2517,7 @@ public class RuntimeEventType(@get:JvmName("getRawValue") public val rawValue: U
       23u -> "MAP_SPRITE_REQUESTED"
       24u -> "MAP_SPRITE_LOADED"
       25u -> "MAP_SPRITE_ERROR"
+      26u -> "MAP_TERRAIN_GRABBED_GROUND"
       else -> "RuntimeEventType($rawValue)"
     }
 
@@ -2643,6 +2651,19 @@ public class RuntimeEventType(@get:JvmName("getRawValue") public val rawValue: U
     public val MAP_SPRITE_ERROR: RuntimeEventType = RuntimeEventType(MAP_SPRITE_ERROR_VALUE)
     /** The `rawValue` of [MAP_SPRITE_ERROR]. */
     public const val MAP_SPRITE_ERROR_VALUE: UInt = 25u
+    /**
+     * The map learned the height of the ground that a gesture's anchored pan grabbed, from the
+     * frame after the grab.
+     *
+     * Until it arrives, the pan moves the ground at the height of the camera's center, and once it
+     * arrives the map puts the grabbed ground back under the finger. It comes only when the height
+     * differs from the last one this map reported.
+     */
+    @JvmField
+    public val MAP_TERRAIN_GRABBED_GROUND: RuntimeEventType =
+      RuntimeEventType(MAP_TERRAIN_GRABBED_GROUND_VALUE)
+    /** The `rawValue` of [MAP_TERRAIN_GRABBED_GROUND]. */
+    public const val MAP_TERRAIN_GRABBED_GROUND_VALUE: UInt = 26u
 
     /** Returns the constant whose `rawValue` is [rawValue], or a new value that keeps it. */
     @JvmStatic
@@ -2674,6 +2695,7 @@ public class RuntimeEventType(@get:JvmName("getRawValue") public val rawValue: U
         MAP_SPRITE_REQUESTED_VALUE -> MAP_SPRITE_REQUESTED
         MAP_SPRITE_LOADED_VALUE -> MAP_SPRITE_LOADED
         MAP_SPRITE_ERROR_VALUE -> MAP_SPRITE_ERROR
+        MAP_TERRAIN_GRABBED_GROUND_VALUE -> MAP_TERRAIN_GRABBED_GROUND
         else -> RuntimeEventType(rawValue)
       }
   }
@@ -8463,6 +8485,20 @@ public data class RuntimeEventSprite(
 )
 
 /**
+ * The details of `RuntimeEventType.MAP_TERRAIN_GRABBED_GROUND`.
+ *
+ * See `mln_runtime_event_terrain_grabbed_ground` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+ */
+public data class RuntimeEventTerrainGrabbedGround(
+  /**
+   * The grabbed ground's height in meters above sea level, as the terrain draws it, with the
+   * style's terrain exaggeration applied.
+   */
+  public val elevationMeters: Double,
+)
+
+/**
  * The details of an event, in the member that its `payload_type` names.
  *
  * See `mln_runtime_event_payload` in the
@@ -8495,6 +8531,9 @@ public sealed interface RuntimeEventPayload {
   public data class Glyphs(public val value: RuntimeEventGlyphs) : RuntimeEventPayload
 
   public data class Sprite(public val value: RuntimeEventSprite) : RuntimeEventPayload
+
+  public data class TerrainGrabbedGround(public val value: RuntimeEventTerrainGrabbedGround) :
+    RuntimeEventPayload
 
   public data object None : RuntimeEventPayload
 

@@ -367,9 +367,10 @@ pub const MLN_RUNTIME_EVENT_FLAG_MAP_GLYPHS_ERROR: mln_runtime_event_flag = 4194
 pub const MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_REQUESTED: mln_runtime_event_flag = 8388608;
 pub const MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_LOADED: mln_runtime_event_flag = 16777216;
 pub const MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_ERROR: mln_runtime_event_flag = 33554432;
-pub const MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS: mln_runtime_event_flag = 66191358;
+pub const MLN_RUNTIME_EVENT_FLAG_MAP_TERRAIN_GRABBED_GROUND: mln_runtime_event_flag = 67108864;
+pub const MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS: mln_runtime_event_flag = 133300222;
 pub const MLN_RUNTIME_EVENT_FLAG_ALL_RUNTIME_EVENTS: mln_runtime_event_flag = 917504;
-pub const MLN_RUNTIME_EVENT_FLAG_ALL: mln_runtime_event_flag = 67108862;
+pub const MLN_RUNTIME_EVENT_FLAG_ALL: mln_runtime_event_flag = 134217726;
 pub type mln_runtime_event_payload_type = u32;
 pub const MLN_RUNTIME_EVENT_PAYLOAD_NONE: mln_runtime_event_payload_type = 0;
 pub const MLN_RUNTIME_EVENT_PAYLOAD_CAMERA_CHANGE: mln_runtime_event_payload_type = 1;
@@ -385,6 +386,7 @@ pub const MLN_RUNTIME_EVENT_PAYLOAD_OFFLINE_REGION_TILE_COUNT_LIMIT:
     mln_runtime_event_payload_type = 9;
 pub const MLN_RUNTIME_EVENT_PAYLOAD_GLYPHS: mln_runtime_event_payload_type = 10;
 pub const MLN_RUNTIME_EVENT_PAYLOAD_SPRITE: mln_runtime_event_payload_type = 11;
+pub const MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND: mln_runtime_event_payload_type = 12;
 pub type mln_runtime_event_source_type = u32;
 pub const MLN_RUNTIME_EVENT_SOURCE_RUNTIME: mln_runtime_event_source_type = 0;
 pub const MLN_RUNTIME_EVENT_SOURCE_MAP: mln_runtime_event_source_type = 1;
@@ -414,6 +416,7 @@ pub const MLN_RUNTIME_EVENT_MAP_GLYPHS_ERROR: mln_runtime_event_type = 22;
 pub const MLN_RUNTIME_EVENT_MAP_SPRITE_REQUESTED: mln_runtime_event_type = 23;
 pub const MLN_RUNTIME_EVENT_MAP_SPRITE_LOADED: mln_runtime_event_type = 24;
 pub const MLN_RUNTIME_EVENT_MAP_SPRITE_ERROR: mln_runtime_event_type = 25;
+pub const MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND: mln_runtime_event_type = 26;
 pub type mln_source_feature_query_option_field = u32;
 pub const MLN_SOURCE_FEATURE_QUERY_OPTION_SOURCE_LAYER_IDS: mln_source_feature_query_option_field =
     1;
@@ -1708,6 +1711,7 @@ pub union mln_runtime_event_payload {
     pub offline_region_tile_count_limit: mln_runtime_event_offline_region_tile_count_limit,
     pub glyphs: mln_runtime_event_glyphs,
     pub sprite: mln_runtime_event_sprite,
+    pub terrain_grabbed_ground: mln_runtime_event_terrain_grabbed_ground,
 }
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -1732,6 +1736,11 @@ pub struct mln_runtime_event_sprite {
 #[derive(Debug, Clone, Copy)]
 pub struct mln_runtime_event_style_image {
     pub image_id: mln_buffer_view,
+}
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct mln_runtime_event_terrain_grabbed_ground {
+    pub elevation_meters: f64,
 }
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]

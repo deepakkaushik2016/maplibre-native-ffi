@@ -3316,9 +3316,10 @@ export const RuntimeEventFlag = {
   mapSpriteRequested: 8388608n,
   mapSpriteLoaded: 16777216n,
   mapSpriteError: 33554432n,
-  allMapEvents: 66191358n,
+  mapTerrainGrabbedGround: 67108864n,
+  allMapEvents: 133300222n,
   allRuntimeEvents: 917504n,
-  all: 67108862n,
+  all: 134217726n,
 } as const;
 /** A bitwise OR of RuntimeEventFlag flags. */
 export type RuntimeEventFlag = bigint;
@@ -3431,6 +3432,10 @@ export type RuntimeEventPayload =
     }
   | { readonly kind: "glyphs"; readonly value: RuntimeEventGlyphs }
   | { readonly kind: "sprite"; readonly value: RuntimeEventSprite }
+  | {
+      readonly kind: "terrainGrabbedGround";
+      readonly value: RuntimeEventTerrainGrabbedGround;
+    }
   | { readonly kind: "none" }
   | {
       readonly kind: "unknown";
@@ -3497,6 +3502,20 @@ export interface RuntimeEventSprite {
  */
 export interface RuntimeEventStyleImage {
   readonly imageId: string;
+}
+
+/**
+ * The details of `RuntimeEventType.mapTerrainGrabbedGround`.
+ *
+ * See `mln_runtime_event_terrain_grabbed_ground` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+ */
+export interface RuntimeEventTerrainGrabbedGround {
+  /**
+   * The grabbed ground's height in meters above sea level, as the terrain draws
+   * it, with the style's terrain exaggeration applied.
+   */
+  readonly elevationMeters: number;
 }
 
 /**
@@ -3583,6 +3602,16 @@ export const RuntimeEventType = {
   mapSpriteRequested: 23,
   mapSpriteLoaded: 24,
   mapSpriteError: 25,
+  /**
+   * The map learned the height of the ground that a gesture's anchored pan
+   * grabbed, from the frame after the grab.
+   *
+   * Until it arrives, the pan moves the ground at the height of the camera's
+   * center, and once it arrives the map puts the grabbed ground back under the
+   * finger. It comes only when the height differs from the last one this map
+   * reported.
+   */
+  mapTerrainGrabbedGround: 26,
 } as const;
 /** One of the RuntimeEventType values, or a value this binding does not know. */
 export type RuntimeEventType =

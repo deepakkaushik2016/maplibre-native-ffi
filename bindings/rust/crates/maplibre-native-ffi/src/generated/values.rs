@@ -5340,6 +5340,11 @@ impl FromNative<sys::mln_runtime_event> for RuntimeEvent {
                 sys::MLN_RUNTIME_EVENT_PAYLOAD_SPRITE => {
                     RuntimeEventPayload::Sprite(unsafe { from_native(raw.payload.sprite) }?)
                 }
+                sys::MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND => {
+                    RuntimeEventPayload::TerrainGrabbedGround(unsafe {
+                        from_native(raw.payload.terrain_grabbed_ground)
+                    }?)
+                }
                 sys::MLN_RUNTIME_EVENT_PAYLOAD_NONE => RuntimeEventPayload::Empty,
                 tag => RuntimeEventPayload::Unknown(tag as u32),
             },
@@ -5397,9 +5402,10 @@ pub struct RuntimeEventFlag: u64 {
     const MAP_SPRITE_REQUESTED = 8388608;
     const MAP_SPRITE_LOADED = 16777216;
     const MAP_SPRITE_ERROR = 33554432;
-    const ALL_MAP_EVENTS = 66191358;
+    const MAP_TERRAIN_GRABBED_GROUND = 67108864;
+    const ALL_MAP_EVENTS = 133300222;
     const ALL_RUNTIME_EVENTS = 917504;
-    const ALL = 67108862;
+    const ALL = 134217726;
 }
 }
 
@@ -5580,6 +5586,7 @@ pub enum RuntimeEventPayload {
     OfflineRegionTileCountLimit(RuntimeEventOfflineRegionTileCountLimit),
     Glyphs(RuntimeEventGlyphs),
     Sprite(RuntimeEventSprite),
+    TerrainGrabbedGround(RuntimeEventTerrainGrabbedGround),
     Empty,
     Unknown(u32),
 }
@@ -5679,6 +5686,26 @@ impl FromNative<sys::mln_runtime_event_style_image> for RuntimeEventStyleImage {
     }
 }
 
+/// The details of `RuntimeEventType::MapTerrainGrabbedGround`.
+///
+/// See `mln_runtime_event_terrain_grabbed_ground` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct RuntimeEventTerrainGrabbedGround {
+    /// The grabbed ground's height in meters above sea level, as the terrain
+    /// draws it, with the style's terrain exaggeration applied.
+    pub elevation_meters: f64,
+}
+impl FromNative<sys::mln_runtime_event_terrain_grabbed_ground>
+    for RuntimeEventTerrainGrabbedGround
+{
+    unsafe fn from_native(raw: sys::mln_runtime_event_terrain_grabbed_ground) -> Result<Self> {
+        Ok(Self {
+            elevation_meters: raw.elevation_meters,
+        })
+    }
+}
+
 /// The details of `RuntimeEventType::MapTileAction`.
 ///
 /// See `mln_runtime_event_tile_action` in the
@@ -5751,6 +5778,14 @@ pub enum RuntimeEventType: u32 {
     MapSpriteRequested = 23,
     MapSpriteLoaded = 24,
     MapSpriteError = 25,
+    /// The map learned the height of the ground that a gesture's anchored pan
+    /// grabbed, from the frame after the grab.
+    ///
+    /// Until it arrives, the pan moves the ground at the height of the camera's
+    /// center, and once it arrives the map puts the grabbed ground back under
+    /// the finger. It comes only when the height differs from the last one this
+    /// map reported.
+    MapTerrainGrabbedGround = 26,
 } Unknown
 }
 

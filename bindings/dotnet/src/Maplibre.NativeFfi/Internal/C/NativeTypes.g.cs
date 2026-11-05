@@ -1288,6 +1288,9 @@ internal unsafe struct mln_runtime_event_payload
 
     [FieldOffset(0)]
     public mln_runtime_event_sprite sprite;
+
+    [FieldOffset(0)]
+    public mln_runtime_event_terrain_grabbed_ground terrain_grabbed_ground;
 }
 
 internal unsafe struct mln_runtime_event_render_frame
@@ -1312,6 +1315,11 @@ internal unsafe struct mln_runtime_event_sprite
 internal unsafe struct mln_runtime_event_style_image
 {
     public mln_buffer_view image_id;
+}
+
+internal unsafe struct mln_runtime_event_terrain_grabbed_ground
+{
+    public double elevation_meters;
 }
 
 internal unsafe struct mln_runtime_event_tile_action
@@ -2296,9 +2304,10 @@ internal enum mln_runtime_event_flag : ulong
     MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_REQUESTED = 8388608,
     MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_LOADED = 16777216,
     MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_ERROR = 33554432,
-    MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS = 66191358,
+    MLN_RUNTIME_EVENT_FLAG_MAP_TERRAIN_GRABBED_GROUND = 67108864,
+    MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS = 133300222,
     MLN_RUNTIME_EVENT_FLAG_ALL_RUNTIME_EVENTS = 917504,
-    MLN_RUNTIME_EVENT_FLAG_ALL = 67108862,
+    MLN_RUNTIME_EVENT_FLAG_ALL = 134217726,
 }
 
 internal enum mln_runtime_event_payload_type : uint
@@ -2315,6 +2324,7 @@ internal enum mln_runtime_event_payload_type : uint
     MLN_RUNTIME_EVENT_PAYLOAD_OFFLINE_REGION_TILE_COUNT_LIMIT = 9,
     MLN_RUNTIME_EVENT_PAYLOAD_GLYPHS = 10,
     MLN_RUNTIME_EVENT_PAYLOAD_SPRITE = 11,
+    MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND = 12,
 }
 
 internal enum mln_runtime_event_source_type : uint
@@ -2350,6 +2360,7 @@ internal enum mln_runtime_event_type : uint
     MLN_RUNTIME_EVENT_MAP_SPRITE_REQUESTED = 23,
     MLN_RUNTIME_EVENT_MAP_SPRITE_LOADED = 24,
     MLN_RUNTIME_EVENT_MAP_SPRITE_ERROR = 25,
+    MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND = 26,
 }
 
 internal enum mln_source_feature_query_option_field : uint

@@ -18531,6 +18531,53 @@ maplibre_native_ffi_runtime_event_sprite_from_native(
   return self;
 }
 
+G_DEFINE_BOXED_TYPE(
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround,
+  maplibre_native_ffi_runtime_event_terrain_grabbed_ground,
+  maplibre_native_ffi_runtime_event_terrain_grabbed_ground_copy,
+  maplibre_native_ffi_runtime_event_terrain_grabbed_ground_free
+)
+
+MaplibreNativeFfiRuntimeEventTerrainGrabbedGround*
+maplibre_native_ffi_runtime_event_terrain_grabbed_ground_copy(
+  const MaplibreNativeFfiRuntimeEventTerrainGrabbedGround* self
+) {
+  g_return_val_if_fail(self != NULL, NULL);
+  return g_memdup2(self, sizeof *self);
+}
+
+void maplibre_native_ffi_runtime_event_terrain_grabbed_ground_free(
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround* self
+) {
+  g_free(self);
+}
+
+G_STATIC_ASSERT(
+  sizeof(MaplibreNativeFfiRuntimeEventTerrainGrabbedGround) ==
+  sizeof(mln_runtime_event_terrain_grabbed_ground)
+);
+SAME_MEMBER(
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround,
+  mln_runtime_event_terrain_grabbed_ground, elevation_meters
+);
+
+void maplibre_native_ffi_runtime_event_terrain_grabbed_ground_read(
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround* out,
+  const mln_runtime_event_terrain_grabbed_ground* in
+) {
+  memcpy(out, in, sizeof *out);
+}
+
+MaplibreNativeFfiRuntimeEventTerrainGrabbedGround*
+maplibre_native_ffi_runtime_event_terrain_grabbed_ground_from_native(
+  const mln_runtime_event_terrain_grabbed_ground* in
+) {
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround* self =
+    g_new0(MaplibreNativeFfiRuntimeEventTerrainGrabbedGround, 1);
+  maplibre_native_ffi_runtime_event_terrain_grabbed_ground_read(self, in);
+  return self;
+}
+
 struct _MaplibreNativeFfiRuntimeEventPayload {
   gint64 tag;
   MaplibreNativeFfiRuntimeEventCameraChange camera_change;
@@ -18546,6 +18593,7 @@ struct _MaplibreNativeFfiRuntimeEventPayload {
     offline_region_tile_count_limit;
   MaplibreNativeFfiRuntimeEventGlyphs* glyphs;
   MaplibreNativeFfiRuntimeEventSprite* sprite;
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround terrain_grabbed_ground;
 };
 
 G_DEFINE_BOXED_TYPE(
@@ -18804,6 +18852,26 @@ maplibre_native_ffi_runtime_event_payload_get_sprite(
   return self->sprite;
 }
 
+gboolean maplibre_native_ffi_runtime_event_payload_is_terrain_grabbed_ground(
+  const MaplibreNativeFfiRuntimeEventPayload* self
+) {
+  g_return_val_if_fail(self != NULL, FALSE);
+  return self->tag == MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND;
+}
+
+MaplibreNativeFfiRuntimeEventTerrainGrabbedGround*
+maplibre_native_ffi_runtime_event_payload_get_terrain_grabbed_ground(
+  const MaplibreNativeFfiRuntimeEventPayload* self
+) {
+  g_return_val_if_fail(self != NULL, NULL);
+  g_return_val_if_fail(
+    self->tag == MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND, NULL
+  );
+  return (
+           MaplibreNativeFfiRuntimeEventTerrainGrabbedGround*
+  )&self->terrain_grabbed_ground;
+}
+
 gboolean maplibre_native_ffi_runtime_event_payload_is_none(
   const MaplibreNativeFfiRuntimeEventPayload* self
 ) {
@@ -18877,6 +18945,11 @@ maplibre_native_ffi_runtime_event_payload_from_native(
     case MLN_RUNTIME_EVENT_PAYLOAD_SPRITE:
       self->sprite =
         maplibre_native_ffi_runtime_event_sprite_from_native(&data->sprite);
+      break;
+    case MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND:
+      maplibre_native_ffi_runtime_event_terrain_grabbed_ground_read(
+        &self->terrain_grabbed_ground, &data->terrain_grabbed_ground
+      );
       break;
     default:
       break;

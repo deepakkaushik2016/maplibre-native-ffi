@@ -283,6 +283,16 @@ class RuntimeEventSpriteVariant:
         return cls(RuntimeEventSprite._from_native(raw))
 
 
+@dataclass(frozen=True, slots=True)
+class RuntimeEventTerrainGrabbedGroundVariant:
+    value: RuntimeEventTerrainGrabbedGround
+    _tag = 12
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(RuntimeEventTerrainGrabbedGround._from_native(raw))
+
+
 class CacheDatabaseOperation(UnknownIntEnum):
     """A maintenance action on a runtime's cache database.
 
@@ -837,9 +847,10 @@ class RuntimeEventFlag(IntFlag):
     MAP_SPRITE_REQUESTED = 8388608
     MAP_SPRITE_LOADED = 16777216
     MAP_SPRITE_ERROR = 33554432
-    ALL_MAP_EVENTS = 66191358
+    MAP_TERRAIN_GRABBED_GROUND = 67108864
+    ALL_MAP_EVENTS = 133300222
     ALL_RUNTIME_EVENTS = 917504
-    ALL = 67108862
+    ALL = 134217726
 
 
 class RuntimeEventSourceType(UnknownIntEnum):
@@ -891,6 +902,7 @@ class RuntimeEventType(UnknownIntEnum):
     MAP_SPRITE_REQUESTED = 23
     MAP_SPRITE_LOADED = 24
     MAP_SPRITE_ERROR = 25
+    MAP_TERRAIN_GRABBED_GROUND = 26
 
 
 class Status(UnknownIntEnum):
@@ -4502,6 +4514,7 @@ class RuntimeEvent:
         | RuntimeEventOfflineRegionTileCountLimitVariant
         | RuntimeEventGlyphsVariant
         | RuntimeEventSpriteVariant
+        | RuntimeEventTerrainGrabbedGroundVariant
         | UnknownVariant
         | None
     )
@@ -4528,6 +4541,7 @@ class RuntimeEvent:
                     "offline_region_tile_count_limit": RuntimeEventOfflineRegionTileCountLimitVariant,
                     "glyphs": RuntimeEventGlyphsVariant,
                     "sprite": RuntimeEventSpriteVariant,
+                    "terrain_grabbed_ground": RuntimeEventTerrainGrabbedGroundVariant,
                 },
                 0,
             ),
@@ -4746,6 +4760,24 @@ class RuntimeEventStyleImage:
     @classmethod
     def _from_native(cls, raw):
         return cls(image_id=raw["image_id"])
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeEventTerrainGrabbedGround:
+    """The details of `RuntimeEventType.MAP_TERRAIN_GRABBED_GROUND`.
+
+    See `mln_runtime_event_terrain_grabbed_ground` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+    """
+
+    elevation_meters: float
+    """The grabbed ground's height in meters above sea level, as the terrain
+    draws it, with the style's terrain exaggeration applied.
+    """
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(elevation_meters=raw["elevation_meters"])
 
 
 @dataclass(frozen=True, slots=True)

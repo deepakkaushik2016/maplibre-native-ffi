@@ -8014,6 +8014,7 @@ pub const RuntimeEvent = struct {
                 c.MLN_RUNTIME_EVENT_PAYLOAD_OFFLINE_REGION_TILE_COUNT_LIMIT => .{ .offline_region_tile_count_limit = RuntimeEventOfflineRegionTileCountLimit.fromNative(raw.payload.offline_region_tile_count_limit) },
                 c.MLN_RUNTIME_EVENT_PAYLOAD_GLYPHS => .{ .glyphs = try RuntimeEventGlyphs.fromNative(allocator, raw.payload.glyphs) },
                 c.MLN_RUNTIME_EVENT_PAYLOAD_SPRITE => .{ .sprite = try RuntimeEventSprite.fromNative(raw.payload.sprite) },
+                c.MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND => .{ .terrain_grabbed_ground = RuntimeEventTerrainGrabbedGround.fromNative(raw.payload.terrain_grabbed_ground) },
                 c.MLN_RUNTIME_EVENT_PAYLOAD_NONE => .empty,
                 else => |tag| .{ .unknown = @intCast(tag) },
             },
@@ -8067,15 +8068,16 @@ pub const RuntimeEventFlag = struct {
     map_sprite_requested: bool = false,
     map_sprite_loaded: bool = false,
     map_sprite_error: bool = false,
+    map_terrain_grabbed_ground: bool = false,
     unknown_bits: u64 = 0,
-    pub const native_bits = [_]u64{ 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432 };
+    pub const native_bits = [_]u64{ 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864 };
     const methods = marshal.FlagMethods(@This());
     pub const fromNative = methods.fromNative;
     pub const toNative = methods.toNative;
     pub const none: RuntimeEventFlag = .{};
-    pub const all_map_events: RuntimeEventFlag = .{ .map_camera_will_change = true, .map_camera_is_changing = true, .map_camera_did_change = true, .map_style_loaded = true, .map_loading_started = true, .map_loading_finished = true, .map_loading_failed = true, .map_idle = true, .map_render_error = true, .map_render_frame_started = true, .map_render_frame_finished = true, .map_render_map_started = true, .map_render_map_finished = true, .map_style_image_missing = true, .map_tile_action = true, .map_source_changed = true, .map_glyphs_requested = true, .map_glyphs_loaded = true, .map_glyphs_error = true, .map_sprite_requested = true, .map_sprite_loaded = true, .map_sprite_error = true };
+    pub const all_map_events: RuntimeEventFlag = .{ .map_camera_will_change = true, .map_camera_is_changing = true, .map_camera_did_change = true, .map_style_loaded = true, .map_loading_started = true, .map_loading_finished = true, .map_loading_failed = true, .map_idle = true, .map_render_error = true, .map_render_frame_started = true, .map_render_frame_finished = true, .map_render_map_started = true, .map_render_map_finished = true, .map_style_image_missing = true, .map_tile_action = true, .map_source_changed = true, .map_glyphs_requested = true, .map_glyphs_loaded = true, .map_glyphs_error = true, .map_sprite_requested = true, .map_sprite_loaded = true, .map_sprite_error = true, .map_terrain_grabbed_ground = true };
     pub const all_runtime_events: RuntimeEventFlag = .{ .offline_region_status_changed = true, .offline_region_response_error = true, .offline_region_tile_count_limit_exceeded = true };
-    pub const all: RuntimeEventFlag = .{ .map_camera_will_change = true, .map_camera_is_changing = true, .map_camera_did_change = true, .map_style_loaded = true, .map_loading_started = true, .map_loading_finished = true, .map_loading_failed = true, .map_idle = true, .map_render_error = true, .map_render_frame_started = true, .map_render_frame_finished = true, .map_render_map_started = true, .map_render_map_finished = true, .map_style_image_missing = true, .map_tile_action = true, .map_source_changed = true, .offline_region_status_changed = true, .offline_region_response_error = true, .offline_region_tile_count_limit_exceeded = true, .map_glyphs_requested = true, .map_glyphs_loaded = true, .map_glyphs_error = true, .map_sprite_requested = true, .map_sprite_loaded = true, .map_sprite_error = true };
+    pub const all: RuntimeEventFlag = .{ .map_camera_will_change = true, .map_camera_is_changing = true, .map_camera_did_change = true, .map_style_loaded = true, .map_loading_started = true, .map_loading_finished = true, .map_loading_failed = true, .map_idle = true, .map_render_error = true, .map_render_frame_started = true, .map_render_frame_finished = true, .map_render_map_started = true, .map_render_map_finished = true, .map_style_image_missing = true, .map_tile_action = true, .map_source_changed = true, .offline_region_status_changed = true, .offline_region_response_error = true, .offline_region_tile_count_limit_exceeded = true, .map_glyphs_requested = true, .map_glyphs_loaded = true, .map_glyphs_error = true, .map_sprite_requested = true, .map_sprite_loaded = true, .map_sprite_error = true, .map_terrain_grabbed_ground = true };
 };
 
 /// The details of a glyph event.
@@ -8248,6 +8250,7 @@ pub const RuntimeEventPayload = union(enum) {
     offline_region_tile_count_limit: RuntimeEventOfflineRegionTileCountLimit,
     glyphs: RuntimeEventGlyphs,
     sprite: RuntimeEventSprite,
+    terrain_grabbed_ground: RuntimeEventTerrainGrabbedGround,
     empty,
     unknown: u32,
 };
@@ -8332,6 +8335,21 @@ pub const RuntimeEventStyleImage = struct {
     }
 };
 
+/// The details of `RuntimeEventType.map_terrain_grabbed_ground`.
+///
+/// See `mln_runtime_event_terrain_grabbed_ground` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+pub const RuntimeEventTerrainGrabbedGround = struct {
+    /// The grabbed ground's height in meters above sea level, as the terrain
+    /// draws it, with the style's terrain exaggeration applied.
+    elevation_meters: f64 = 0,
+    pub fn fromNative(raw: c.mln_runtime_event_terrain_grabbed_ground) RuntimeEventTerrainGrabbedGround {
+        return .{
+            .elevation_meters = raw.elevation_meters,
+        };
+    }
+};
+
 /// The details of `RuntimeEventType.map_tile_action`.
 ///
 /// See `mln_runtime_event_tile_action` in the
@@ -8401,6 +8419,14 @@ pub const RuntimeEventType = enum(u32) {
     map_sprite_requested = 23,
     map_sprite_loaded = 24,
     map_sprite_error = 25,
+    /// The map learned the height of the ground that a gesture's anchored pan
+    /// grabbed, from the frame after the grab.
+    ///
+    /// Until it arrives, the pan moves the ground at the height of the camera's
+    /// center, and once it arrives the map puts the grabbed ground back under
+    /// the finger. It comes only when the height differs from the last one this
+    /// map reported.
+    map_terrain_grabbed_ground = 26,
     _,
     pub const fromNative = marshal.EnumMethods(@This()).fromNative;
     pub const toNative = marshal.EnumMethods(@This()).toNative;

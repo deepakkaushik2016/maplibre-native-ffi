@@ -199,6 +199,7 @@
     "bindings/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventSourceType.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventSprite.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventStyleImage.g.cs",
+    "bindings/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventTerrainGrabbedGround.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventTileAction.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventType.g.cs",
     "bindings/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeHandle.Operations.g.cs",

@@ -2537,6 +2537,20 @@ napi_value mln_ts_read_runtime_event_payload(
           ))
         return NULL;
       return result;
+    case MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND:
+      if (!mln_ts_set(
+            env, result, "kind", mln_ts_text(env, "terrainGrabbedGround", 20)
+          ))
+        return NULL;
+      if (!mln_ts_set(
+            env, result, "value",
+            mln_ts_read_runtime_event_terrain_grabbed_ground(
+              env, &(source->payload.terrain_grabbed_ground),
+              sizeof(source->payload.terrain_grabbed_ground)
+            )
+          ))
+        return NULL;
+      return result;
     case MLN_RUNTIME_EVENT_PAYLOAD_NONE:
       if (!mln_ts_set(env, result, "kind", mln_ts_text(env, "none", 4)))
         return NULL;
@@ -2626,6 +2640,21 @@ napi_value mln_ts_read_runtime_event_style_image(
   if (!mln_ts_set(
         env, result, "imageId",
         mln_ts_text(env, (source->image_id).data, (source->image_id).size)
+      ))
+    return NULL;
+  return result;
+}
+
+napi_value mln_ts_read_runtime_event_terrain_grabbed_ground(
+  napi_env env, const mln_runtime_event_terrain_grabbed_ground* source,
+  size_t size
+) {
+  (void)size;
+  napi_value result = mln_ts_object(env);
+  if (result == NULL) return NULL;
+  if (!mln_ts_set(
+        env, result, "elevationMeters",
+        mln_ts_number(env, (double)(source->elevation_meters))
       ))
     return NULL;
   return result;

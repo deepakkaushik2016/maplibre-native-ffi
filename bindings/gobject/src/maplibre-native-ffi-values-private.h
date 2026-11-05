@@ -803,6 +803,15 @@ G_GNUC_INTERNAL MaplibreNativeFfiRuntimeEventSprite*
 maplibre_native_ffi_runtime_event_sprite_from_native(
   const mln_runtime_event_sprite* in
 );
+G_GNUC_INTERNAL MaplibreNativeFfiRuntimeEventTerrainGrabbedGround*
+maplibre_native_ffi_runtime_event_terrain_grabbed_ground_from_native(
+  const mln_runtime_event_terrain_grabbed_ground* in
+);
+G_GNUC_INTERNAL void
+maplibre_native_ffi_runtime_event_terrain_grabbed_ground_read(
+  MaplibreNativeFfiRuntimeEventTerrainGrabbedGround* out,
+  const mln_runtime_event_terrain_grabbed_ground* in
+);
 G_GNUC_INTERNAL MaplibreNativeFfiRuntimeEventPayload*
 maplibre_native_ffi_runtime_event_payload_from_native(
   gint64 tag, const mln_runtime_event_payload* in

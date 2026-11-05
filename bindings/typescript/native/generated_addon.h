@@ -345,6 +345,10 @@ napi_value mln_ts_read_runtime_event_sprite(
 napi_value mln_ts_read_runtime_event_style_image(
   napi_env env, const mln_runtime_event_style_image* source, size_t size
 );
+napi_value mln_ts_read_runtime_event_terrain_grabbed_ground(
+  napi_env env, const mln_runtime_event_terrain_grabbed_ground* source,
+  size_t size
+);
 napi_value mln_ts_read_runtime_event_tile_action(
   napi_env env, const mln_runtime_event_tile_action* source, size_t size
 );

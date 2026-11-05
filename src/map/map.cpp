@@ -1085,6 +1085,46 @@ class StillImageFrameFilter {
   uint64_t request_generation_ = 0;
 };
 
+// Hands the height of a gesture's grabbed ground to the map, which puts the
+// ground under the finger with it, and reports it as an event when it differs
+// from the last one reported. The renderer reports each grab once, so this
+// runs once per grab rather than once per frame. Runs on the map's run loop,
+// like the delegate.
+class GrabbedGroundReporter {
+ public:
+  GrabbedGroundReporter(
+    mln::RendererObserver& delegate,
+    std::shared_ptr<mln::core::MapEventState> event_state
+  )
+      : delegate_(delegate), event_state_(std::move(event_state)) {}
+
+  void report(uint64_t grab_id, double elevation_meters) {
+    delegate_.onTerrainGrabbedGroundElevation(grab_id, elevation_meters);
+    if (elevation_meters == last_reported_) return;
+    last_reported_ = elevation_meters;
+    auto& events = *event_state_;
+    if (!mln::core::event_selected(
+          events.mask, MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND
+        )) {
+      return;
+    }
+    auto payload = mln::core::zeroed_event_payload();
+    payload.terrain_grabbed_ground = mln_runtime_event_terrain_grabbed_ground{
+      .elevation_meters = elevation_meters
+    };
+    mln::core::queue_map_event(
+      events, events.published_generation,
+      MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND,
+      MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND, payload
+    );
+  }
+
+ private:
+  mln::RendererObserver& delegate_;
+  std::shared_ptr<mln::core::MapEventState> event_state_;
+  double last_reported_ = std::numeric_limits<double>::quiet_NaN();
+};
+
 // Delivers mln::RendererObserver callbacks on the map's run loop instead of on
 // whichever thread rendered. The delegate is mln::Map::Impl, whose handlers
 // must not run concurrently. Every callback therefore becomes a mailbox message
@@ -1093,12 +1133,15 @@ class StillImageFrameFilter {
 class ForwardingRendererObserver final : public mln::RendererObserver {
  public:
   ForwardingRendererObserver(
-    mln::Scheduler& map_scheduler, mln::RendererObserver& delegate
+    mln::Scheduler& map_scheduler, mln::RendererObserver& delegate,
+    std::shared_ptr<mln::core::MapEventState> event_state
   )
       : mailbox_(std::make_shared<mln::Mailbox>(map_scheduler)),
         delegate_(delegate, mailbox_),
         still_image_frames_(delegate),
-        still_image_frames_ref_(still_image_frames_, mailbox_) {}
+        still_image_frames_ref_(still_image_frames_, mailbox_),
+        grabbed_ground_(delegate, std::move(event_state)),
+        grabbed_ground_ref_(grabbed_ground_, mailbox_) {}
 
   ForwardingRendererObserver(const ForwardingRendererObserver&) = delete;
   auto operator=(const ForwardingRendererObserver&)
@@ -1179,6 +1222,14 @@ class ForwardingRendererObserver final : public mln::RendererObserver {
     );
   }
 
+  void onTerrainGrabbedGroundElevation(
+    uint64_t grab_id, double elevation_meters
+  ) override {
+    grabbed_ground_ref_.invoke(
+      &GrabbedGroundReporter::report, grab_id, elevation_meters
+    );
+  }
+
   void onStyleImageMissing(
     const std::string& id, const StyleImageMissingCallback& done
   ) override {
@@ -1256,6 +1307,8 @@ class ForwardingRendererObserver final : public mln::RendererObserver {
   mln::ActorRef<mln::RendererObserver> delegate_;
   StillImageFrameFilter still_image_frames_;
   mln::ActorRef<StillImageFrameFilter> still_image_frames_ref_;
+  GrabbedGroundReporter grabbed_ground_;
+  mln::ActorRef<GrabbedGroundReporter> grabbed_ground_ref_;
   std::atomic<uint64_t> rendering_generation_{0};
 };
 
@@ -1292,8 +1345,9 @@ class HeadlessFrontend final : public mln::RendererFrontend {
 
   // mln::Map calls this once from its constructor on the runtime worker.
   void setObserver(mln::RendererObserver& observer) override {
-    observer_ =
-      std::make_unique<ForwardingRendererObserver>(run_loop_, observer);
+    observer_ = std::make_unique<ForwardingRendererObserver>(
+      run_loop_, observer, event_state_
+    );
   }
 
   // Runs on the runtime worker. An open map transaction or command group holds

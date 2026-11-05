@@ -1019,9 +1019,12 @@ final class RuntimeEventFlag extends _Flags<RuntimeEventFlag> {
   static const mapSpriteRequested = RuntimeEventFlag.fromRawValue(8388608);
   static const mapSpriteLoaded = RuntimeEventFlag.fromRawValue(16777216);
   static const mapSpriteError = RuntimeEventFlag.fromRawValue(33554432);
-  static const allMapEvents = RuntimeEventFlag.fromRawValue(66191358);
+  static const mapTerrainGrabbedGround = RuntimeEventFlag.fromRawValue(
+    67108864,
+  );
+  static const allMapEvents = RuntimeEventFlag.fromRawValue(133300222);
   static const allRuntimeEvents = RuntimeEventFlag.fromRawValue(917504);
-  static const all = RuntimeEventFlag.fromRawValue(67108862);
+  static const all = RuntimeEventFlag.fromRawValue(134217726);
   @override
   RuntimeEventFlag _of(int rawValue) => RuntimeEventFlag.fromRawValue(rawValue);
   @override
@@ -1052,9 +1055,10 @@ final class RuntimeEventFlag extends _Flags<RuntimeEventFlag> {
     8388608: 'mapSpriteRequested',
     16777216: 'mapSpriteLoaded',
     33554432: 'mapSpriteError',
-    66191358: 'allMapEvents',
+    67108864: 'mapTerrainGrabbedGround',
+    133300222: 'allMapEvents',
     917504: 'allRuntimeEvents',
-    67108862: 'all',
+    134217726: 'all',
   });
 }
 
@@ -1134,6 +1138,15 @@ final class RuntimeEventType extends _Enum {
   static const mapSpriteRequested = RuntimeEventType.fromRawValue(23);
   static const mapSpriteLoaded = RuntimeEventType.fromRawValue(24);
   static const mapSpriteError = RuntimeEventType.fromRawValue(25);
+
+  /// The map learned the height of the ground that a gesture's anchored pan
+  /// grabbed, from the frame after the grab.
+  ///
+  /// Until it arrives, the pan moves the ground at the height of the camera's
+  /// center, and once it arrives the map puts the grabbed ground back under the
+  /// finger. It comes only when the height differs from the last one this map
+  /// reported.
+  static const mapTerrainGrabbedGround = RuntimeEventType.fromRawValue(26);
   @override
   String toString() => switch (rawValue) {
     1 => 'RuntimeEventType.mapCameraWillChange',
@@ -1161,6 +1174,7 @@ final class RuntimeEventType extends _Enum {
     23 => 'RuntimeEventType.mapSpriteRequested',
     24 => 'RuntimeEventType.mapSpriteLoaded',
     25 => 'RuntimeEventType.mapSpriteError',
+    26 => 'RuntimeEventType.mapTerrainGrabbedGround',
     _ => 'RuntimeEventType($rawValue)',
   };
 }
@@ -7360,6 +7374,24 @@ final class RuntimeEventSprite extends _Value {
   String toString() => _describe('RuntimeEventSprite', const ['id', 'url']);
 }
 
+/// The details of `RuntimeEventType.mapTerrainGrabbedGround`.
+///
+/// See `mln_runtime_event_terrain_grabbed_ground` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/runtime_8h.html).
+final class RuntimeEventTerrainGrabbedGround extends _Value {
+  const RuntimeEventTerrainGrabbedGround({this.elevationMeters = 0});
+
+  /// The grabbed ground's height in meters above sea level, as the terrain
+  /// draws it, with the style's terrain exaggeration applied.
+  final double elevationMeters;
+
+  @override
+  List<Object?> get _members => [elevationMeters];
+  @override
+  String toString() =>
+      _describe('RuntimeEventTerrainGrabbedGround', const ['elevationMeters']);
+}
+
 /// An event that a runtime or one of its maps raised.
 ///
 /// See `mln_runtime_event` in the
@@ -7447,6 +7479,12 @@ final class RuntimeEventPayloadGlyphs extends RuntimeEventPayload {
 final class RuntimeEventPayloadSprite extends RuntimeEventPayload {
   const RuntimeEventPayloadSprite(this.value) : super._();
   final RuntimeEventSprite value;
+}
+
+final class RuntimeEventPayloadTerrainGrabbedGround
+    extends RuntimeEventPayload {
+  const RuntimeEventPayloadTerrainGrabbedGround(this.value) : super._();
+  final RuntimeEventTerrainGrabbedGround value;
 }
 
 final class RuntimeEventPayloadNone extends RuntimeEventPayload {

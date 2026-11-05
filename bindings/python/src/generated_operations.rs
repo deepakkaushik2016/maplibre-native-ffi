@@ -1200,6 +1200,14 @@ fn generated_copy_mln_runtime_event(
                 "sprite",
                 generated_copy_mln_runtime_event_sprite(py, &(unsafe { value.payload.sprite }))?,
             )?,
+            sys::MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND => generated_variant(
+                py,
+                "terrain_grabbed_ground",
+                generated_copy_mln_runtime_event_terrain_grabbed_ground(
+                    py,
+                    &(unsafe { value.payload.terrain_grabbed_ground }),
+                )?,
+            )?,
             tag => generated_unknown_variant(py, tag)?,
         },
     )?;
@@ -1355,6 +1363,18 @@ fn generated_copy_mln_runtime_event_style_image(
 ) -> PyResult<Py<PyAny>> {
     let dict = PyDict::new(py);
     dict.set_item("image_id", generated_text(py, value.image_id)?)?;
+    Ok(dict.into_any().unbind())
+}
+
+fn generated_copy_mln_runtime_event_terrain_grabbed_ground(
+    py: Python<'_>,
+    value: &sys::mln_runtime_event_terrain_grabbed_ground,
+) -> PyResult<Py<PyAny>> {
+    let dict = PyDict::new(py);
+    dict.set_item(
+        "elevation_meters",
+        generated_value(py, value.elevation_meters)?,
+    )?;
     Ok(dict.into_any().unbind())
 }
 

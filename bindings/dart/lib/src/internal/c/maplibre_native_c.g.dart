@@ -1591,6 +1591,7 @@ final class mln_runtime_event_payload extends Union {
   offline_region_tile_count_limit;
   external mln_runtime_event_glyphs glyphs;
   external mln_runtime_event_sprite sprite;
+  external mln_runtime_event_terrain_grabbed_ground terrain_grabbed_ground;
 }
 
 final class mln_runtime_event_render_frame extends Struct {
@@ -1614,6 +1615,11 @@ final class mln_runtime_event_sprite extends Struct {
 
 final class mln_runtime_event_style_image extends Struct {
   external mln_buffer_view image_id;
+}
+
+final class mln_runtime_event_terrain_grabbed_ground extends Struct {
+  @Double()
+  external double elevation_meters;
 }
 
 final class mln_runtime_event_tile_action extends Struct {
@@ -2546,9 +2552,10 @@ const MLN_RUNTIME_EVENT_FLAG_MAP_GLYPHS_ERROR = 4194304;
 const MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_REQUESTED = 8388608;
 const MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_LOADED = 16777216;
 const MLN_RUNTIME_EVENT_FLAG_MAP_SPRITE_ERROR = 33554432;
-const MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS = 66191358;
+const MLN_RUNTIME_EVENT_FLAG_MAP_TERRAIN_GRABBED_GROUND = 67108864;
+const MLN_RUNTIME_EVENT_FLAG_ALL_MAP_EVENTS = 133300222;
 const MLN_RUNTIME_EVENT_FLAG_ALL_RUNTIME_EVENTS = 917504;
-const MLN_RUNTIME_EVENT_FLAG_ALL = 67108862;
+const MLN_RUNTIME_EVENT_FLAG_ALL = 134217726;
 
 // mln_runtime_event_payload_type
 const MLN_RUNTIME_EVENT_PAYLOAD_NONE = 0;
@@ -2563,6 +2570,7 @@ const MLN_RUNTIME_EVENT_PAYLOAD_OFFLINE_REGION_RESPONSE_ERROR = 8;
 const MLN_RUNTIME_EVENT_PAYLOAD_OFFLINE_REGION_TILE_COUNT_LIMIT = 9;
 const MLN_RUNTIME_EVENT_PAYLOAD_GLYPHS = 10;
 const MLN_RUNTIME_EVENT_PAYLOAD_SPRITE = 11;
+const MLN_RUNTIME_EVENT_PAYLOAD_TERRAIN_GRABBED_GROUND = 12;
 
 // mln_runtime_event_source_type
 const MLN_RUNTIME_EVENT_SOURCE_RUNTIME = 0;
@@ -2594,6 +2602,7 @@ const MLN_RUNTIME_EVENT_MAP_GLYPHS_ERROR = 22;
 const MLN_RUNTIME_EVENT_MAP_SPRITE_REQUESTED = 23;
 const MLN_RUNTIME_EVENT_MAP_SPRITE_LOADED = 24;
 const MLN_RUNTIME_EVENT_MAP_SPRITE_ERROR = 25;
+const MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND = 26;
 
 // mln_source_feature_query_option_field
 const MLN_SOURCE_FEATURE_QUERY_OPTION_SOURCE_LAYER_IDS = 1;

@@ -198,6 +198,7 @@
 /dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventSourceType.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventSprite.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventStyleImage.g.cs linguist-generated=true
+/dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventTerrainGrabbedGround.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventTileAction.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeEventType.g.cs linguist-generated=true
 /dotnet/src/Maplibre.NativeFfi/Runtime/RuntimeHandle.Operations.g.cs linguist-generated=true

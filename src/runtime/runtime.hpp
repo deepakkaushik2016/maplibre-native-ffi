@@ -178,7 +178,7 @@ static_assert(
   "every event type needs a mask bit in one of the two groups"
 );
 static_assert(
-  MLN_RUNTIME_EVENT_MAP_SPRITE_ERROR < 64,
+  MLN_RUNTIME_EVENT_MAP_TERRAIN_GRABBED_GROUND < 64,
   "an event type value past 63 needs a wider subscription mask"
 );
 // runtime.h promises that a later payload member widens the event stride
