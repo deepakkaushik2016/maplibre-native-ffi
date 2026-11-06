@@ -1,8 +1,9 @@
 // What a runtime or map release waits for: a map's physical cleanup, which
 // runs on a teardown lane after the map's own release has completed, queued
 // leases, accepted completions, and worker thread destruction. Also the stack
-// size of the threads a runtime starts.
+// size and, on Apple platforms, the QoS of the threads a runtime starts.
 
+#include <atomic>
 #include <cstddef>
 #include <thread>
 
@@ -16,6 +17,10 @@
 #include "runtime/runtime.hpp"
 #include "support/camera.h"
 #include "support/test_support.h"
+
+#if defined(__APPLE__)
+#include <pthread/qos.h>
+#endif
 
 namespace {
 
@@ -365,6 +370,29 @@ void a_runtime_raises_musls_default_thread_stack() {
 }
 #endif
 
+#if defined(__APPLE__)
+// The runtime's thread runs the map: the camera changes a gesture makes and
+// the update each frame renders. Apple platforms schedule it as work the user
+// waits for, user-initiated, which keeps it off the efficiency cores without
+// competing with the user-interactive render thread.
+void a_runtime_runs_its_map_at_user_initiated_qos() {
+  const auto runtime = create_runtime();
+  auto live = mln::core::lease_runtime(runtime);
+  auto qos = std::atomic<int>{QOS_CLASS_UNSPECIFIED};
+  auto ran = std::atomic_bool{false};
+  live->executor.invoke([&qos, &ran] {
+    qos = qos_class_self();
+    mln_test_flag_set(&ran);
+  });
+  TEST_ASSERT_TRUE(mln_test_wait_for_flag(&ran));
+  live.reset();
+  TEST_ASSERT_EQUAL_INT(QOS_CLASS_USER_INITIATED, qos.load());
+  auto released = mln_test_completion_default(0);
+  MLN_TEST_OK(mln_runtime_release(runtime, &released.descriptor, nullptr));
+  MLN_TEST_OK(mln_test_completion_settle(&released));
+}
+#endif
+
 }  // namespace
 
 MLN_TEST_GROUP {
@@ -378,5 +406,8 @@ MLN_TEST_GROUP {
 #if defined(__linux__) && !defined(__GLIBC__) && !defined(__ANDROID__) && \
   !defined(__OHOS__)
   RUN_TEST(a_runtime_raises_musls_default_thread_stack);
+#endif
+#if defined(__APPLE__)
+  RUN_TEST(a_runtime_runs_its_map_at_user_initiated_qos);
 #endif
 }

@@ -29,6 +29,10 @@
 #include "support/host_graphics.h"
 #endif
 
+#if defined(__APPLE__)
+#include <pthread/qos.h>
+#endif
+
 namespace {
 
 using mln::native_tests::await;
@@ -105,6 +109,36 @@ void a_resize_queued_before_detach_completes_as_failed() {
   mln_test_completion_destroy(&detach);
   destroy_fixture(fixture);
 }
+
+#if defined(__APPLE__)
+// The core worker renders every frame that the host shows, so Apple platforms
+// schedule it as the host's own render thread (Flutter's raster thread, a
+// display link): user-interactive, on the performance cores. At the default
+// QoS it ran mostly on the efficiency cores.
+void a_core_worker_renders_at_user_interactive_qos() {
+  auto fixture = Fixture{};
+  create_offscreen_fixture(fixture);
+  auto qos = std::atomic<int>{QOS_CLASS_UNSPECIFIED};
+  auto completion = mln_test_completion_default(0);
+  MLN_TEST_OK(
+    mln::core::enqueue_driver_operation(
+      fixture.render.session,
+      [&qos](mln_render_session_object&) {
+        qos = qos_class_self();
+        return MLN_STATUS_OK;
+      },
+      &completion.descriptor,
+      mln::core::valueless_completion<&mln_render_session_reduce_memory_use>()
+    )
+  );
+  MLN_TEST_OK(
+    mln_test_render_fixture_finish_operation(&fixture.render, &completion)
+  );
+  mln_test_completion_destroy(&completion);
+  TEST_ASSERT_EQUAL_INT(QOS_CLASS_USER_INTERACTIVE, qos.load());
+  destroy_fixture(fixture);
+}
+#endif
 
 struct RunningHook {
   mln::core::RenderSessionScheduler scheduler;
@@ -2130,4 +2164,7 @@ MLN_TEST_GROUP {
   RUN_TEST(
     a_waiting_demand_waits_for_an_update_the_session_has_yet_to_learn_of
   );
+#if defined(__APPLE__)
+  RUN_TEST(a_core_worker_renders_at_user_interactive_qos);
+#endif
 }

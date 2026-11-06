@@ -8,6 +8,10 @@
 #include <emscripten/threading.h>
 #endif
 
+#if defined(__APPLE__)
+#include <pthread/qos.h>
+#endif
+
 #include "execution/worker_thread.hpp"
 
 namespace mln::core {
@@ -51,7 +55,7 @@ auto reserve_default_thread_stack() noexcept -> void {}
 // Windows sizes thread stacks from the executable's own header, and
 // Emscripten sizes them from the link-time pthread stack setting, so both keep
 // std::thread.
-WorkerThread::WorkerThread(std::function<void()> body)
+WorkerThread::WorkerThread(std::function<void()> body, Urgency /*urgency*/)
     : thread_{std::move(body)} {}
 
 WorkerThread::WorkerThread(WorkerThread&& other) noexcept = default;
@@ -85,9 +89,25 @@ auto run_worker(void* opaque) -> void* {
   return nullptr;
 }
 
+#if defined(__APPLE__)
+auto qos_class(WorkerThread::Urgency urgency) noexcept -> qos_class_t {
+  switch (urgency) {
+    case WorkerThread::Urgency::UserInitiated:
+      return QOS_CLASS_USER_INITIATED;
+    case WorkerThread::Urgency::UserInteractive:
+      return QOS_CLASS_USER_INTERACTIVE;
+    case WorkerThread::Urgency::Default:
+      break;
+  }
+  return QOS_CLASS_DEFAULT;
+}
+#endif
+
 }  // namespace
 
-WorkerThread::WorkerThread(std::function<void()> body) {
+WorkerThread::WorkerThread(
+  std::function<void()> body, [[maybe_unused]] Urgency urgency
+) {
   auto attributes = pthread_attr_t{};
   if (const auto error = pthread_attr_init(&attributes); error != 0) {
     throw std::system_error{
@@ -99,6 +119,13 @@ WorkerThread::WorkerThread(std::function<void()> body) {
   static_cast<void>(
     pthread_attr_setstacksize(&attributes, std::max(stack_size, kStackSize))
   );
+#if defined(__APPLE__)
+  if (urgency != Urgency::Default) {
+    static_cast<void>(
+      pthread_attr_set_qos_class_np(&attributes, qos_class(urgency), 0)
+    );
+  }
+#endif
   auto call = std::make_unique<std::function<void()> >(std::move(body));
   const auto error =
     pthread_create(&handle_, &attributes, run_worker, call.get());

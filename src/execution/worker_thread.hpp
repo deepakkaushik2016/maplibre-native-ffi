@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <thread>
 
@@ -29,9 +31,24 @@ class WorkerThread {
  public:
   static constexpr std::size_t kStackSize = std::size_t{8} << 20;
 
+  // How soon the user waits on the thread's work. Apple platforms schedule a
+  // thread by its QoS class, and one started without a class runs at the
+  // default, mostly on the efficiency cores. Other platforms ignore it.
+  enum class Urgency : std::uint8_t {
+    // The default QoS: work nobody waits on, such as cleanup.
+    Default,
+    // QOS_CLASS_USER_INITIATED: work the user waits on, such as the map's
+    // updates.
+    UserInitiated,
+    // QOS_CLASS_USER_INTERACTIVE: each frame the display shows.
+    UserInteractive,
+  };
+
   WorkerThread() = default;
   // Throws std::system_error when the thread cannot be created.
-  explicit WorkerThread(std::function<void()> body);
+  explicit WorkerThread(
+    std::function<void()> body, Urgency urgency = Urgency::Default
+  );
   WorkerThread(WorkerThread&& other) noexcept;
   auto operator=(WorkerThread&& other) noexcept -> WorkerThread&;
   WorkerThread(const WorkerThread&) = delete;

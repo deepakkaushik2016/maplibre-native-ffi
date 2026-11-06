@@ -1825,8 +1825,12 @@ auto start_attach_render_session(
         return worker_status;
       }
     } else {
-      session->worker =
-        mln::core::WorkerThread{[session]() { run_core_worker(session); }};
+      // It renders each frame the host shows: on Apple platforms, the QoS of
+      // the host's own render thread.
+      session->worker = mln::core::WorkerThread{
+        [session]() { run_core_worker(session); },
+        mln::core::WorkerThread::Urgency::UserInteractive
+      };
     }
   }
   // Built before the commit below, because building it allocates and may

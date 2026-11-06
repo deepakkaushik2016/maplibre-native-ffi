@@ -68,7 +68,11 @@ auto RuntimeExecutor::start(std::function<void()> initialize) -> void {
           }
           started_.notify_all();
         }
-      }
+      },
+      // The map runs here: the camera changes a gesture makes and the update
+      // each frame renders, which the user waits on. Below the render
+      // thread's urgency, so it never holds a frame back.
+      WorkerThread::Urgency::UserInitiated
     );
   } catch (...) {
     // A thread that never started leaves no startup report behind, so a later
