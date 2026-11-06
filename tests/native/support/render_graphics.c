@@ -378,9 +378,18 @@ bool mln_test_render_fixture_create_synced(
   mln_map map, mln_test_render_fixture* fixture,
   mln_gpu_sync_kind_flags producer_sync_kinds
 ) {
+  return mln_test_render_fixture_create_synced_ring(
+    map, fixture, 1, producer_sync_kinds
+  );
+}
+
+bool mln_test_render_fixture_create_synced_ring(
+  mln_map map, mln_test_render_fixture* fixture, size_t depth,
+  mln_gpu_sync_kind_flags producer_sync_kinds
+) {
   attach_sync_kinds = producer_sync_kinds;
   const bool attached = mln_test_render_fixture_create_borrowed_ring(
-    map, fixture, 1, MLN_TEST_PRESET_DRIVER
+    map, fixture, depth, MLN_TEST_PRESET_DRIVER
   );
   attach_sync_kinds = 0;
   return attached;

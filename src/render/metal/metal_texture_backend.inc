@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -67,11 +68,17 @@ class MetalTextureBackend final : public mln::mtl::RendererBackend,
   }
   // The synchronization of the last frame committed.
   [[nodiscard]] auto producer_sync() const -> mln_gpu_sync;
-  // Makes the next frame wait for `event` to reach `value`.
-  void wait_event(MTL::SharedEvent* event, uint64_t value);
-  // Waits for the frame a queue-ordered render left in flight, and records its
-  // result.
+  // Makes the next frame that renders into `slot`, whose texture the host
+  // reads until `event` reaches `value`, wait for it on the GPU.
+  void wait_event(MTL::SharedEvent* event, uint64_t value, std::size_t slot);
+  // Waits for every frame still in flight, and records their results.
   void finish_frame();
+  // Readies the selected slot for the frame `buffer` encodes: waits for the
+  // last frame that rendered into the slot, if the GPU still runs it (and so
+  // for the frames before it), and encodes the host's waits for the slot. A
+  // frame into another slot does not wait, so the CPU encodes the next frame
+  // while the GPU draws the last one.
+  void begin_slot_frame(MTL::CommandBuffer& buffer);
   auto select_slot(std::size_t slot) -> bool;
   // The depth and stencil attachments every slot renders with, made for
   // `size` when the ring has none of that size. No stencil on the iOS
@@ -101,6 +108,14 @@ class MetalTextureBackend final : public mln::mtl::RendererBackend,
  private:
   void record_command_buffer_result(const MTL::CommandBuffer& buffer);
   void commit(NS::SharedPtr<MTL::CommandBuffer> buffer);
+  // Records the results of the frames the GPU has finished, oldest first,
+  // without waiting.
+  void retire_finished_frames();
+  // Waits for the first `count` frames in flight, oldest first.
+  void wait_for_frames(std::size_t count);
+  // Moves the host's waits for slots onto the next frame, whatever its slot,
+  // for a retarget that renumbers the slots.
+  void keep_waits_for_next_frame();
 
   // The caller's texture for each slot, or empty for an offscreen session.
   std::vector<MTL::Texture*> borrowed_textures_;
@@ -113,15 +128,25 @@ class MetalTextureBackend final : public mln::mtl::RendererBackend,
   DepthStencil depth_stencil_;
   std::optional<CommandBufferFailure> command_buffer_failure_;
   mln_gpu_sync_kind producer_sync_kind_ = MLN_GPU_SYNC_CPU_COMPLETE;
-  NS::SharedPtr<MTL::CommandBuffer> in_flight_;
+  // The frames committed and not yet seen finished, oldest first, with the
+  // slot each rendered into. A frame of every slot can be in flight at once.
+  struct FrameInFlight {
+    std::size_t slot = 0;
+    NS::SharedPtr<MTL::CommandBuffer> buffer;
+  };
+  std::vector<FrameInFlight> in_flight_;
   // The producer event, made when the first frame signals it, and the value
   // its last frame signaled.
   NS::SharedPtr<MTL::SharedEvent> event_;
   uint64_t event_value_ = 0;
-  // Consumer events that the next frame waits for.
+  // Consumer events that the next frame into `slot` waits for: the host reads
+  // that slot's texture until the event signals. A wait for any_slot, left by
+  // a retarget, applies to the next frame whatever its slot.
+  static constexpr std::size_t any_slot = SIZE_MAX;
   struct EventWait {
     NS::SharedPtr<MTL::SharedEvent> event;
     uint64_t value = 0;
+    std::size_t slot = any_slot;
   };
   std::vector<EventWait> event_waits_;
 };

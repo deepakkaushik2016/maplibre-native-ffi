@@ -154,14 +154,17 @@ class MetalTextureSessionBackend final
     return backend_.producer_sync();
   }
 
-  auto release_consumer_sync(const mln_gpu_sync& sync) -> mln_status override {
+  // Only the slot's next frame waits: frames into other slots don't touch the
+  // texture the host reads.
+  auto release_consumer_sync(const mln_gpu_sync& sync, std::size_t slot)
+    -> mln_status override {
     if (sync.kind != MLN_GPU_SYNC_METAL_SHARED_EVENT)
       return MLN_STATUS_UNSUPPORTED;
     backend_.wait_event(
       // The C ABI carries the event as the bit pattern of its pointer.
       // NOLINTNEXTLINE(performance-no-int-to-ptr)
       reinterpret_cast<MTL::SharedEvent*>(static_cast<uintptr_t>(sync.handle)),
-      sync.value
+      sync.value, slot
     );
     return MLN_STATUS_OK;
   }

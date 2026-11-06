@@ -308,7 +308,9 @@ class VulkanTextureSessionBackend final
     return backend_.producer_sync();
   }
 
-  auto release_consumer_sync(const mln_gpu_sync& sync) -> mln_status override {
+  // The wait orders every later frame, whatever its slot.
+  auto release_consumer_sync(const mln_gpu_sync& sync, std::size_t /*slot*/)
+    -> mln_status override {
     try {
       auto guard = mln::gfx::BackendScope{backend_};
       if (sync.kind == MLN_GPU_SYNC_SYNC_FD) {

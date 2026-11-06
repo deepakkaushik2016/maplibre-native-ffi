@@ -321,7 +321,8 @@ class FailingFrameBackend final : public mln::core::TextureSessionBackend {
     return backend_->prepare_off_thread_teardown();
   }
   void quarantine() noexcept override { backend_->quarantine(); }
-  auto release_consumer_sync(const mln_gpu_sync& sync) -> mln_status override {
+  auto release_consumer_sync(const mln_gpu_sync& sync, std::size_t slot)
+    -> mln_status override {
     if (failure_ == FrameFailure::Release) {
       mln::core::set_thread_error(
         "waiting for the consumer synchronization failed"
@@ -332,7 +333,7 @@ class FailingFrameBackend final : public mln::core::TextureSessionBackend {
       mln::core::set_thread_error("consumer synchronization lost its target");
       return MLN_STATUS_TARGET_LOST;
     }
-    return backend_->release_consumer_sync(sync);
+    return backend_->release_consumer_sync(sync, slot);
   }
 
  private:

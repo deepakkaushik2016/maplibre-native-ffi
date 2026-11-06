@@ -32,6 +32,11 @@ bool mln_test_render_fixture_create_synced(
   mln_map map, mln_test_render_fixture* fixture,
   mln_gpu_sync_kind_flags producer_sync_kinds
 );
+// The same, with a ring of `depth` textures.
+bool mln_test_render_fixture_create_synced_ring(
+  mln_map map, mln_test_render_fixture* fixture, size_t depth,
+  mln_gpu_sync_kind_flags producer_sync_kinds
+);
 
 // The texture at `index` of a borrowed fixture's ring, or null past its end.
 mln_test_graphics_texture* mln_test_render_fixture_texture(

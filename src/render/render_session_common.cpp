@@ -4148,7 +4148,7 @@ auto acquired_frame_release(
         backend = consumed->session->texture.backend.get();
     }
     if (status == MLN_STATUS_OK && backend != nullptr) {
-      status = backend->release_consumer_sync(copied);
+      status = backend->release_consumer_sync(copied, consumed->slot);
       // After a failed wait the host's GPU may still read the texture, so the
       // slot is quarantined below, and the session fails rather than render
       // on with fewer slots.

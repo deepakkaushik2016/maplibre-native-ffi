@@ -130,15 +130,14 @@ class MetalTextureBackend::MetalTextureRenderableResource final
       }
     }
 
-    backend.finish_frame();
-    assert(context.getBackend().getCommandQueue());
-    commandBuffer =
-      NS::RetainPtr(context.getBackend().getCommandQueue()->commandBuffer());
-    // A wait applies to the passes encoded after it in the command buffer.
-    // Each pass binds a new buffer, and only the last one commits, so every
-    // buffer gets the waits until the frame commits.
-    for (const auto& wait : backend.event_waits_) {
-      commandBuffer->encodeWait(wait.event.get(), wait.value);
+    // An upload pass and the render pass both bind the renderable in one
+    // frame, and only the swap after the render pass commits, so the frame
+    // keeps one command buffer from its first bind.
+    if (!commandBuffer) {
+      assert(context.getBackend().getCommandQueue());
+      commandBuffer =
+        NS::RetainPtr(context.getBackend().getCommandQueue()->commandBuffer());
+      backend.begin_slot_frame(*commandBuffer.get());
     }
     renderPassDescriptor =
       NS::TransferPtr(MTL::RenderPassDescriptor::alloc()->init());
@@ -385,13 +384,70 @@ void MetalTextureBackend::commit(NS::SharedPtr<MTL::CommandBuffer> buffer) {
     buffer->encodeSignalEvent(event_.get(), ++event_value_);
   }
   buffer->commit();
-  event_waits_.clear();
+  // The frame encoded the waits for its slot (begin_slot_frame).
+  const auto slot = ring_.selected();
+  std::erase_if(event_waits_, [slot](const EventWait& wait) {
+    return wait.slot == slot || wait.slot == any_slot;
+  });
   if (producer_sync_kind_ != MLN_GPU_SYNC_CPU_COMPLETE) {
-    in_flight_ = std::move(buffer);
+    in_flight_.push_back(
+      FrameInFlight{.slot = slot, .buffer = std::move(buffer)}
+    );
     return;
   }
   buffer->waitUntilCompleted();
   record_command_buffer_result(*buffer.get());
+}
+
+void MetalTextureBackend::begin_slot_frame(MTL::CommandBuffer& buffer) {
+  retire_finished_frames();
+  // Waiting for the frames before the slot's last one too keeps their results
+  // in order, and costs nothing more: on the one queue they finish first.
+  const auto slot = ring_.selected();
+  const auto last = std::find_if(
+    in_flight_.rbegin(), in_flight_.rend(),
+    [slot](const FrameInFlight& frame) { return frame.slot == slot; }
+  );
+  if (last != in_flight_.rend()) {
+    wait_for_frames(static_cast<std::size_t>(in_flight_.rend() - last));
+  }
+  // A wait applies to the passes encoded after it in the command buffer, and
+  // every pass of the frame is encoded after this.
+  for (const auto& wait : event_waits_) {
+    if (wait.slot == slot || wait.slot == any_slot) {
+      buffer.encodeWait(wait.event.get(), wait.value);
+    }
+  }
+}
+
+void MetalTextureBackend::retire_finished_frames() {
+  auto finished = std::size_t{0};
+  for (const auto& frame : in_flight_) {
+    const auto status = frame.buffer->status();
+    if (
+      status != MTL::CommandBufferStatusCompleted &&
+      status != MTL::CommandBufferStatusError
+    ) {
+      break;
+    }
+    record_command_buffer_result(*frame.buffer.get());
+    ++finished;
+  }
+  in_flight_.erase(
+    in_flight_.begin(),
+    in_flight_.begin() + static_cast<std::ptrdiff_t>(finished)
+  );
+}
+
+void MetalTextureBackend::wait_for_frames(std::size_t count) {
+  count = std::min(count, in_flight_.size());
+  for (auto index = std::size_t{0}; index < count; ++index) {
+    in_flight_[index].buffer->waitUntilCompleted();
+    record_command_buffer_result(*in_flight_[index].buffer.get());
+  }
+  in_flight_.erase(
+    in_flight_.begin(), in_flight_.begin() + static_cast<std::ptrdiff_t>(count)
+  );
 }
 
 auto MetalTextureBackend::producer_sync() const -> mln_gpu_sync {
@@ -403,26 +459,22 @@ auto MetalTextureBackend::producer_sync() const -> mln_gpu_sync {
   };
 }
 
-void MetalTextureBackend::wait_event(MTL::SharedEvent* event, uint64_t value) {
+void MetalTextureBackend::wait_event(
+  MTL::SharedEvent* event, uint64_t value, std::size_t slot
+) {
   event_waits_.push_back(
-    EventWait{.event = NS::RetainPtr(event), .value = value}
+    EventWait{.event = NS::RetainPtr(event), .value = value, .slot = slot}
   );
 }
 
-void MetalTextureBackend::finish_frame() {
-  if (!in_flight_) return;
-  in_flight_->waitUntilCompleted();
-  record_command_buffer_result(*in_flight_.get());
-  in_flight_.reset();
-}
+void MetalTextureBackend::finish_frame() { wait_for_frames(in_flight_.size()); }
 
 void MetalTextureBackend::record_command_buffer_result(
   const MTL::CommandBuffer& buffer
 ) {
-  if (buffer.status() != MTL::CommandBufferStatusError) {
-    command_buffer_failure_.reset();
-    return;
-  }
+  // Frames finish in order and are recorded in order. A failure stays until a
+  // render reports it, even when a later frame succeeds before that.
+  if (buffer.status() != MTL::CommandBufferStatusError) return;
   auto failure = CommandBufferFailure{};
   if (const auto* error = buffer.error(); error != nullptr) {
     failure.code = error->code();
@@ -435,6 +487,7 @@ void MetalTextureBackend::record_command_buffer_result(
 
 auto MetalTextureBackend::take_command_buffer_failure()
   -> std::optional<CommandBufferFailure> {
+  retire_finished_frames();
   return std::exchange(command_buffer_failure_, std::nullopt);
 }
 
@@ -462,8 +515,13 @@ auto MetalTextureBackend::has_borrowed_pixel_format(
   return format == borrowed_pixel_format_;
 }
 
+void MetalTextureBackend::keep_waits_for_next_frame() {
+  for (auto& wait : event_waits_) wait.slot = any_slot;
+}
+
 void MetalTextureBackend::release_borrowed_textures() {
   finish_frame();
+  keep_waits_for_next_frame();
   // The session never retained the textures, so it keeps no pointer to one
   // that the host may destroy.
   std::fill(borrowed_textures_.begin(), borrowed_textures_.end(), nullptr);
@@ -478,6 +536,8 @@ void MetalTextureBackend::set_borrowed_textures(
 ) {
   // The session no longer touches a texture that it replaces.
   finish_frame();
+  // The host's waits named slots of the outgoing ring; keep honoring them.
+  keep_waits_for_next_frame();
   borrowed_textures_ = std::move(textures);
   setRenderableSize(new_size);
   // Drop every slot's renderable rather than patch it: its depth and stencil

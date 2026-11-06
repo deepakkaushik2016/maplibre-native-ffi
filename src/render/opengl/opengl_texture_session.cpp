@@ -1676,7 +1676,9 @@ class OpenGLTextureSessionBackend final
     return MLN_STATUS_OK;
   }
 
-  auto release_consumer_sync(const mln_gpu_sync& sync) -> mln_status override {
+  // The wait orders every later frame, whatever its slot.
+  auto release_consumer_sync(const mln_gpu_sync& sync, std::size_t /*slot*/)
+    -> mln_status override {
 #if defined(MLN_FFI_OPENGL_PROVIDER_EGL)
     if (sync.kind == MLN_GPU_SYNC_SYNC_FD) return wait_sync_fd(sync);
 #if defined(__APPLE__)

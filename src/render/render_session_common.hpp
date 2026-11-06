@@ -441,9 +441,12 @@ class TextureSessionBackend : public RenderSessionBackend {
     out_rendered = true;
     return MLN_STATUS_OK;
   }
-  // Waits for a consumer sync that names an object, on the driver.
-  virtual auto release_consumer_sync(const mln_gpu_sync& sync) -> mln_status {
+  // Waits for a consumer sync that names an object, on the driver, before the
+  // texture of ring `slot`, which the host read, is rendered into again.
+  virtual auto release_consumer_sync(const mln_gpu_sync& sync, std::size_t slot)
+    -> mln_status {
     (void)sync;
+    (void)slot;
     return MLN_STATUS_UNSUPPORTED;
   }
   virtual auto producer_sync() const -> mln_gpu_sync {

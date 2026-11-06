@@ -882,6 +882,229 @@ static void metal_shared_events_order_frame_reads_and_slot_reuse(void) {
 }
 #endif
 
+#if defined(MLN_FFI_TEST_BACKEND_METAL)
+// Signals the host's event once the case has checked what it needs to, or
+// after a few seconds, so that a render held back by the event still returns
+// and the case fails instead of hanging.
+static bool host_read_signaled(void* event) {
+  return mln_test_graphics_metal_shared_event_value(event) != 0;
+}
+
+static void release_held_frame_later(void* event) {
+  (void)mln_test_await(
+    host_read_signaled, event, mln_test_deadline_after(5000),
+    "the case's signal of the host's read"
+  );
+  mln_test_graphics_metal_shared_event_signal(event, 1);
+}
+
+// The CPU encodes a frame while the GPU still runs the previous one: only a
+// slot's own last frame holds a frame into that slot back. Here the host keeps
+// the GPU on frame 2 by releasing the slot it renders into with an event it
+// has not signaled, and frame 3, into the other slot, renders anyway.
+static void a_frame_renders_while_the_gpu_runs_the_frame_before(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(map, mln_test_red_background_style_json);
+  mln_test_render_fixture fixture = {0};
+  TEST_ASSERT_TRUE_MESSAGE(
+    mln_test_render_fixture_create_synced_ring(
+      map, &fixture, 2, MLN_GPU_SYNC_KIND_FLAG_METAL_SHARED_EVENT
+    ),
+    mln_test_graphics_last_error()
+  );
+
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 1)
+  );
+  mln_acquired_frame first = MLN_HANDLE_NULL;
+  MLN_TEST_OK(mln_render_session_acquire_frame(fixture.session, &first, NULL));
+  uint32_t first_slot = 0;
+  mln_test_frame_texture_handle(first, &first_slot);
+  void* host_read = mln_test_graphics_metal_shared_event_create();
+  TEST_ASSERT_NOT_NULL_MESSAGE(host_read, mln_test_graphics_last_error());
+  const mln_gpu_sync consumer = {
+    .size = sizeof(mln_gpu_sync),
+    .kind = MLN_GPU_SYNC_METAL_SHARED_EVENT,
+    .handle = (uint64_t)(uintptr_t)host_read,
+    .value = 1,
+  };
+  MLN_TEST_OK(mln_acquired_frame_release(first, &consumer, NULL));
+  mln_test_thread* releaser =
+    mln_test_thread_start(release_held_frame_later, host_read);
+
+  // Frame 2 reuses the released slot, so the GPU holds it until the host's
+  // event signals.
+  paint_background_blue(runtime, map);
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 2)
+  );
+  mln_acquired_frame second = MLN_HANDLE_NULL;
+  MLN_TEST_OK(mln_render_session_acquire_frame(fixture.session, &second, NULL));
+  uint32_t second_slot = 0;
+  mln_test_frame_texture_handle(second, &second_slot);
+  TEST_ASSERT_EQUAL_UINT32(first_slot, second_slot);
+  mln_gpu_sync producer = {.size = sizeof(mln_gpu_sync)};
+  MLN_TEST_OK(mln_acquired_frame_get_producer_sync(second, &producer, NULL));
+  event_target held = {
+    .event = (void*)(uintptr_t)producer.handle, .value = producer.value
+  };
+
+  // Frame 3 goes to the other slot, and renders while frame 2 is held.
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 3)
+  );
+  TEST_ASSERT_FALSE_MESSAGE(
+    event_reached(&held),
+    "frame 3 waited for the GPU to finish frame 2, in another slot"
+  );
+  mln_acquired_frame third = MLN_HANDLE_NULL;
+  MLN_TEST_OK(mln_render_session_acquire_frame(fixture.session, &third, NULL));
+  uint32_t third_slot = 0;
+  mln_test_frame_texture_handle(third, &third_slot);
+  TEST_ASSERT_NOT_EQUAL_UINT32(second_slot, third_slot);
+  MLN_TEST_OK(mln_acquired_frame_get_producer_sync(third, &producer, NULL));
+  event_target produced = {
+    .event = (void*)(uintptr_t)producer.handle, .value = producer.value
+  };
+
+  mln_test_graphics_metal_shared_event_signal(host_read, 1);
+  mln_test_thread_join(releaser);
+  TEST_ASSERT_TRUE(mln_test_await(
+    event_reached, &produced, mln_test_deadline_default(), "frame 3's event"
+  ));
+  expect_texture_color(
+    mln_test_render_fixture_texture(&fixture, second_slot), blue,
+    "frame 2's texture"
+  );
+  expect_texture_color(
+    mln_test_render_fixture_texture(&fixture, third_slot), blue,
+    "frame 3's texture"
+  );
+  mln_test_render_release_frame(&second);
+  mln_test_render_release_frame(&third);
+  MLN_TEST_RENDER_AWAIT(
+    MLN_STATUS_OK, &fixture,
+    mln_render_session_detach(fixture.session, &completion.descriptor, NULL)
+  );
+  mln_test_graphics_metal_shared_event_release(host_read);
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+#endif
+
+#if defined(MLN_FFI_TEST_BACKEND_METAL)
+static event_target acquire_producer(
+  const mln_test_render_fixture* fixture, mln_acquired_frame* out_frame,
+  uint32_t* out_slot
+) {
+  MLN_TEST_OK(
+    mln_render_session_acquire_frame(fixture->session, out_frame, NULL)
+  );
+  mln_test_frame_texture_handle(*out_frame, out_slot);
+  mln_gpu_sync producer = {.size = sizeof(mln_gpu_sync)};
+  MLN_TEST_OK(
+    mln_acquired_frame_get_producer_sync(*out_frame, &producer, NULL)
+  );
+  return (event_target){
+    .event = (void*)(uintptr_t)producer.handle, .value = producer.value
+  };
+}
+
+// Frames into other slots no longer wait for the frame before them, so the
+// host's event for a released slot must hold back the next frame into that
+// slot, wherever it comes in the ring, and only that frame.
+static void a_host_read_holds_back_only_the_next_frame_into_its_slot(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(map, mln_test_red_background_style_json);
+  mln_test_render_fixture fixture = {0};
+  TEST_ASSERT_TRUE_MESSAGE(
+    mln_test_render_fixture_create_synced_ring(
+      map, &fixture, 2, MLN_GPU_SYNC_KIND_FLAG_METAL_SHARED_EVENT
+    ),
+    mln_test_graphics_last_error()
+  );
+
+  mln_acquired_frame first = MLN_HANDLE_NULL;
+  mln_acquired_frame second = MLN_HANDLE_NULL;
+  uint32_t first_slot = 0;
+  uint32_t second_slot = 0;
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 1)
+  );
+  (void)acquire_producer(&fixture, &first, &first_slot);
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 2)
+  );
+  (void)acquire_producer(&fixture, &second, &second_slot);
+  TEST_ASSERT_NOT_EQUAL_UINT32(first_slot, second_slot);
+
+  // The host is done with the first slot, and still reads the second.
+  mln_test_render_release_frame(&first);
+  void* host_read = mln_test_graphics_metal_shared_event_create();
+  TEST_ASSERT_NOT_NULL_MESSAGE(host_read, mln_test_graphics_last_error());
+  const mln_gpu_sync consumer = {
+    .size = sizeof(mln_gpu_sync),
+    .kind = MLN_GPU_SYNC_METAL_SHARED_EVENT,
+    .handle = (uint64_t)(uintptr_t)host_read,
+    .value = 1,
+  };
+  MLN_TEST_OK(mln_acquired_frame_release(second, &consumer, NULL));
+
+  // Frame 3 renders into the first slot, which nobody reads: it finishes.
+  paint_background_blue(runtime, map);
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 3)
+  );
+  mln_acquired_frame third = MLN_HANDLE_NULL;
+  uint32_t third_slot = 0;
+  event_target third_done = acquire_producer(&fixture, &third, &third_slot);
+  TEST_ASSERT_EQUAL_UINT32(first_slot, third_slot);
+  TEST_ASSERT_TRUE_MESSAGE(
+    mln_test_await(
+      event_reached, &third_done, mln_test_deadline_default(),
+      "frame 3, into a slot the host released"
+    ),
+    "the host's read of another slot held frame 3 back"
+  );
+
+  // Frame 4 renders into the slot the host still reads: it waits.
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 4)
+  );
+  mln_acquired_frame fourth = MLN_HANDLE_NULL;
+  uint32_t fourth_slot = 0;
+  event_target fourth_done = acquire_producer(&fixture, &fourth, &fourth_slot);
+  TEST_ASSERT_EQUAL_UINT32(second_slot, fourth_slot);
+  TEST_ASSERT_FALSE_MESSAGE(
+    event_reached(&fourth_done),
+    "frame 4 rendered into the slot the host still reads"
+  );
+  mln_test_graphics_metal_shared_event_signal(host_read, 1);
+  TEST_ASSERT_TRUE(mln_test_await(
+    event_reached, &fourth_done, mln_test_deadline_default(),
+    "frame 4 after the host's read"
+  ));
+  expect_texture_color(
+    mln_test_render_fixture_texture(&fixture, fourth_slot), blue,
+    "frame 4's texture"
+  );
+
+  mln_test_render_release_frame(&third);
+  mln_test_render_release_frame(&fourth);
+  MLN_TEST_RENDER_AWAIT(
+    MLN_STATUS_OK, &fixture,
+    mln_render_session_detach(fixture.session, &completion.descriptor, NULL)
+  );
+  mln_test_graphics_metal_shared_event_release(host_read);
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+#endif
+
 #if defined(MLN_FFI_TEST_OPENGL_EGL)
 static void borrowed_opengl_frames_support_gpu_fences(void) {
   mln_runtime runtime = mln_test_create_runtime();
@@ -1033,6 +1256,10 @@ MLN_TEST_GROUP {
 #endif
 #if defined(__APPLE__)
   RUN_TEST(metal_shared_events_order_frame_reads_and_slot_reuse);
+#endif
+#if defined(MLN_FFI_TEST_BACKEND_METAL)
+  RUN_TEST(a_frame_renders_while_the_gpu_runs_the_frame_before);
+  RUN_TEST(a_host_read_holds_back_only_the_next_frame_into_its_slot);
 #endif
 #if defined(MLN_FFI_TEST_OPENGL_EGL)
   RUN_TEST(borrowed_opengl_frames_support_gpu_fences);
