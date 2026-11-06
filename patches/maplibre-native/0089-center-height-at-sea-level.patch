@@ -55,8 +55,8 @@ diff --git a/test/renderer/terrain_camera.test.cpp b/test/renderer/terrain_camer
 index 85c0700e2081..db2a04b2edfc 100644
 --- a/test/renderer/terrain_camera.test.cpp
 +++ b/test/renderer/terrain_camera.test.cpp
-@@ -712,6 +712,73 @@ TEST(TerrainCamera, ClampDoesNotApplyAfterTerrainRemoval) {
-     EXPECT_NEAR(test.altitude(), 0.0, 0.001);
+@@ -726,6 +726,73 @@ TEST(TerrainCamera, ClampDoesNotApplyAfterTerrainRemoval) {
+     FAIL() << "no frame landed over the plateau mid-transition, even in a 24 s transition";
  }
  
 +// Ground at sea level is ground too: a clamped centre held above it comes down onto it. The
