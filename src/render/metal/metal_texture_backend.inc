@@ -1,10 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include <mln/gfx/headless_backend.hpp>
+#include <mln/gfx/texture2d.hpp>
 #include <mln/mtl/headless_backend.hpp>
 
 #include <Metal/MTLCommandBuffer.hpp>
@@ -14,6 +16,10 @@
 #include <Metal/MTLTexture.hpp>
 
 #include "render/render_session_common.hpp"
+
+namespace mln::mtl {
+class Context;
+}  // namespace mln::mtl
 
 namespace mln::core {
 
@@ -67,6 +73,16 @@ class MetalTextureBackend final : public mln::mtl::RendererBackend,
   // result.
   void finish_frame();
   auto select_slot(std::size_t slot) -> bool;
+  // The depth and stencil attachments every slot renders with, made for
+  // `size` when the ring has none of that size. No stencil on the iOS
+  // simulator, whose depth format holds it.
+  struct DepthStencil {
+    std::shared_ptr<mln::gfx::Texture2D> depth;
+    std::shared_ptr<mln::gfx::Texture2D> stencil;
+    mln::Size size;
+  };
+  auto depth_stencil(mln::mtl::Context& context, mln::Size size)
+    -> const DepthStencil&;
   void set_ring_size(mln::Size size);
 
   [[nodiscard]] auto has_device(const MTL::Device* other) const -> bool;
@@ -94,6 +110,7 @@ class MetalTextureBackend final : public mln::mtl::RendererBackend,
   MTL::PixelFormat owned_pixel_format_ = MTL::PixelFormatInvalid;
   bool io_surfaces_ = false;
   RenderableSlotRing ring_;
+  DepthStencil depth_stencil_;
   std::optional<CommandBufferFailure> command_buffer_failure_;
   mln_gpu_sync_kind producer_sync_kind_ = MLN_GPU_SYNC_CPU_COMPLETE;
   NS::SharedPtr<MTL::CommandBuffer> in_flight_;

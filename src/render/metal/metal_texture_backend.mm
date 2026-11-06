@@ -88,45 +88,6 @@ class MetalTextureBackend::MetalTextureRenderableResource final
         borrowedTexture(borrowed_texture_),
         ownedPixelFormat(owned_pixel_format_),
         ioSurfaceBacked(io_surface_) {
-    depthTexture = context.createTexture2D();
-    depthTexture->setSize(size);
-    depthTexture->setFormat(
-      mln::gfx::TexturePixelType::Depth, mln::gfx::TextureChannelDataType::Float
-    );
-    depthTexture->setSamplerConfiguration(
-      {.filter = mln::gfx::TextureFilterType::Linear,
-       .wrapU = mln::gfx::TextureWrapType::Clamp,
-       .wrapV = mln::gfx::TextureWrapType::Clamp}
-    );
-    // The texture was created by mln::mtl::Context above.
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-    static_cast<mln::mtl::Texture2D*>(depthTexture.get())
-      ->setUsage(
-        MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite |
-        MTL::TextureUsageRenderTarget
-      );
-
-#if !TARGET_OS_SIMULATOR
-    stencilTexture = context.createTexture2D();
-    stencilTexture->setSize(size);
-    stencilTexture->setFormat(
-      mln::gfx::TexturePixelType::Stencil,
-      mln::gfx::TextureChannelDataType::UnsignedByte
-    );
-    stencilTexture->setSamplerConfiguration(
-      {.filter = mln::gfx::TextureFilterType::Linear,
-       .wrapU = mln::gfx::TextureWrapType::Clamp,
-       .wrapV = mln::gfx::TextureWrapType::Clamp}
-    );
-    // The texture was created by mln::mtl::Context above.
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-    static_cast<mln::mtl::Texture2D*>(stencilTexture.get())
-      ->setUsage(
-        MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite |
-        MTL::TextureUsageRenderTarget
-      );
-#endif
-
     context.renderingStats().numFrameBuffers++;
   }
   MetalTextureRenderableResource(const MetalTextureRenderableResource&) =
@@ -186,24 +147,23 @@ class MetalTextureBackend::MetalTextureRenderableResource final
     ) {
       colorTarget->setTexture(metal_texture());
     }
-    if (depthTexture != nullptr) {
-      depthTexture->create();
-      if (auto* depthTarget = renderPassDescriptor->depthAttachment()) {
-        depthTarget->setTexture(
-          // The texture was created by mln::mtl::Context above.
-          // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-          static_cast<mln::mtl::Texture2D*>(depthTexture.get())
-            ->getMetalTexture()
-        );
-      }
+    // The slots share one depth and stencil pair: only one renders at a time,
+    // and no frame reads the depth or stencil another drew.
+    const auto& attachments = backend.depth_stencil(context, size);
+    if (auto* depthTarget = renderPassDescriptor->depthAttachment()) {
+      depthTarget->setTexture(
+        // The texture was created by mln::mtl::Context.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+        static_cast<mln::mtl::Texture2D*>(attachments.depth.get())
+          ->getMetalTexture()
+      );
     }
-    if (stencilTexture != nullptr) {
-      stencilTexture->create();
+    if (attachments.stencil != nullptr) {
       if (auto* stencilTarget = renderPassDescriptor->stencilAttachment()) {
         stencilTarget->setTexture(
-          // The texture was created by mln::mtl::Context above.
+          // The texture was created by mln::mtl::Context.
           // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-          static_cast<mln::mtl::Texture2D*>(stencilTexture.get())
+          static_cast<mln::mtl::Texture2D*>(attachments.stencil.get())
             ->getMetalTexture()
         );
       }
@@ -285,8 +245,6 @@ class MetalTextureBackend::MetalTextureRenderableResource final
   bool ioSurfaceBacked;
   IOSurfacePtr ioSurface;
   mln::mtl::MTLTexturePtr ownedTexture;
-  mln::gfx::Texture2DPtr depthTexture;
-  mln::gfx::Texture2DPtr stencilTexture;
   mln::mtl::MTLCommandBufferPtr commandBuffer;
   mln::mtl::MTLRenderPassDescriptorPtr renderPassDescriptor;
 };
@@ -326,6 +284,7 @@ MetalTextureBackend::~MetalTextureBackend() {
   auto guard = mln::gfx::BackendScope{*this};
   resource.reset();
   ring_.clear();
+  depth_stencil_ = {};
   context.reset();
 }
 
@@ -365,6 +324,50 @@ void MetalTextureBackend::deactivate() {}
 auto MetalTextureBackend::metal_texture() -> MTL::Texture* {
   getDefaultRenderable();
   return getResource<MetalTextureRenderableResource>().metal_texture();
+}
+
+auto MetalTextureBackend::depth_stencil(
+  mln::mtl::Context& context, mln::Size size
+) -> const DepthStencil& {
+  if (depth_stencil_.depth != nullptr && depth_stencil_.size == size) {
+    return depth_stencil_;
+  }
+  // A replaced pair goes first, so the ring never holds two.
+  depth_stencil_ = {};
+  auto attachment = [&context, size](
+                      mln::gfx::TexturePixelType pixel_type,
+                      mln::gfx::TextureChannelDataType channel_type
+                    ) {
+    auto texture = context.createTexture2D();
+    texture->setSize(size);
+    texture->setFormat(pixel_type, channel_type);
+    texture->setSamplerConfiguration(
+      {.filter = mln::gfx::TextureFilterType::Linear,
+       .wrapU = mln::gfx::TextureWrapType::Clamp,
+       .wrapV = mln::gfx::TextureWrapType::Clamp}
+    );
+    // The texture was created by mln::mtl::Context above.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+    static_cast<mln::mtl::Texture2D*>(texture.get())
+      ->setUsage(
+        MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite |
+        MTL::TextureUsageRenderTarget
+      );
+    texture->create();
+    return texture;
+  };
+  depth_stencil_.depth = attachment(
+    mln::gfx::TexturePixelType::Depth, mln::gfx::TextureChannelDataType::Float
+  );
+  // The iOS simulator's depth target is PixelFormatDepth32Float_Stencil8.
+#if !TARGET_OS_SIMULATOR
+  depth_stencil_.stencil = attachment(
+    mln::gfx::TexturePixelType::Stencil,
+    mln::gfx::TextureChannelDataType::UnsignedByte
+  );
+#endif
+  depth_stencil_.size = size;
+  return depth_stencil_;
 }
 
 void MetalTextureBackend::commit(NS::SharedPtr<MTL::CommandBuffer> buffer) {
@@ -458,6 +461,7 @@ void MetalTextureBackend::release_borrowed_textures() {
   auto guard = mln::gfx::BackendScope{*this};
   resource.reset();
   ring_.reset(borrowed_textures_.size());
+  depth_stencil_ = {};
 }
 
 void MetalTextureBackend::set_borrowed_textures(
