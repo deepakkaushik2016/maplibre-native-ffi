@@ -147,10 +147,16 @@ class MetalTextureBackend::MetalTextureRenderableResource final
     ) {
       colorTarget->setTexture(metal_texture());
     }
-    // The slots share one depth and stencil pair: only one renders at a time,
-    // and no frame reads the depth or stencil another drew.
+    // The slots share one depth and stencil pair. Each pass clears both and
+    // stores neither, so no frame reads what another left in them; a frame
+    // that overlaps the previous one on the GPU is ordered after it by hazard
+    // tracking. These are Metal's defaults, which mln::mtl::RenderPass relies
+    // on (it applies only the clear color), set here so they stay.
     const auto& attachments = backend.depth_stencil(context, size);
     if (auto* depthTarget = renderPassDescriptor->depthAttachment()) {
+      depthTarget->setLoadAction(MTL::LoadActionClear);
+      depthTarget->setClearDepth(1.0);
+      depthTarget->setStoreAction(MTL::StoreActionDontCare);
       depthTarget->setTexture(
         // The texture was created by mln::mtl::Context.
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
@@ -160,6 +166,9 @@ class MetalTextureBackend::MetalTextureRenderableResource final
     }
     if (attachments.stencil != nullptr) {
       if (auto* stencilTarget = renderPassDescriptor->stencilAttachment()) {
+        stencilTarget->setLoadAction(MTL::LoadActionClear);
+        stencilTarget->setClearStencil(0);
+        stencilTarget->setStoreAction(MTL::StoreActionDontCare);
         stencilTarget->setTexture(
           // The texture was created by mln::mtl::Context.
           // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
