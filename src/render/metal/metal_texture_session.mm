@@ -174,6 +174,10 @@ class MetalTextureSessionBackend final
   }
   void resize(mln::Size size) override { backend_.set_ring_size(size); }
 
+  void prepare_render_resources() override {
+    backend_.discard_unfinished_frame();
+  }
+
   // Command buffers retain the objects they use, so their GPU work keeps
   // those objects alive and destruction needs no wait.
   [[nodiscard]] auto allows_off_thread_teardown() const noexcept

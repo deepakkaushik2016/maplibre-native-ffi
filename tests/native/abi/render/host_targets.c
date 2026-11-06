@@ -890,6 +890,19 @@ static bool host_read_signaled(void* event) {
   return mln_test_graphics_metal_shared_event_value(event) != 0;
 }
 
+static bool never(void* context) {
+  (void)context;
+  return false;
+}
+
+// Signals the host's event after a short while, as a host whose GPU read ends.
+static void signal_after_a_while(void* event) {
+  (void)mln_test_await(
+    never, NULL, mln_test_deadline_after(300), "a host's read in progress"
+  );
+  mln_test_graphics_metal_shared_event_signal(event, 1);
+}
+
 static void release_held_frame_later(void* event) {
   (void)mln_test_await(
     host_read_signaled, event, mln_test_deadline_after(5000),
@@ -1105,6 +1118,182 @@ static void a_host_read_holds_back_only_the_next_frame_into_its_slot(void) {
 }
 #endif
 
+#if defined(MLN_FFI_TEST_BACKEND_METAL)
+static mln_gpu_sync shared_event_consumer(void* event) {
+  return (mln_gpu_sync){
+    .size = sizeof(mln_gpu_sync),
+    .kind = MLN_GPU_SYNC_METAL_SHARED_EVENT,
+    .handle = (uint64_t)(uintptr_t)event,
+    .value = 1,
+  };
+}
+
+// A retarget renumbers the slots, so a host's read of a slot of the outgoing
+// ring holds back the next frame, whatever its slot in the new ring.
+static void a_host_read_holds_back_the_first_frame_after_a_retarget(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(map, mln_test_red_background_style_json);
+  mln_test_render_fixture fixture = {0};
+  TEST_ASSERT_TRUE_MESSAGE(
+    mln_test_render_fixture_create_synced_ring(
+      map, &fixture, 2, MLN_GPU_SYNC_KIND_FLAG_METAL_SHARED_EVENT
+    ),
+    mln_test_graphics_last_error()
+  );
+  mln_acquired_frame first = MLN_HANDLE_NULL;
+  mln_acquired_frame second = MLN_HANDLE_NULL;
+  uint32_t first_slot = 0;
+  uint32_t second_slot = 0;
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 1)
+  );
+  (void)acquire_producer(&fixture, &first, &first_slot);
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 2)
+  );
+  event_target second_done = acquire_producer(&fixture, &second, &second_slot);
+  TEST_ASSERT_TRUE(mln_test_await(
+    event_reached, &second_done, mln_test_deadline_default(), "frame 2"
+  ));
+  // The host is done with the first slot and still reads the second, whose
+  // index the new ring's first frame does not take.
+  mln_test_render_release_frame(&first);
+  void* host_read = mln_test_graphics_metal_shared_event_create();
+  TEST_ASSERT_NOT_NULL_MESSAGE(host_read, mln_test_graphics_last_error());
+  const mln_gpu_sync consumer = shared_event_consumer(host_read);
+  MLN_TEST_OK(mln_acquired_frame_release(second, &consumer, NULL));
+
+  mln_test_graphics_texture* ring[2] = {
+    mln_test_render_fixture_new_texture(&fixture),
+    mln_test_render_fixture_new_texture(&fixture),
+  };
+  TEST_ASSERT_NOT_NULL_MESSAGE(ring[0], mln_test_graphics_last_error());
+  TEST_ASSERT_NOT_NULL_MESSAGE(ring[1], mln_test_graphics_last_error());
+  MLN_TEST_RENDER_AWAIT(
+    MLN_STATUS_OK, &fixture,
+    mln_test_render_fixture_set_textures(
+      &fixture, ring, 2,
+      &completion.descriptor
+    )
+  );
+  MLN_TEST_OK(mln_test_map_fence(map));
+
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 3)
+  );
+  mln_acquired_frame third = MLN_HANDLE_NULL;
+  uint32_t third_slot = 0;
+  event_target third_done = acquire_producer(&fixture, &third, &third_slot);
+  TEST_ASSERT_NOT_EQUAL_UINT32(second_slot, third_slot);
+  // Held, it never finishes in this wait; unheld, it would well within it.
+  TEST_ASSERT_FALSE_MESSAGE(
+    mln_test_await(
+      event_reached, &third_done, mln_test_deadline_after(1000),
+      "frame 3, which the host's read holds"
+    ),
+    "the first frame after the retarget dropped the host's wait"
+  );
+  mln_test_graphics_metal_shared_event_signal(host_read, 1);
+  TEST_ASSERT_TRUE(mln_test_await(
+    event_reached, &third_done, mln_test_deadline_default(), "frame 3"
+  ));
+  mln_test_render_release_frame(&third);
+  MLN_TEST_RENDER_AWAIT(
+    MLN_STATUS_OK, &fixture,
+    mln_render_session_detach(fixture.session, &completion.descriptor, NULL)
+  );
+  mln_test_graphics_metal_shared_event_release(host_read);
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
+// A retarget to textures of another size, while a frame is still on the GPU,
+// lets go of the outgoing ring only once that frame is done, and the next
+// frame renders at the new size.
+static void a_resizing_retarget_waits_for_the_frame_in_flight(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(map, mln_test_red_background_style_json);
+  mln_test_render_fixture fixture = {0};
+  TEST_ASSERT_TRUE_MESSAGE(
+    mln_test_render_fixture_create_synced_ring(
+      map, &fixture, 2, MLN_GPU_SYNC_KIND_FLAG_METAL_SHARED_EVENT
+    ),
+    mln_test_graphics_last_error()
+  );
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 1)
+  );
+  mln_acquired_frame first = MLN_HANDLE_NULL;
+  uint32_t first_slot = 0;
+  event_target first_done = acquire_producer(&fixture, &first, &first_slot);
+  void* host_read = mln_test_graphics_metal_shared_event_create();
+  TEST_ASSERT_NOT_NULL_MESSAGE(host_read, mln_test_graphics_last_error());
+  const mln_gpu_sync consumer = shared_event_consumer(host_read);
+  MLN_TEST_OK(mln_acquired_frame_release(first, &consumer, NULL));
+
+  // Frame 2 goes into the released slot, so the GPU holds it until the
+  // host's event; the event signals a little later, from another thread.
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 2)
+  );
+  event_target second_done = {
+    .event = first_done.event, .value = first_done.value + 1
+  };
+  TEST_ASSERT_FALSE(event_reached(&second_done));
+  mln_test_thread* releaser =
+    mln_test_thread_start(signal_after_a_while, host_read);
+
+  const uint32_t width = MLN_TEST_HOST_TARGET_SIZE / 2;
+  const uint32_t height = MLN_TEST_HOST_TARGET_SIZE * 3 / 4;
+  mln_test_graphics_texture* ring[2] = {
+    mln_test_render_fixture_new_sized_texture(&fixture, width, height),
+    mln_test_render_fixture_new_sized_texture(&fixture, width, height),
+  };
+  TEST_ASSERT_NOT_NULL_MESSAGE(ring[0], mln_test_graphics_last_error());
+  TEST_ASSERT_NOT_NULL_MESSAGE(ring[1], mln_test_graphics_last_error());
+  MLN_TEST_RENDER_AWAIT(
+    MLN_STATUS_OK, &fixture,
+    mln_test_render_fixture_set_textures(
+      &fixture, ring, 2,
+      &completion.descriptor
+    )
+  );
+  TEST_ASSERT_TRUE_MESSAGE(
+    event_reached(&second_done),
+    "the retarget let go of the outgoing ring with a frame still on the GPU"
+  );
+  mln_test_thread_join(releaser);
+  MLN_TEST_OK(mln_test_map_fence(map));
+
+  paint_background_blue(runtime, map);
+  TEST_ASSERT_EQUAL_UINT32(
+    MLN_RENDER_RESULT_RENDERED, render_frame(&fixture, 3)
+  );
+  mln_acquired_frame third = MLN_HANDLE_NULL;
+  uint32_t third_slot = 0;
+  event_target third_done = acquire_producer(&fixture, &third, &third_slot);
+  TEST_ASSERT_TRUE(mln_test_await(
+    event_reached, &third_done, mln_test_deadline_default(), "frame 3"
+  ));
+  TEST_ASSERT_EQUAL_UINT64(
+    mln_test_texture_handle(ring[third_slot]),
+    mln_test_frame_texture_handle(third, &third_slot)
+  );
+  mln_test_render_release_frame(&third);
+  MLN_TEST_RENDER_AWAIT(
+    MLN_STATUS_OK, &fixture,
+    mln_render_session_detach(fixture.session, &completion.descriptor, NULL)
+  );
+  mln_test_graphics_metal_shared_event_release(host_read);
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+#endif
+
 #if defined(MLN_FFI_TEST_OPENGL_EGL)
 static void borrowed_opengl_frames_support_gpu_fences(void) {
   mln_runtime runtime = mln_test_create_runtime();
@@ -1260,6 +1449,8 @@ MLN_TEST_GROUP {
 #if defined(MLN_FFI_TEST_BACKEND_METAL)
   RUN_TEST(a_frame_renders_while_the_gpu_runs_the_frame_before);
   RUN_TEST(a_host_read_holds_back_only_the_next_frame_into_its_slot);
+  RUN_TEST(a_host_read_holds_back_the_first_frame_after_a_retarget);
+  RUN_TEST(a_resizing_retarget_waits_for_the_frame_in_flight);
 #endif
 #if defined(MLN_FFI_TEST_OPENGL_EGL)
   RUN_TEST(borrowed_opengl_frames_support_gpu_fences);

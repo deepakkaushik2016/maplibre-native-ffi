@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstdlib>
 
 #include <mln/gfx/backend_scope.hpp>
 #include <mln/gfx/context.hpp>
@@ -12,8 +13,10 @@
 #include <Metal/MTLRenderPass.hpp>
 
 #include "maplibre_native_c.h"
+#include "mln_test_graphics.h"
 #include "render/render_session_common.hpp"
 #include "support/frames.h"
+#include "support/host_graphics.h"
 #include "support/map.h"
 #include "support/test_support.h"
 #include "support/wait.h"
@@ -163,10 +166,109 @@ void a_ring_pass_neither_loads_nor_stores_depth_and_stencil() {
   mln_test_destroy_runtime(runtime);
 }
 
+auto event_reached(void* context) -> bool {
+  const auto* sync = static_cast<const mln_gpu_sync*>(context);
+  return mln_test_graphics_metal_shared_event_value(
+           // The C ABI carries the event as the bit pattern of its pointer.
+           // NOLINTNEXTLINE(performance-no-int-to-ptr)
+           reinterpret_cast<void*>(static_cast<uintptr_t>(sync->handle))
+         ) >= sync->value;
+}
+
+auto producer_of(mln_acquired_frame frame) -> mln_gpu_sync {
+  auto sync = mln_gpu_sync{.size = sizeof(mln_gpu_sync)};
+  MLN_TEST_OK(mln_acquired_frame_get_producer_sync(frame, &sync, nullptr));
+  return sync;
+}
+
+// A render that fails after the renderable's first bind leaves an
+// uncommitted command buffer in the slot. The next frame into that slot must
+// start its own: reusing the stale one would skip the slot's waits, here the
+// host's event for its read of the slot, and then drop them at commit.
+void a_frame_after_an_aborted_one_still_waits_for_the_hosts_read() {
+  const auto runtime = mln_test_create_runtime();
+  const auto map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(map, mln_test_red_background_style_json);
+  auto fixture = mln_test_render_fixture{};
+  TEST_ASSERT_TRUE(mln_test_render_fixture_create_synced_ring(
+    map, &fixture, 2, MLN_GPU_SYNC_KIND_FLAG_METAL_SHARED_EVENT
+  ));
+  auto first = mln_test_render_and_acquire(&fixture, 1);
+  auto first_done = producer_of(first);
+  TEST_ASSERT_TRUE(mln_test_await(
+    event_reached, &first_done, mln_test_deadline_default(), "frame 1"
+  ));
+
+  // A frame into the selected slot binds its renderable and goes no further.
+  auto completion = mln_test_completion_default(0);
+  MLN_TEST_OK(
+    mln::core::enqueue_driver_operation(
+      fixture.session,
+      [](mln_render_session_object& session) {
+        auto* backend = session.texture.backend->renderer_backend();
+        if (backend == nullptr) return MLN_STATUS_INVALID_STATE;
+        const auto guard = mln::gfx::BackendScope{*backend};
+        backend->getDefaultRenderable()
+          .getResource<mln::mtl::RenderableResource>()
+          .bind();
+        return MLN_STATUS_OK;
+      },
+      &completion.descriptor,
+      mln::core::valueless_completion<&mln_render_session_reduce_memory_use>()
+    )
+  );
+  MLN_TEST_OK(mln_test_render_fixture_finish_operation(&fixture, &completion));
+  mln_test_completion_destroy(&completion);
+
+  // The host releases the slot, and reads it until its event signals.
+  auto* host_read = mln_test_graphics_metal_shared_event_create();
+  TEST_ASSERT_NOT_NULL(host_read);
+  const auto consumer = mln_gpu_sync{
+    .size = sizeof(mln_gpu_sync),
+    .kind = MLN_GPU_SYNC_METAL_SHARED_EVENT,
+    .handle = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(host_read)),
+    .value = 1,
+  };
+  auto first_slot = uint32_t{0};
+  (void)mln_test_frame_texture_handle(first, &first_slot);
+  MLN_TEST_OK(mln_acquired_frame_release(first, &consumer, nullptr));
+
+  auto second = mln_test_render_and_acquire(&fixture, 2);
+  auto second_slot = uint32_t{1};
+  (void)mln_test_frame_texture_handle(second, &second_slot);
+  TEST_ASSERT_EQUAL_UINT32(first_slot, second_slot);
+  auto second_done = producer_of(second);
+  // Held by the host's event, the frame never finishes in this wait; a frame
+  // that skipped the wait finishes well within it.
+  TEST_ASSERT_FALSE_MESSAGE(
+    mln_test_await(
+      event_reached, &second_done, mln_test_deadline_after(1000),
+      "frame 2, which the host's event holds"
+    ),
+    "the frame after the aborted one rendered into the slot the host reads"
+  );
+  mln_test_graphics_metal_shared_event_signal(host_read, 1);
+  TEST_ASSERT_TRUE(mln_test_await(
+    event_reached, &second_done, mln_test_deadline_default(), "frame 2"
+  ));
+  mln_test_render_release_frame(&second);
+  auto detach = mln_test_completion_default(0);
+  MLN_TEST_OK(
+    mln_render_session_detach(fixture.session, &detach.descriptor, nullptr)
+  );
+  MLN_TEST_OK(mln_test_render_fixture_finish_operation(&fixture, &detach));
+  mln_test_completion_destroy(&detach);
+  mln_test_graphics_metal_shared_event_release(host_read);
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 }  // namespace
 
 MLN_TEST_GROUP {
   RUN_TEST(a_ring_shares_one_depth_and_stencil_pair_across_its_slots);
   RUN_TEST(a_resize_replaces_the_depth_and_stencil_pair);
   RUN_TEST(a_ring_pass_neither_loads_nor_stores_depth_and_stencil);
+  RUN_TEST(a_frame_after_an_aborted_one_still_waits_for_the_hosts_read);
 }

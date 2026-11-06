@@ -65,7 +65,7 @@ class MetalSurfaceBackend final : public mln::mtl::RendererBackend,
       finish_committed();
       // Release what is still bound to the outgoing layer: a drawable must not
       // outlive its layer. This frame's buffer was never committed.
-      commandBuffer.reset();
+      forget_uncommitted();
       renderPassDescriptor.reset();
       drawable.reset();
 
@@ -79,7 +79,7 @@ class MetalSurfaceBackend final : public mln::mtl::RendererBackend,
     // After this, the host may destroy the layer.
     void release_layer() {
       finish_committed();
-      commandBuffer.reset();
+      forget_uncommitted();
       renderPassDescriptor.reset();
       drawable.reset();
       layer.reset();
@@ -227,6 +227,17 @@ class MetalSurfaceBackend final : public mln::mtl::RendererBackend,
     // GPU of a macOS VM, which faults every process's GPU work when one lets
     // go of a layer with work in flight on its drawable (#1035). Buffers on
     // one queue complete in order, so waiting for the last one is enough.
+    // The engine tracks a render pass's buffer as a GPU reader until it runs;
+    // one dropped uncommitted never will.
+    void forget_uncommitted() {
+      if (!commandBuffer) return;
+      // Metal renderables are always attached to a Metal backend/context.
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+      static_cast<mln::mtl::Context&>(backend.getContext())
+        .untrackCommandBuffer(commandBuffer.get());
+      commandBuffer.reset();
+    }
+
     void finish_committed() {
       if (lastCommitted) {
         lastCommitted->waitUntilCompleted();

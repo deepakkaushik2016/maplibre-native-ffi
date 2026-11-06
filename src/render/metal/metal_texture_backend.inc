@@ -80,6 +80,9 @@ class MetalTextureBackend final : public mln::mtl::RendererBackend,
   // while the GPU draws the last one.
   void begin_slot_frame(MTL::CommandBuffer& buffer);
   auto select_slot(std::size_t slot) -> bool;
+  // Drops what a frame that never committed left in the selected slot's
+  // renderable. Runs before each render.
+  void discard_unfinished_frame();
   // The depth and stencil attachments every slot renders with, made for
   // `size` when the ring has none of that size. No stencil on the iOS
   // simulator, whose depth format holds it.

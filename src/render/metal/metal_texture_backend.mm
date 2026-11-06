@@ -99,7 +99,19 @@ class MetalTextureBackend::MetalTextureRenderableResource final
     -> MetalTextureRenderableResource& = delete;
 
   ~MetalTextureRenderableResource() override {
+    discard_unfinished_frame();
     context.renderingStats().numFrameBuffers--;
+  }
+
+  // Drops the command buffer of a frame that bound this renderable and never
+  // reached swap(), such as a render that failed midway. The next frame into
+  // the slot starts its own, so it waits for the slot and encodes the host's
+  // waits (begin_slot_frame) instead of reusing one that has neither.
+  void discard_unfinished_frame() {
+    if (!commandBuffer) return;
+    context.untrackCommandBuffer(commandBuffer.get());
+    commandBuffer.reset();
+    renderPassDescriptor.reset();
   }
 
   void bind() override {
@@ -489,6 +501,12 @@ auto MetalTextureBackend::take_command_buffer_failure()
   -> std::optional<CommandBufferFailure> {
   retire_finished_frames();
   return std::exchange(command_buffer_failure_, std::nullopt);
+}
+
+void MetalTextureBackend::discard_unfinished_frame() {
+  if (resource) {
+    getResource<MetalTextureRenderableResource>().discard_unfinished_frame();
+  }
 }
 
 auto MetalTextureBackend::select_slot(std::size_t slot) -> bool {
