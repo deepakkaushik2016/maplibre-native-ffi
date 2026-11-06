@@ -352,7 +352,7 @@ void main() {
       final pin =
           jsonDecode(await File('hook/native_release.json').readAsString())
               as Map<String, Object?>;
-      expect(pin['tag'], 'terrain-3d-202611.3');
+      expect(pin['tag'], 'terrain-3d-202611.4');
       final artifacts = (pin['artifacts']! as List<Object?>)
           .cast<Map<String, Object?>>();
       expect(
