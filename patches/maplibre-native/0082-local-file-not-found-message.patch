@@ -2,7 +2,8 @@ Names the path in the error when a local file request finds no file, or finds a
 directory. The NotFound error had no message, so loading
 file:///nonexistent/style.json failed with "loading style failed: " and nothing
 after the colon. file://, asset://, and Android's local file sources all read
-through requestLocalFile.
+through requestLocalFile. PMTiles passes that message on instead of adding its
+own "path not found", so its test looks for the file's name.
 (https://github.com/maplibre/maplibre-native-ffi/issues/1708)
 Upstream: not proposed
 
@@ -49,3 +50,18 @@ index 85e4d80..791d403 100644
          loop.stop();
      });
  
+diff --git a/test/storage/pmtiles_file_source.test.cpp b/test/storage/pmtiles_file_source.test.cpp
+index 856d32865591..eb7d1c5b1985 100644
+--- a/test/storage/pmtiles_file_source.test.cpp
++++ b/test/storage/pmtiles_file_source.test.cpp
+@@ -39,7 +39,9 @@ TEST(PMTilesFileSource, NonExistentFile) {
+             req.reset();
+             ASSERT_NE(nullptr, res.error);
+             EXPECT_EQ(Response::Error::Reason::NotFound, res.error->reason);
+-            EXPECT_NE((res.error->message).find("path not found"), std::string::npos);
++            // The local file source names the missing file, so PMTiles passes its message on.
++            EXPECT_NE((res.error->message).find("Cannot find file "), std::string::npos);
++            EXPECT_TRUE(res.error->message.ends_with("does_not_exist"));
+             ASSERT_FALSE(res.data.get());
+             loop.stop();
+         });
