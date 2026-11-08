@@ -7,8 +7,10 @@
 
 #if defined(MLN_FFI_TEST_BACKEND_METAL)
 #include <IOSurface/IOSurfaceRef.h>
+#include <dlfcn.h>
 #include <objc/message.h>
 #include <objc/runtime.h>
+#include <unistd.h>
 #endif
 
 enum { ring_width = 64, ring_height = 48, buffer_count = 3 };
@@ -230,6 +232,121 @@ static void a_held_frame_keeps_its_surface(void) {
   destroy_map_and_runtime(map, runtime);
 }
 
+static mln_gpu_sync producer_sync(mln_acquired_frame frame) {
+  mln_gpu_sync sync = {.size = sizeof(mln_gpu_sync)};
+  MLN_TEST_OK(
+    mln_acquired_frame_get_producer_sync(frame, &sync, MLN_TEST_DIAGNOSTIC)
+  );
+  TEST_ASSERT_EQUAL_UINT32(MLN_GPU_SYNC_METAL_SHARED_EVENT, sync.kind);
+  TEST_ASSERT_TRUE(sync.handle != 0);
+  return sync;
+}
+
+static uint64_t signaled_value(uint64_t event) {
+  return ((uint64_t (*)(id, SEL))objc_msgSend)(
+    (id)(uintptr_t)event, sel_registerName("signaledValue")
+  );
+}
+
+static void signal_event(id event, uint64_t value) {
+  ((void (*)(id, SEL, uint64_t))objc_msgSend)(
+    event, sel_registerName("setSignaledValue:"), value
+  );
+}
+
+// Releases `*frame` for the session to render into its surface again only
+// once `gate` reaches 1 on the GPU.
+static void release_frame_behind(mln_acquired_frame* frame, id gate) {
+  const mln_gpu_sync sync = {
+    .size = sizeof(mln_gpu_sync),
+    .kind = MLN_GPU_SYNC_METAL_SHARED_EVENT,
+    .handle = (uint64_t)(uintptr_t)gate,
+    .value = 1,
+  };
+  MLN_TEST_OK(mln_acquired_frame_release(*frame, &sync, MLN_TEST_DIAGNOSTIC));
+  *frame = MLN_HANDLE_NULL;
+}
+
+// A host shows a frame once its shared event reaches the frame's value, while
+// the session renders the next. So with frames in flight, each has a value of
+// its own, later frames larger ones, and the event reaches a frame's value
+// only once that frame's GPU work has ended.
+static void frames_in_flight_signal_their_own_values_in_order(void) {
+  const mln_runtime runtime = mln_test_create_runtime();
+  const mln_map map = create_red_map(runtime);
+  mln_test_render_fixture fixture = {0};
+  mln_acquired_frame held[buffer_count] = {MLN_HANDLE_NULL};
+  mln_acquired_frame first = MLN_HANDLE_NULL;
+  mln_acquired_frame second = MLN_HANDLE_NULL;
+  // Static: a failed assertion longjmps out of TEST_PROTECT, and the cleanup
+  // after it must still see the gate to open it, or the session's queue
+  // stays blocked.
+  static id gate;
+  gate = nil;
+  if (TEST_PROTECT()) {
+    attach(map, MLN_GPU_SYNC_KIND_FLAG_METAL_SHARED_EVENT, &fixture);
+    // Every slot is held, so each next frame goes to the slot released for
+    // it.
+    for (uint64_t index = 0; index < buffer_count; ++index) {
+      held[index] = mln_test_render_and_acquire(&fixture, 1 + index);
+    }
+    const mln_gpu_sync last = producer_sync(held[buffer_count - 1]);
+    wait_for_producer(held[buffer_count - 1]);
+    // The session renders with the system's default device, as the
+    // descriptor names none.
+    const id device =
+      ((id (*)(void))dlsym(RTLD_DEFAULT, "MTLCreateSystemDefaultDevice"))();
+    TEST_ASSERT_NOT_NULL(device);
+    gate = ((id (*)(id, SEL))objc_msgSend)(
+      device, sel_registerName("newSharedEvent")
+    );
+    TEST_ASSERT_NOT_NULL(gate);
+
+    // The first frame waits on the GPU for the gate, and the second runs
+    // behind it on the session's queue, so neither ends before the gate.
+    release_frame_behind(&held[0], gate);
+    first = mln_test_render_and_acquire(&fixture, 1 + buffer_count);
+    mln_test_render_release_frame(&held[1]);
+    second = mln_test_render_and_acquire(&fixture, 2 + buffer_count);
+
+    const mln_gpu_sync first_sync = producer_sync(first);
+    const mln_gpu_sync second_sync = producer_sync(second);
+    TEST_ASSERT_EQUAL_UINT64(last.handle, first_sync.handle);
+    TEST_ASSERT_EQUAL_UINT64(last.handle, second_sync.handle);
+    TEST_ASSERT_GREATER_THAN_UINT64(last.value, first_sync.value);
+    TEST_ASSERT_GREATER_THAN_UINT64(first_sync.value, second_sync.value);
+
+    // Long enough for an unblocked frame of this map to end on the GPU.
+    usleep(200000);
+    TEST_ASSERT_LESS_THAN_UINT64(first_sync.value, signaled_value(last.handle));
+
+    signal_event(gate, 1);
+    expect_red_surface(first);
+    expect_red_surface(second);
+    TEST_ASSERT_GREATER_OR_EQUAL_UINT64(
+      second_sync.value, signaled_value(last.handle)
+    );
+    release_frame(&first);
+    release_frame(&second);
+  }
+  // A failed case must not leave the session's queue blocked. It asserts
+  // nothing more, which would jump back into the case: the harness reclaims
+  // the frames, the session, the map and the runtime.
+  if (gate != nil) signal_event(gate, 1);
+  if (!Unity.CurrentTestFailed) {
+    release_frame(&first);
+    release_frame(&second);
+    for (size_t index = 0; index < buffer_count; ++index) {
+      release_frame(&held[index]);
+    }
+    release_session(&fixture);
+  }
+  if (gate != nil) {
+    ((void (*)(id, SEL))objc_msgSend)(gate, sel_registerName("release"));
+  }
+  destroy_map_and_runtime(map, runtime);
+}
+
 static void a_resize_gives_the_ring_surfaces_of_the_new_size(void) {
   const mln_runtime runtime = mln_test_create_runtime();
   const mln_map map = create_red_map(runtime);
@@ -309,6 +426,7 @@ MLN_TEST_GROUP {
 #if defined(MLN_FFI_TEST_BACKEND_METAL)
   RUN_TEST(a_frame_renders_into_a_surface_that_the_host_reads);
   RUN_TEST(a_held_frame_keeps_its_surface);
+  RUN_TEST(frames_in_flight_signal_their_own_values_in_order);
   RUN_TEST(a_resize_gives_the_ring_surfaces_of_the_new_size);
   RUN_TEST(an_io_surface_ring_rejects_the_callers_graphics_thread);
 #else
