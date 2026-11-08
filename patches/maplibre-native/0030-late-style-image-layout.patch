@@ -156,12 +156,12 @@ index d488206..079d6ff 100644
      void setShowCollisionBoxes(bool showCollisionBoxes_, uint64_t correlationID_);
  
 diff --git a/test/map/map.test.cpp b/test/map/map.test.cpp
-index 15575f3..3ef23f3 100644
+index 2588e4b..92b0f8e 100644
 --- a/test/map/map.test.cpp
 +++ b/test/map/map.test.cpp
-@@ -2563,3 +2563,110 @@ TEST(Map, TileSelectionOptionsPublishUpdates) {
-     check(&Map::setTileLodZoomShift, &UpdateParameters::tileLodZoomShift, 1.0);
+@@ -2656,3 +2656,110 @@ TEST(Map, TileSelectionOptionsPublishUpdates) {
      check(&Map::setTileLodMode, &UpdateParameters::tileLodMode, TileLodMode::Distance);
+     check(&Map::setTerrainLoadMode, &UpdateParameters::terrainLoadMode, TerrainLoadMode::Performance);
  }
 +
 +TEST(Map, UnrelatedImagePreservesTileLayoutAndCache) {

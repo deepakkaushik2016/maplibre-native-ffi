@@ -104,14 +104,13 @@ index 5d2e57b..ad20fc3 100644
      }
  }
 diff --git a/test/style/style_parser.test.cpp b/test/style/style_parser.test.cpp
-index 5fd1778..a86ddac 100644
+index 703e6cd..268a78a 100644
 --- a/test/style/style_parser.test.cpp
 +++ b/test/style/style_parser.test.cpp
-@@ -314,3 +314,15 @@ TEST(StyleParser, ZoomCurve) {
-     ASSERT_TRUE(expr2);
+@@ -315,6 +315,18 @@ TEST(StyleParser, ZoomCurve) {
      ASSERT_TRUE(findZoomCurveChecked(*expr2).is<std::nullptr_t>());
  }
-+
+ 
 +TEST(StyleParser, NestingDepthLimit) {
 +    const auto parse = [](std::size_t depth) {
 +        style::Parser parser;
@@ -123,3 +122,7 @@ index 5fd1778..a86ddac 100644
 +    // Deep enough to overflow the stack if the parser recursed through it all.
 +    EXPECT_EQ(parse(1000000), "Arrays and objects nest too deeply. at offset 256");
 +}
++
+ // A style document's terrain goes through the same range check as one set on
+ // its own: out of range, the style loads without terrain and logs why.
+ TEST(StyleParser, TerrainExaggerationOutOfRange) {
