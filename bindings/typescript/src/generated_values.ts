@@ -2908,6 +2908,12 @@ export interface RenderingStats {
    * The draw calls in every frame so far.
    */
   readonly totalDrawCallCount: bigint;
+  /**
+   * The CPU texture writes so far that waited for an earlier frame still on the
+   * GPU, which reads the texture, such as a patch of an icon atlas. Only the
+   * Metal backend waits, and counts them.
+   */
+  readonly totalTextureUploadWaitCount: bigint;
 }
 
 /**

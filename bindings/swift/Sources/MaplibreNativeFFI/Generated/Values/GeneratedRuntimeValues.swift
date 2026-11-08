@@ -419,18 +419,24 @@ public struct RenderingStats: Equatable, Hashable, Sendable {
   public var drawCallCount: Int64
   /// The draw calls in every frame so far.
   public var totalDrawCallCount: Int64
+  /// The CPU texture writes so far that waited for an earlier frame still on
+  /// the GPU, which reads the texture, such as a patch of an icon atlas. Only
+  /// the Metal backend waits, and counts them.
+  public var totalTextureUploadWaitCount: Int64
   public init(
     encodingTimeMs: Double = 0,
     renderingTimeMs: Double = 0,
     frameCount: Int64 = 0,
     drawCallCount: Int64 = 0,
-    totalDrawCallCount: Int64 = 0
+    totalDrawCallCount: Int64 = 0,
+    totalTextureUploadWaitCount: Int64 = 0
   ) {
     self.encodingTimeMs = encodingTimeMs
     self.renderingTimeMs = renderingTimeMs
     self.frameCount = frameCount
     self.drawCallCount = drawCallCount
     self.totalDrawCallCount = totalDrawCallCount
+    self.totalTextureUploadWaitCount = totalTextureUploadWaitCount
   }
 
   init(raw: mln_rendering_stats) {
@@ -439,6 +445,7 @@ public struct RenderingStats: Equatable, Hashable, Sendable {
     frameCount = raw.frame_count
     drawCallCount = raw.draw_call_count
     totalDrawCallCount = raw.total_draw_call_count
+    totalTextureUploadWaitCount = raw.total_texture_upload_wait_count
   }
 }
 

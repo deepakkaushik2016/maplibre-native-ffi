@@ -429,6 +429,12 @@ typedef struct mln_rendering_stats {
   int64_t draw_call_count;
   /** The draw calls in every frame so far. */
   int64_t total_draw_call_count;
+  /**
+   * The CPU texture writes so far that waited for an earlier frame still on
+   * the GPU, which reads the texture, such as a patch of an icon atlas. Only
+   * the Metal backend waits, and counts them.
+   */
+  int64_t total_texture_upload_wait_count;
 } mln_rendering_stats;
 
 /** The details of MLN_RUNTIME_EVENT_MAP_RENDER_FRAME_FINISHED. */

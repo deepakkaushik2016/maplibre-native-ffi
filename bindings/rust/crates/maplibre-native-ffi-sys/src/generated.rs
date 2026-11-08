@@ -1539,6 +1539,7 @@ pub struct mln_rendering_stats {
     pub frame_count: i64,
     pub draw_call_count: i64,
     pub total_draw_call_count: i64,
+    pub total_texture_upload_wait_count: i64,
 }
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]

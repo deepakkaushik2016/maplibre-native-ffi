@@ -1951,7 +1951,8 @@ internal static unsafe class GeneratedValues
             value.rendering_time_ms,
             value.frame_count,
             value.draw_call_count,
-            value.total_draw_call_count
+            value.total_draw_call_count,
+            value.total_texture_upload_wait_count
         );
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]

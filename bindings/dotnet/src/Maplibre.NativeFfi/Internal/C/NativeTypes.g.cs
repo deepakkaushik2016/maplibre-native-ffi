@@ -1085,6 +1085,7 @@ internal unsafe struct mln_rendering_stats
     public long frame_count;
     public long draw_call_count;
     public long total_draw_call_count;
+    public long total_texture_upload_wait_count;
 }
 
 internal unsafe struct mln_resource_provider

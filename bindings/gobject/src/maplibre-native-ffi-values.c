@@ -15947,6 +15947,10 @@ SAME_MEMBER(
 SAME_MEMBER(
   MaplibreNativeFfiRenderingStats, mln_rendering_stats, total_draw_call_count
 );
+SAME_MEMBER(
+  MaplibreNativeFfiRenderingStats, mln_rendering_stats,
+  total_texture_upload_wait_count
+);
 
 void maplibre_native_ffi_rendering_stats_read(
   MaplibreNativeFfiRenderingStats* out, const mln_rendering_stats* in

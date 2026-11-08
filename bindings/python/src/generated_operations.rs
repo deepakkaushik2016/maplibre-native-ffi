@@ -963,6 +963,10 @@ fn generated_copy_mln_rendering_stats(
         "total_draw_call_count",
         generated_value(py, value.total_draw_call_count)?,
     )?;
+    dict.set_item(
+        "total_texture_upload_wait_count",
+        generated_value(py, value.total_texture_upload_wait_count)?,
+    )?;
     Ok(dict.into_any().unbind())
 }
 

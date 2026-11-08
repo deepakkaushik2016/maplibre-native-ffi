@@ -2861,6 +2861,7 @@ internal fun readRenderingStats(source: Long): RenderingStats =
     frameCount = readI64(source + 16),
     drawCallCount = readI64(source + 24),
     totalDrawCallCount = readI64(source + 32),
+    totalTextureUploadWaitCount = readI64(source + 40),
   )
 
 @JvmSynthetic

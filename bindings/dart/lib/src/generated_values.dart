@@ -7104,6 +7104,7 @@ final class RenderingStats extends _Value {
     this.frameCount = 0,
     this.drawCallCount = 0,
     this.totalDrawCallCount = 0,
+    this.totalTextureUploadWaitCount = 0,
   });
 
   /// The time that the frame took to encode, in milliseconds.
@@ -7121,6 +7122,11 @@ final class RenderingStats extends _Value {
   /// The draw calls in every frame so far.
   final int totalDrawCallCount;
 
+  /// The CPU texture writes so far that waited for an earlier frame still on
+  /// the GPU, which reads the texture, such as a patch of an icon atlas. Only
+  /// the Metal backend waits, and counts them.
+  final int totalTextureUploadWaitCount;
+
   @override
   List<Object?> get _members => [
     encodingTimeMs,
@@ -7128,6 +7134,7 @@ final class RenderingStats extends _Value {
     frameCount,
     drawCallCount,
     totalDrawCallCount,
+    totalTextureUploadWaitCount,
   ];
   @override
   String toString() => _describe('RenderingStats', const [
@@ -7136,6 +7143,7 @@ final class RenderingStats extends _Value {
     'frameCount',
     'drawCallCount',
     'totalDrawCallCount',
+    'totalTextureUploadWaitCount',
   ]);
 }
 

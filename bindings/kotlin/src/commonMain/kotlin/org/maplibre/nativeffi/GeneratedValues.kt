@@ -8310,6 +8310,11 @@ public data class RenderingStats(
   public val drawCallCount: Long,
   /** The draw calls in every frame so far. */
   public val totalDrawCallCount: Long,
+  /**
+   * The CPU texture writes so far that waited for an earlier frame still on the GPU, which reads
+   * the texture, such as a patch of an icon atlas. Only the Metal backend waits, and counts them.
+   */
+  public val totalTextureUploadWaitCount: Long,
 )
 
 /**

@@ -4994,6 +4994,10 @@ type RenderingStats struct {
 	DrawCallCount int64
 	// The draw calls in every frame so far.
 	TotalDrawCallCount int64
+	// The CPU texture writes so far that waited for an earlier frame still on the
+	// GPU, which reads the texture, such as a patch of an icon atlas. Only the
+	// Metal backend waits, and counts them.
+	TotalTextureUploadWaitCount int64
 }
 
 func copyRenderingStats(raw C.mln_rendering_stats) RenderingStats {
@@ -5003,6 +5007,7 @@ func copyRenderingStats(raw C.mln_rendering_stats) RenderingStats {
 	result.FrameCount = int64(raw.frame_count)
 	result.DrawCallCount = int64(raw.draw_call_count)
 	result.TotalDrawCallCount = int64(raw.total_draw_call_count)
+	result.TotalTextureUploadWaitCount = int64(raw.total_texture_upload_wait_count)
 	return result
 }
 

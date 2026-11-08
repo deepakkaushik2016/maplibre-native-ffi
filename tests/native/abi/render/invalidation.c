@@ -773,6 +773,9 @@ static void a_drawn_frame_reports_its_statistics(void) {
   TEST_ASSERT_GREATER_OR_EQUAL_INT64(
     wait.stats.draw_call_count, wait.stats.total_draw_call_count
   );
+  // An offscreen session waits for each frame, so no texture write of these
+  // frames found one still on the GPU.
+  TEST_ASSERT_EQUAL_INT64(0, wait.stats.total_texture_upload_wait_count);
 
   mln_test_render_fixture_destroy(&fixture);
   mln_test_destroy_map(map);

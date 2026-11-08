@@ -7439,6 +7439,10 @@ pub const RenderingStats = struct {
     draw_call_count: i64 = 0,
     /// The draw calls in every frame so far.
     total_draw_call_count: i64 = 0,
+    /// The CPU texture writes so far that waited for an earlier frame still on
+    /// the GPU, which reads the texture, such as a patch of an icon atlas. Only
+    /// the Metal backend waits, and counts them.
+    total_texture_upload_wait_count: i64 = 0,
     pub fn fromNative(raw: c.mln_rendering_stats) RenderingStats {
         return .{
             .encoding_time_ms = raw.encoding_time_ms,
@@ -7446,6 +7450,7 @@ pub const RenderingStats = struct {
             .frame_count = raw.frame_count,
             .draw_call_count = raw.draw_call_count,
             .total_draw_call_count = raw.total_draw_call_count,
+            .total_texture_upload_wait_count = raw.total_texture_upload_wait_count,
         };
     }
 };

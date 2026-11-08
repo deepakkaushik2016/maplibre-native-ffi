@@ -338,7 +338,8 @@ auto to_c_rendering_stats(const mln::gfx::RenderingStats& stats)
     .rendering_time_ms = stats.renderingTime * 1000.0,
     .frame_count = stats.numFrames,
     .draw_call_count = stats.numDrawCalls,
-    .total_draw_call_count = stats.totalDrawCalls
+    .total_draw_call_count = stats.totalDrawCalls,
+    .total_texture_upload_wait_count = stats.numTextureUploadWaits
   };
 }
 
@@ -3306,10 +3307,11 @@ auto publish_map_snapshot(MapObject& live) -> uint64_t {
     .view = map_view_from_transform(
       live.map->getTransformState(), live.logical_extent.scale_factor
     ),
-    .terrain =
-      {.load_mode =
-         from_native_terrain_load_mode(live.map->getTerrainLoadMode()),
-       .center_clamped_to_ground = live.map->getCenterClampedToGround()}
+    .terrain = {
+      .load_mode =
+        from_native_terrain_load_mode(live.map->getTerrainLoadMode()),
+      .center_clamped_to_ground = live.map->getCenterClampedToGround()
+    }
   };
   const auto generation = snapshot.generation;
   {

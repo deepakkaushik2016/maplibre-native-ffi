@@ -24,10 +24,16 @@ namespace Maplibre.NativeFfi;
 /// <param name="TotalDrawCallCount">
 /// The draw calls in every frame so far.
 /// </param>
+/// <param name="TotalTextureUploadWaitCount">
+/// The CPU texture writes so far that waited for an earlier frame still on the
+/// GPU, which reads the texture, such as a patch of an icon atlas. Only the
+/// Metal backend waits, and counts them.
+/// </param>
 public readonly partial record struct RenderingStats(
     double EncodingTimeMs,
     double RenderingTimeMs,
     long FrameCount,
     long DrawCallCount,
-    long TotalDrawCallCount
+    long TotalDrawCallCount,
+    long TotalTextureUploadWaitCount
 );

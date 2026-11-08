@@ -2121,6 +2121,11 @@ napi_value mln_ts_read_rendering_stats(
         mln_ts_i64(env, (int64_t)(source->total_draw_call_count))
       ))
     return NULL;
+  if (!mln_ts_set(
+        env, result, "totalTextureUploadWaitCount",
+        mln_ts_i64(env, (int64_t)(source->total_texture_upload_wait_count))
+      ))
+    return NULL;
   return result;
 }
 

@@ -4720,6 +4720,10 @@ pub struct RenderingStats {
     pub draw_call_count: i64,
     /// The draw calls in every frame so far.
     pub total_draw_call_count: i64,
+    /// The CPU texture writes so far that waited for an earlier frame still on
+    /// the GPU, which reads the texture, such as a patch of an icon atlas. Only
+    /// the Metal backend waits, and counts them.
+    pub total_texture_upload_wait_count: i64,
 }
 impl FromNative<sys::mln_rendering_stats> for RenderingStats {
     unsafe fn from_native(raw: sys::mln_rendering_stats) -> Result<Self> {
@@ -4729,6 +4733,7 @@ impl FromNative<sys::mln_rendering_stats> for RenderingStats {
             frame_count: raw.frame_count,
             draw_call_count: raw.draw_call_count,
             total_draw_call_count: raw.total_draw_call_count,
+            total_texture_upload_wait_count: raw.total_texture_upload_wait_count,
         })
     }
 }

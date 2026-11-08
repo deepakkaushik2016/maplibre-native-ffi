@@ -4186,6 +4186,12 @@ class RenderingStats:
     total_draw_call_count: int
     """The draw calls in every frame so far."""
 
+    total_texture_upload_wait_count: int
+    """The CPU texture writes so far that waited for an earlier frame still on
+    the GPU, which reads the texture, such as a patch of an icon atlas. Only
+    the Metal backend waits, and counts them.
+    """
+
     @classmethod
     def _from_native(cls, raw):
         return cls(
@@ -4194,6 +4200,7 @@ class RenderingStats:
             frame_count=raw["frame_count"],
             draw_call_count=raw["draw_call_count"],
             total_draw_call_count=raw["total_draw_call_count"],
+            total_texture_upload_wait_count=raw["total_texture_upload_wait_count"],
         )
 
 

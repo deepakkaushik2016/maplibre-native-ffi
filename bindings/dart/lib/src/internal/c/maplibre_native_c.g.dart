@@ -1376,6 +1376,8 @@ final class mln_rendering_stats extends Struct {
   external int draw_call_count;
   @Int64()
   external int total_draw_call_count;
+  @Int64()
+  external int total_texture_upload_wait_count;
 }
 
 final class mln_resource_provider extends Struct {

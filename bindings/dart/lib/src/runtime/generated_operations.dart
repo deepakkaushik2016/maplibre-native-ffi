@@ -2761,6 +2761,7 @@ RenderingStats _readRenderingStats(raw.mln_rendering_stats source) =>
       frameCount: source.frame_count,
       drawCallCount: source.draw_call_count,
       totalDrawCallCount: source.total_draw_call_count,
+      totalTextureUploadWaitCount: source.total_texture_upload_wait_count,
     );
 
 RuntimeEventRenderFrame _readRuntimeEventRenderFrame(

@@ -1335,6 +1335,9 @@ typedef struct {
  * @frame_count: The frames rendered so far.
  * @draw_call_count: The draw calls in the frame.
  * @total_draw_call_count: The draw calls in every frame so far.
+ * @total_texture_upload_wait_count: The CPU texture writes so far that waited
+ *   for an earlier frame still on the GPU, which reads the texture, such as a
+ *   patch of an icon atlas. Only the Metal backend waits, and counts them.
  *
  * Statistics about the frames that a map renders.
  *
@@ -1347,6 +1350,7 @@ typedef struct {
   gint64 frame_count;
   gint64 draw_call_count;
   gint64 total_draw_call_count;
+  gint64 total_texture_upload_wait_count;
 } MaplibreNativeFfiRenderingStats;
 
 /**
