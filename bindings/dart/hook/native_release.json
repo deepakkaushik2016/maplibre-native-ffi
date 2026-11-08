@@ -2,7 +2,7 @@
   "schemaVersion": 0,
   "tag": "terrain-3d-202611.4",
   "version": "0.0.0-terrain-3d-202611.4",
-  "commit": "5bdde6e450d63056d6479c5723efef20f0edcee3",
+  "commit": "14828166d8e3f6d639121aad0a681829a9220104",
   "platforms": [
     {
       "id": "android-arm64",
@@ -51,77 +51,77 @@
       "platform": "android-arm64",
       "backend": "opengl",
       "archive": "maplibre-native-c-android-arm64-egl.tar.gz",
-      "sha256": "f24e4888f7f99fa34d45e410c2e0d412ed192c69f3e0aa03d132f2efb2d30d47",
+      "sha256": "0b3ac5b6dd85cc1bd5f02ca048170661b3a51621ac60bc6089ecb95b5021ccf5",
       "sbom": {
         "file": "maplibre-native-c-android-arm64-egl.cdx.json",
         "url": "https://github.com/deepakkaushik2016/maplibre-native-ffi/releases/download/terrain-3d-202611.4/maplibre-native-c-android-arm64-egl.cdx.json",
-        "sha256": "5c1909bb77da3b3ca1a3e6a6e069fef19723abdc990a4baa66e75b3542ca8164"
+        "sha256": "cbba621417760838e803872065ad6e4e9c4c975feb1f435040c48beca95350a9"
       }
     },
     {
       "platform": "android-arm64",
       "backend": "vulkan",
       "archive": "maplibre-native-c-android-arm64-vulkan.tar.gz",
-      "sha256": "8d3f7b78bd0835793e79cc69a288a82a763fe24b6342920b9bedd8ef549d80c1",
+      "sha256": "83082ef2f5f026be152c70eba9e93b559003c05164b6188724ff33b5b0e4329a",
       "sbom": {
         "file": "maplibre-native-c-android-arm64-vulkan.cdx.json",
         "url": "https://github.com/deepakkaushik2016/maplibre-native-ffi/releases/download/terrain-3d-202611.4/maplibre-native-c-android-arm64-vulkan.cdx.json",
-        "sha256": "4e857c86edd780d5d6caa117c0dc73677d8fda52fdf4847a700a6b445a0a2e7b"
+        "sha256": "cc2b647b52ee3c08d6f4aec100c6d383b3933d40d06ba8b6a555905fa2306bb1"
       }
     },
     {
       "platform": "android-x64",
       "backend": "opengl",
       "archive": "maplibre-native-c-android-x64-egl.tar.gz",
-      "sha256": "c513265c336fb33330041cffd86c9717bcdedd94875b8520e2b00678e8bc7ffa",
+      "sha256": "8ae3d9ace3dce6a972f46c9b7a19313cd2d239b8fc787ac4a3138ed5dd92c43b",
       "sbom": {
         "file": "maplibre-native-c-android-x64-egl.cdx.json",
         "url": "https://github.com/deepakkaushik2016/maplibre-native-ffi/releases/download/terrain-3d-202611.4/maplibre-native-c-android-x64-egl.cdx.json",
-        "sha256": "35442b9993c4520b07997f4a4e8fd0909a69780377bddb3e3f2744ef65bfb10a"
+        "sha256": "16cae7afafc742f9955ebb25839422fc7352b8279b047f1ecab4ccadddde3806"
       }
     },
     {
       "platform": "android-x64",
       "backend": "vulkan",
       "archive": "maplibre-native-c-android-x64-vulkan.tar.gz",
-      "sha256": "0e779bea25c9f84452dd7c5da09d95aa7c18d9396f6e53fff4635d97813f62bf",
+      "sha256": "d4566be788867a7ce108e6fd6e2426bc475a4e50335ec2efbf64c65a491395fd",
       "sbom": {
         "file": "maplibre-native-c-android-x64-vulkan.cdx.json",
         "url": "https://github.com/deepakkaushik2016/maplibre-native-ffi/releases/download/terrain-3d-202611.4/maplibre-native-c-android-x64-vulkan.cdx.json",
-        "sha256": "607990a35f4e7c9ce3731e5e4b97267132a727f8e9efc8a69c2cf11ef87b5b89"
+        "sha256": "b874880ae39c21a376fa7479418743a1e9cedcd6e1d5366768a380adc7501572"
       }
     },
     {
       "platform": "ios-arm64",
       "backend": "metal",
       "archive": "maplibre-native-c-ios-arm64-metal.tar.gz",
-      "sha256": "b2981f10197fddf150382c9f10f05f4e586e952b8a7b6e49a6726586a862f4b0",
+      "sha256": "56461bb588e76a21f39f6ce66f5ea97a4def585b42b9777d048b428a191f168b",
       "sbom": {
         "file": "maplibre-native-c-ios-arm64-metal.cdx.json",
         "url": "https://github.com/deepakkaushik2016/maplibre-native-ffi/releases/download/terrain-3d-202611.4/maplibre-native-c-ios-arm64-metal.cdx.json",
-        "sha256": "24aa066bf4b2d9411c840e11f75f7571d0130834ac2eae7264c1ea8bb11c7fe8"
+        "sha256": "2f1601fc12580e64cbae7c23ed51614035c735baed4c6ce80c2b0fec7a084c16"
       }
     },
     {
       "platform": "ios-simulator-arm64",
       "backend": "metal",
       "archive": "maplibre-native-c-ios-simulator-arm64-metal.tar.gz",
-      "sha256": "6804e7d28d719381badc7007f4871875074123b17c118850cee6e630b6130697",
+      "sha256": "c420e8c8d9d673e1220e8001f0ba8d2cdc33df8c586c5849b4e14dd837b1e39a",
       "sbom": {
         "file": "maplibre-native-c-ios-simulator-arm64-metal.cdx.json",
         "url": "https://github.com/deepakkaushik2016/maplibre-native-ffi/releases/download/terrain-3d-202611.4/maplibre-native-c-ios-simulator-arm64-metal.cdx.json",
-        "sha256": "8ff35b4adea2cedc022ec99b706676a67e2fd6ae1646511e52fb5bb39cb5fa40"
+        "sha256": "5dd1ff832b4d50c46ae5a89205e87dc8e02f9475e7bfb143ee67bdd6fa0ad4ff"
       }
     },
     {
       "platform": "macos-arm64",
       "backend": "metal",
       "archive": "maplibre-native-c-macos-arm64-metal.tar.gz",
-      "sha256": "6fbf4cb24d8c76558a32b905cfa52083ad9433c3b07bbc6c5f233dbc85e393dc",
+      "sha256": "f52db3ed657adaa758d11ada3ff599a251dd8ad0f1fe8cd8bc49059a5716d822",
       "sbom": {
         "file": "maplibre-native-c-macos-arm64-metal.cdx.json",
         "url": "https://github.com/deepakkaushik2016/maplibre-native-ffi/releases/download/terrain-3d-202611.4/maplibre-native-c-macos-arm64-metal.cdx.json",
-        "sha256": "d1cfda59e442996ac6f5fcf849d0c5f91f5cacb9e704dab7738ce8ea76f27048"
+        "sha256": "962d6d282c16e04e8fee9e9c544d09a0d40ceb9b5ef99014d6f78a0ee2895e5d"
       }
     }
   ]
