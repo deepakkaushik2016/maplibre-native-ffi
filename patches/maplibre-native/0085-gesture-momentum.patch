@@ -5,8 +5,15 @@ momentum starts at its release speed and slows by friction or by Android's
 scroll spline. On a tilted map, a pan glides the same distance on screen in
 every direction.
 
+On this engine, pans and anchors work on the plane at the center's altitude,
+the ground being looked at over terrain (Transform::moveBy, moveLatLng): the
+momentum's pan steps and its zoom, bearing, and pitch anchors use that plane
+too. On the sea-level plane, a fling over a raised center threw the center
+kilometers along the view, and a rotation or tilt slid the ground off its
+anchor.
+
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 841931253f..18c7f55556 100644
+index 841931253f3f..18c7f5555602 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -300,6 +300,7 @@ list(APPEND INCLUDE_FILES
@@ -18,7 +25,7 @@ index 841931253f..18c7f55556 100644
      ${PROJECT_SOURCE_DIR}/include/mln/map/map_observer.hpp
      ${PROJECT_SOURCE_DIR}/include/mln/map/map_options.hpp
 diff --git a/bazel/core.bzl b/bazel/core.bzl
-index de609f7390..80a8a760a6 100644
+index de609f7390db..80a8a760a6dd 100644
 --- a/bazel/core.bzl
 +++ b/bazel/core.bzl
 @@ -704,6 +704,7 @@ MLN_CORE_HEADERS = [
@@ -31,7 +38,7 @@ index de609f7390..80a8a760a6 100644
      "include/mln/map/map_observer.hpp",
 diff --git a/include/mln/map/camera_momentum.hpp b/include/mln/map/camera_momentum.hpp
 new file mode 100644
-index 0000000000..6b86726621
+index 000000000000..6b867266217e
 --- /dev/null
 +++ b/include/mln/map/camera_momentum.hpp
 @@ -0,0 +1,128 @@
@@ -164,7 +171,7 @@ index 0000000000..6b86726621
 +
 +} // namespace mln
 diff --git a/include/mln/map/map.hpp b/include/mln/map/map.hpp
-index 89e42cad7a..05bec0725d 100644
+index 89e42cad7a0a..05bec0725d67 100644
 --- a/include/mln/map/map.hpp
 +++ b/include/mln/map/map.hpp
 @@ -27,6 +27,7 @@ namespace mln {
@@ -186,7 +193,7 @@ index 89e42cad7a..05bec0725d 100644
      bool isGestureInProgress() const;
      bool isRotating() const;
 diff --git a/src/mln/map/map.cpp b/src/mln/map/map.cpp
-index 0187f9b96c..aab8974924 100644
+index 0187f9b96c59..aab897492428 100644
 --- a/src/mln/map/map.cpp
 +++ b/src/mln/map/map.cpp
 @@ -126,6 +126,12 @@ void Map::cancelTransitions(uint64_t transitionId) {
@@ -203,7 +210,7 @@ index 0187f9b96c..aab8974924 100644
      if (!inProgress) {
          impl->groundGrab.reset();
 diff --git a/src/mln/map/transform.cpp b/src/mln/map/transform.cpp
-index f06b1df2a7..9be923a5e0 100644
+index f06b1df2a7cf..11b112aa53f8 100644
 --- a/src/mln/map/transform.cpp
 +++ b/src/mln/map/transform.cpp
 @@ -13,6 +13,9 @@
@@ -262,20 +269,20 @@ index f06b1df2a7..9be923a5e0 100644
 +            return glide;
 +        }
 +
-+        // The share of the distance covered after `elapsed`, from 0 to 1.
-+        double progress(Duration elapsed) const {
-+            if (elapsed >= duration) return 1.0;
-+            if (elapsed <= Duration::zero()) return 0.0;
-+            const double t = std::chrono::duration<double>(elapsed).count();
++        // The share of the distance covered after `time`, from 0 to 1.
++        double progress(Duration time) const {
++            if (time >= duration) return 1.0;
++            if (time <= Duration::zero()) return 0.0;
++            const double t = std::chrono::duration<double>(time).count();
 +            const double total = std::chrono::duration<double>(duration).count();
 +            if (!easing) return std::expm1(-rate * t) / std::expm1(-rate * total);
 +            return bezier().solve(t / total, 1e-6);
 +        }
 +
-+        // The share of the distance covered per second after `elapsed`.
-+        double speed(Duration elapsed) const {
-+            if (elapsed >= duration) return 0.0;
-+            const double t = std::max(0.0, std::chrono::duration<double>(elapsed).count());
++        // The share of the distance covered per second after `time`.
++        double speed(Duration time) const {
++            if (time >= duration) return 0.0;
++            const double t = std::max(0.0, std::chrono::duration<double>(time).count());
 +            const double total = std::chrono::duration<double>(duration).count();
 +            if (!easing) return rate * std::exp(-rate * t) / -std::expm1(-rate * total);
 +            // The slope dy/dx of the curve, from its derivatives in its own
@@ -451,7 +458,7 @@ index f06b1df2a7..9be923a5e0 100644
              const double t = std::clamp(std::chrono::duration<double>(now - transition->start) /
                                              std::chrono::duration<double>(transition->duration),
                                          0.0,
-@@ -820,6 +981,289 @@ void Transform::updateTransitions(const TimePoint& now) {
+@@ -820,6 +981,296 @@ void Transform::updateTransitions(const TimePoint& now) {
      finishTransitions(finished);
  }
  
@@ -668,13 +675,17 @@ index f06b1df2a7..9be923a5e0 100644
 +    for (double i = 0; i < steps; ++i) {
 +        const ScreenCoordinate point =
 +            state.getEdgeInsets().getCenter(state.getSize().width, state.getSize().height) - step;
-+        const LatLng unwrapped = screenCoordinateToLatLng(point, LatLng::Unwrapped);
++        // On the plane at the centre's altitude, as moveBy pans: over terrain, the sea-level point
++        // under the screen centre lies altitude·tan(pitch) beyond the centre.
++        const LatLng unwrapped = screenCoordinateToLatLng(point, altitude, LatLng::Unwrapped);
 +        CameraOptions camera = CameraOptions().withCenter(bounded ? unwrapped : unwrapped.wrapped());
 +        double zoom = state.getZoom();
 +        state.constrainCameraAndZoomToBounds(camera, zoom);
 +        state.setLatLngZoom(*camera.center, zoom);
++        // Moving the center keeps the altitude in pixels: back in meters before the next step
++        // reads the plane.
++        state.setCenterAltitude(altitude);
 +    }
-+    state.setCenterAltitude(altitude);
 +    return getLatLng(LatLng::Unwrapped) != before;
 +}
 +
@@ -685,7 +696,8 @@ index f06b1df2a7..9be923a5e0 100644
 +    LatLng anchorLatLng;
 +    if (anchor) {
 +        point = ScreenCoordinate{anchor->x, state.getSize().height - anchor->y};
-+        anchorLatLng = state.screenCoordinateToLatLng(*point);
++        // At the centre's altitude, where moveLatLng puts it back.
++        anchorLatLng = state.screenCoordinateToLatLng(*point, state.getCenterAltitude(), LatLng::Unwrapped);
 +    }
 +    double target = util::clamp(state.getZoom() + zoom, state.getMinZoom(), state.getMaxZoom());
 +    CameraOptions camera = CameraOptions().withCenter(getLatLng(LatLng::Unwrapped));
@@ -706,7 +718,8 @@ index f06b1df2a7..9be923a5e0 100644
 +    LatLng anchorLatLng;
 +    if (anchor) {
 +        point = ScreenCoordinate{anchor->x, state.getSize().height - anchor->y};
-+        anchorLatLng = state.screenCoordinateToLatLng(*point);
++        // At the centre's altitude, where moveLatLng puts it back.
++        anchorLatLng = state.screenCoordinateToLatLng(*point, state.getCenterAltitude(), LatLng::Unwrapped);
 +    }
 +    constexpr double pi = std::numbers::pi;
 +    state.setBearing(util::wrap(state.getBearing() - util::deg2rad(bearing), -pi, pi));
@@ -723,7 +736,8 @@ index f06b1df2a7..9be923a5e0 100644
 +    LatLng anchorLatLng;
 +    if (anchor) {
 +        point = ScreenCoordinate{anchor->x, state.getSize().height - anchor->y};
-+        anchorLatLng = state.screenCoordinateToLatLng(*point);
++        // At the centre's altitude, where moveLatLng puts it back.
++        anchorLatLng = state.screenCoordinateToLatLng(*point, state.getCenterAltitude(), LatLng::Unwrapped);
 +    }
 +    const double before = state.getPitch();
 +    state.setPitch(util::clamp(
@@ -742,7 +756,7 @@ index f06b1df2a7..9be923a5e0 100644
      auto finished = std::exchange(transitions, {});
      updateMovementFlags();
 diff --git a/src/mln/map/transform.hpp b/src/mln/map/transform.hpp
-index 7c47131a27..c87871dcbc 100644
+index 7c47131a2731..c87871dcbcec 100644
 --- a/src/mln/map/transform.hpp
 +++ b/src/mln/map/transform.hpp
 @@ -1,6 +1,7 @@
@@ -799,10 +813,10 @@ index 7c47131a27..c87871dcbc 100644
      void finishTransitions(const std::vector<std::shared_ptr<Transition>>&);
  
 diff --git a/test/map/transform.test.cpp b/test/map/transform.test.cpp
-index a78ad76891..d62203ecb7 100644
+index a78ad768911a..96886dee543f 100644
 --- a/test/map/transform.test.cpp
 +++ b/test/map/transform.test.cpp
-@@ -1830,3 +1830,267 @@ TEST(Transform, FlyDurationRange) {
+@@ -1830,3 +1830,324 @@ TEST(Transform, FlyDurationRange) {
      EXPECT_DOUBLE_EQ(1.0, transform.getZoom());
      EXPECT_FALSE(transform.inTransition());
  }
@@ -891,6 +905,34 @@ index a78ad76891..d62203ecb7 100644
 +    EXPECT_FALSE(transform.inTransition());
 +}
 +
++// Over a raised center, as terrain puts it, a pan's momentum moves the ground
++// at the center across the screen as it moves sea level under a center at sea
++// level: on the plane at the center's altitude, as a drag does. On the
++// sea-level plane, each step put the center where the line of sight through
++// the step meets sea level, kilometers along the view.
++TEST(Transform, MomentumPansARaisedCenterAsItPansSeaLevel) {
++    const auto fling = [](double altitude) {
++        Transform transform;
++        transform.resize({1000, 1000});
++        transform.jumpTo(
++            CameraOptions().withCenter(LatLng{47.265, 11.404}).withZoom(13).withPitch(60).withCenterAltitude(altitude));
++        const double scale = transform.getState().getScale();
++        const auto from = Projection::project(transform.getLatLng(), scale);
++        CameraMomentum momentum;
++        momentum.panVelocity = ScreenCoordinate{300, -200};
++        transform.startMomentum(momentum);
++        transform.updateTransitions(transform.getLatestTransitionStart() + Seconds(3));
++        EXPECT_FALSE(transform.inTransition());
++        EXPECT_NEAR(transform.getState().getCenterAltitude(), altitude, 1e-6);
++        return Projection::project(transform.getLatLng(), scale) - from;
++    };
++    const auto raised = fling(2300);
++    const auto seaLevel = fling(0);
++    EXPECT_GT(std::hypot(seaLevel.x, seaLevel.y), 50.0);
++    EXPECT_NEAR(raised.x, seaLevel.x, 0.5);
++    EXPECT_NEAR(raised.y, seaLevel.y, 0.5);
++}
++
 +// An eased glide follows its curve, and its speed is the curve's slope. A
 +// straight curve moves at an even speed.
 +TEST(Transform, MomentumFollowsAnEasedGlide) {
@@ -919,23 +961,52 @@ index a78ad76891..d62203ecb7 100644
 +}
 +
 +TEST(Transform, MomentumKeepsItsAnchorInPlace) {
-+    Transform transform;
-+    transform.resize({1000, 1000});
-+    transform.jumpTo(CameraOptions().withCenter(LatLng{10, 20}).withZoom(8).withPitch(20).withCenterAltitude(120));
-+    const ScreenCoordinate anchor{800, 300};
-+    const LatLng ground = transform.screenCoordinateToLatLng(anchor);
-+    CameraMomentum momentum;
-+    momentum.pitchVelocity = 20.0;
-+    momentum.pitchAnchor = anchor;
-+    transform.startMomentum(momentum);
-+    transform.updateTransitions(transform.getLatestTransitionStart() + Seconds(3));
-+    EXPECT_GT(util::rad2deg(transform.getPitch()), 20);
-+    const auto point = transform.latLngToScreenCoordinate(ground);
-+    // Restoring the altitude after the correction moves the view by far less
-+    // than a pixel.
-+    EXPECT_NEAR(point.x, anchor.x, 1e-4);
-+    EXPECT_NEAR(point.y, anchor.y, 1e-4);
-+    EXPECT_NEAR(transform.getState().getCenterAltitude(), 120, 1e-6);
++    // The anchor holds the point on the plane at the center's altitude, the
++    // ground being looked at over terrain, as an anchored camera change and
++    // moveLatLng do; at sea level a raised center slid that point off it.
++    enum class Part {
++        Zoom,
++        Bearing,
++        Pitch
++    };
++    for (const Part part : {Part::Zoom, Part::Bearing, Part::Pitch}) {
++        Transform transform;
++        transform.resize({1000, 1000});
++        transform.jumpTo(
++            CameraOptions().withCenter(LatLng{10, 20}).withZoom(8).withPitch(20).withCenterAltitude(120));
++        const ScreenCoordinate anchor{800, 300};
++        const LatLng ground = transform.screenCoordinateToLatLng(anchor, 120.0, LatLng::Unwrapped);
++        CameraMomentum momentum;
++        switch (part) {
++            case Part::Zoom:
++                momentum.zoomVelocity = 1.0;
++                momentum.zoomAnchor = anchor;
++                break;
++            case Part::Bearing:
++                momentum.bearingVelocity = 60.0;
++                momentum.bearingAnchor = anchor;
++                break;
++            case Part::Pitch:
++                momentum.pitchVelocity = 20.0;
++                momentum.pitchAnchor = anchor;
++                break;
++        }
++        transform.startMomentum(momentum);
++        transform.updateTransitions(transform.getLatestTransitionStart() + Seconds(3));
++        if (part == Part::Pitch) {
++            EXPECT_GT(util::rad2deg(transform.getPitch()), 20);
++        }
++        // Where the ground that was under the anchor is now, in pixels on its
++        // plane. Restoring the altitude after the correction moves the view by
++        // far less than a pixel.
++        const double scale = transform.getState().getScale();
++        const auto held = Projection::project(ground, scale);
++        const auto under = Projection::project(
++            transform.screenCoordinateToLatLng(anchor, 120.0, LatLng::Unwrapped), scale);
++        EXPECT_NEAR(under.x, held.x, 1e-4) << static_cast<int>(part);
++        EXPECT_NEAR(under.y, held.y, 1e-4) << static_cast<int>(part);
++        EXPECT_NEAR(transform.getState().getCenterAltitude(), 120, 1e-6) << static_cast<int>(part);
++    }
 +}
 +
 +TEST(Transform, MomentumCapsItsDistance) {
