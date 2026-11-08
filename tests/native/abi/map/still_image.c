@@ -5,6 +5,10 @@
 #include "support/resources.h"
 #include "support/test_support.h"
 
+#if MLN_TEST_PLATFORM_HTTP
+#include "support/http_server.h"
+#endif
+
 static mln_map create_map_in_mode(mln_runtime runtime, uint32_t map_mode) {
   mln_map_options options = mln_test_map_options();
   options.initial_extent =
@@ -354,6 +358,96 @@ static void map_release_cancels_the_pending_still_image(void) {
   mln_test_destroy_runtime(runtime);
 }
 
+#if MLN_TEST_PLATFORM_HTTP
+
+// A 16 by 16 PNG, all green.
+static const uint8_t green_png[] = {
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
+  0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x10, 0x08, 0x02,
+  0x00, 0x00, 0x00, 0x90, 0x91, 0x68, 0x36, 0x00, 0x00, 0x00, 0x15, 0x49, 0x44,
+  0x41, 0x54, 0x78, 0xda, 0x63, 0x60, 0xf8, 0xcf, 0x40, 0x1a, 0x1a, 0xd5, 0x30,
+  0xaa, 0x61, 0xf8, 0x6a, 0x00, 0x00, 0x91, 0xea, 0xff, 0x01, 0x95, 0x7f, 0xd8,
+  0x4f, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+};
+
+static void offline_still_image_body(void) {
+  static const mln_test_http_route routes[] = {
+    {.path = "/tiles/0/0/0.png",
+     .body = green_png,
+     .body_size = sizeof(green_png)},
+  };
+  mln_test_http_server* server = mln_test_http_server_start(routes, 1);
+  char tiles[256];
+  mln_test_http_server_url(
+    server, "/tiles/{z}/{x}/{y}.png", tiles, sizeof(tiles)
+  );
+  char style[1024];
+  const int written = snprintf(
+    style, sizeof(style),
+    "{\"version\":8,\"sources\":{\"raster\":{\"type\":\"raster\","
+    "\"tiles\":[\"%s\"],\"maxzoom\":0,\"tileSize\":256}},\"layers\":["
+    "{\"id\":\"bg\",\"type\":\"background\",\"paint\":"
+    "{\"background-color\":\"#ff0000\"}},{\"id\":\"raster\",\"type\":"
+    "\"raster\",\"source\":\"raster\",\"paint\":{\"raster-fade-duration\":0}}"
+    "]}",
+    tiles
+  );
+  TEST_ASSERT_TRUE(written > 0 && (size_t)written < sizeof(style));
+
+  // The database is empty, so only the network has the tile.
+  char cache_path[1024];
+  mln_test_temp_path("offline-still-image.db", cache_path, sizeof(cache_path));
+  (void)remove(cache_path);
+  mln_runtime_options options = {.size = sizeof(mln_runtime_options)};
+  options.cache_path = mln_buffer_view_from_cstr(cache_path);
+  mln_runtime runtime = mln_test_create_runtime_with_options(options);
+  mln_map map = create_map_in_mode(runtime, MLN_MAP_MODE_STATIC);
+  mln_test_load_style_and_wait(
+    map, mln_test_buffer_view(style, (size_t)written)
+  );
+  mln_test_render_fixture fixture = {0};
+  TEST_ASSERT_TRUE(mln_test_render_fixture_create_offscreen(map, &fixture));
+
+  // Offline, the still image finishes without the tile, which it waited on
+  // forever before.
+  MLN_TEST_OK(mln_network_set_status(MLN_NETWORK_STATUS_OFFLINE, NULL));
+  MLN_TEST_OK(mln_test_render_still_image(&fixture, map));
+  uint8_t rgba[4] = {0};
+  read_center_pixel(&fixture, 64, 64, rgba);
+  TEST_ASSERT_EQUAL_UINT8(255, rgba[0]);
+  TEST_ASSERT_EQUAL_UINT8(0, rgba[1]);
+  TEST_ASSERT_EQUAL_INT(
+    0, mln_test_http_server_requests(server, "/tiles/0/0/0.png")
+  );
+
+  // Back online, the next still image requests the tile and draws it.
+  MLN_TEST_OK(mln_network_set_status(MLN_NETWORK_STATUS_ONLINE, NULL));
+  MLN_TEST_OK(mln_test_render_still_image(&fixture, map));
+  read_center_pixel(&fixture, 64, 64, rgba);
+  TEST_ASSERT_EQUAL_UINT8(0, rgba[0]);
+  TEST_ASSERT_EQUAL_UINT8(255, rgba[1]);
+  TEST_ASSERT_EQUAL_INT(
+    1, mln_test_http_server_requests(server, "/tiles/0/0/0.png")
+  );
+
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+  mln_test_http_server_stop(server);
+  (void)remove(cache_path);
+}
+
+// The network status is process-global: set it back online even when an
+// assertion fails.
+static void a_still_image_offline_finishes_without_a_tile_it_lacks(void) {
+  if (TEST_PROTECT()) {
+    offline_still_image_body();
+  }
+  (void)mln_network_set_status(MLN_NETWORK_STATUS_ONLINE, NULL);
+}
+
+#endif
+
 MLN_TEST_GROUP {
   RUN_TEST(a_static_map_renders_still_images);
   RUN_TEST(a_tile_map_session_resizes_between_still_images);
@@ -362,4 +456,7 @@ MLN_TEST_GROUP {
   RUN_TEST(host_demands_and_a_still_image_demand_never_replace_each_other);
   RUN_TEST(a_continuous_map_refuses_a_still_image);
   RUN_TEST(map_release_cancels_the_pending_still_image);
+#if MLN_TEST_PLATFORM_HTTP
+  RUN_TEST(a_still_image_offline_finishes_without_a_tile_it_lacks);
+#endif
 }
