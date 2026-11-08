@@ -1207,9 +1207,12 @@ class ForwardingRendererObserver final : public mln::RendererObserver {
     delegate_.invoke(&mln::RendererObserver::onDidFinishRenderingMap);
   }
 
-  void onTerrainCenterElevationChanged(double elevation_meters) override {
+  void onTerrainCenterElevationChanged(
+    double elevation_meters, const mln::LatLng& center
+  ) override {
     delegate_.invoke(
-      &mln::RendererObserver::onTerrainCenterElevationChanged, elevation_meters
+      &mln::RendererObserver::onTerrainCenterElevationChanged, elevation_meters,
+      center
     );
   }
 

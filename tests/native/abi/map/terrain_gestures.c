@@ -262,6 +262,122 @@ static void a_pinch_keeps_the_ground_under_its_focal_point(void) {
   close_ridge_view(&view);
 }
 
+// How a wheel's notches meet the frames: back to back with no frame between
+// them, a frame after each, or each notch while a frame renders, so that the
+// frame reports the ground under the center the notch moves away from.
+typedef enum wheel_pacing {
+  WHEEL_BACK_TO_BACK,
+  WHEEL_FRAME_AFTER_EACH,
+  WHEEL_DURING_A_FRAME,
+} wheel_pacing;
+
+static const char* const wheel_pacing_names[] = {
+  "back to back", "a frame after each", "during a frame"
+};
+
+typedef struct wheel_result {
+  double center_shown;
+  double pointer_drift;
+} wheel_result;
+
+// Mouse-wheel notches about `pointer`, each an immediate scale delta about it
+// with no gesture phase, as flutter-maplibre sends a notch, then frames until
+// the map is idle. Returns how far from the middle of the screen the ground at
+// the camera's center is drawn, and how far from the pointer the ground that
+// was under it.
+static wheel_result wheel(
+  const ridge_view* view, mln_screen_point pointer, double levels, int notches,
+  wheel_pacing pacing
+) {
+  const mln_lat_lng pointed = ground_under(view, pointer);
+  for (int notch = 0; notch < notches; ++notch) {
+    const mln_camera_delta zoom = {
+      .size = sizeof(mln_camera_delta),
+      .fields = MLN_CAMERA_DELTA_SCALE | MLN_CAMERA_DELTA_ANCHOR,
+      .scale = pow(2.0, levels),
+      .anchor = pointer,
+    };
+    if (pacing == WHEEL_DURING_A_FRAME) {
+      mln_frame_demand demand = {.size = sizeof(mln_frame_demand)};
+      MLN_TEST_OK(
+        mln_render_session_demand_frame(view->fixture.session, &demand, NULL)
+      );
+      apply_delta(view, &zoom);
+      mln_render_frame_batch_release(
+        mln_test_render_wait_for_results(&view->fixture)
+      );
+      MLN_TEST_OK(mln_test_map_fence(view->map));
+    } else {
+      apply_delta(view, &zoom);
+      if (pacing == WHEEL_FRAME_AFTER_EACH) render_frame(view);
+    }
+  }
+  mln_test_render_until_idle(view->runtime, view->map, &view->fixture);
+  // The map may still be taking in the last frame's ground under the center
+  // when the frames go idle: frames until its camera holds still.
+  mln_camera camera = {0};
+  MLN_TEST_OK(mln_test_map_get_camera(view->map, &camera));
+  const mln_test_deadline deadline = mln_test_deadline_default();
+  for (int still = 0; still < 3;) {
+    TEST_ASSERT_FALSE_MESSAGE(
+      mln_test_deadline_passed(deadline), "the camera never held still"
+    );
+    render_frame(view);
+    mln_camera next = {0};
+    MLN_TEST_OK(mln_test_map_get_camera(view->map, &next));
+    const bool held = next.center_altitude == camera.center_altitude &&
+                      next.center.latitude == camera.center.latitude &&
+                      next.center.longitude == camera.center.longitude;
+    still = held ? still + 1 : 0;
+    camera = next;
+  }
+  const mln_screen_point middle = {.x = 195, .y = 422};
+  return (wheel_result){
+    .center_shown = drawn_distance(view, camera.center, middle),
+    .pointer_drift = drawn_distance(view, pointed, pointer),
+  };
+}
+
+// Wheel notches over the ridge, with the clamp on, leave the camera's center
+// on the ground it looks at, however the notches meet the frames, however
+// many there are, in and out, and the ground under the pointer stays there.
+// Through the delta, a notch is the same anchored zoom as Map::easeTo; the
+// engine's TerrainGesture wheel tests pin the clamp's passes. The zooms go
+// out by about a level at most: this fixture serves its one tile at every
+// zoom, so the coarser DEM tiles of a farther zoom-out put other ground beside
+// it, a cliff the passes stop at.
+static void wheel_zooms_leave_the_center_on_the_ground(void) {
+  const mln_screen_point pointers[] = {{.x = 195, .y = 572}, on_the_face};
+  const struct {
+    double levels;
+    int notches;
+  } wheels[] = {{0.195, 5}, {-0.195, 5}, {0.1, 20}};
+  for (size_t p = 0; p < sizeof(pointers) / sizeof(pointers[0]); ++p) {
+    for (size_t w = 0; w < sizeof(wheels) / sizeof(wheels[0]); ++w) {
+      for (int pacing = WHEEL_BACK_TO_BACK; pacing <= WHEEL_DURING_A_FRAME;
+           ++pacing) {
+        ridge_view view = {0};
+        open_ridge_view(&view, true, MLN_RUNTIME_EVENT_FLAG_NONE);
+        const wheel_result result = wheel(
+          &view, pointers[p], wheels[w].levels, wheels[w].notches,
+          (wheel_pacing)pacing
+        );
+        char label[128];
+        snprintf(
+          label, sizeof(label), "pointer %.0f,%.0f, %d notches of %.3f, %s",
+          pointers[p].x, pointers[p].y, wheels[w].notches, wheels[w].levels,
+          wheel_pacing_names[pacing]
+        );
+        TEST_ASSERT_LESS_THAN_DOUBLE_MESSAGE(0.5, result.center_shown, label);
+        TEST_ASSERT_LESS_THAN_DOUBLE_MESSAGE(
+          2.0, result.pointer_drift, label
+        );
+        close_ridge_view(&view);
+      }
+    }
+  }
+}
+
 typedef struct grab_events {
   size_t count;
   double elevation_meters;
@@ -407,6 +523,7 @@ static void a_grab_reports_a_change_of_a_centimeter_or_more(void) {
 MLN_TEST_GROUP {
   RUN_TEST(a_drag_keeps_the_ground_under_the_finger);
   RUN_TEST(a_pinch_keeps_the_ground_under_its_focal_point);
+  RUN_TEST(wheel_zooms_leave_the_center_on_the_ground);
   RUN_TEST(a_grab_reports_its_ground_height_once);
   RUN_TEST(a_grab_reports_a_change_of_a_centimeter_or_more);
 }

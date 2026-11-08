@@ -790,9 +790,11 @@ class SessionFrameObserver final : public mln::RendererObserver {
   // The terrain heights describe the renderer's state rather than the frame,
   // and the renderer reports each only when it changes, so they reach the map
   // whether or not the frame's own callbacks do.
-  void onTerrainCenterElevationChanged(double elevation_meters) override {
+  void onTerrainCenterElevationChanged(
+    double elevation_meters, const mln::LatLng& center
+  ) override {
     if (delegate_ != nullptr) {
-      delegate_->onTerrainCenterElevationChanged(elevation_meters);
+      delegate_->onTerrainCenterElevationChanged(elevation_meters, center);
     }
   }
 
