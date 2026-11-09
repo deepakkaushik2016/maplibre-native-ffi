@@ -1066,6 +1066,13 @@ class StillImageFrameFilter {
     request_generation_ = generation;
   }
 
+  // Called after a full frame of the request's update that left the image
+  // pending: the map asked for another frame (a clamped center, which that
+  // frame's height report moved onto the ground).
+  auto set_on_image_kept(std::function<void()> on_image_kept) -> void {
+    on_image_kept_ = std::move(on_image_kept);
+  }
+
   void finish_frame(
     RenderMode mode, bool repaint_needed, bool placement_changed,
     std::shared_ptr<mln::gfx::RenderingStats> stats,
@@ -1078,12 +1085,17 @@ class StillImageFrameFilter {
     );
     if (held_back) {
       mln::testing::hit(mln::testing::SyncPoint::StillImageFrameHeldBack);
+    } else if (
+      mode == RenderMode::Full && request_generation_ != 0 && on_image_kept_
+    ) {
+      on_image_kept_();
     }
   }
 
  private:
   mln::RendererObserver& delegate_;
   uint64_t request_generation_ = 0;
+  std::function<void()> on_image_kept_;
 };
 
 // Hands the height of a gesture's grabbed ground to the map, which puts the
@@ -1358,6 +1370,9 @@ class HeadlessFrontend final : public mln::RendererFrontend {
     observer_ = std::make_unique<ForwardingRendererObserver>(
       run_loop_, observer, event_state_
     );
+    observer_->still_image_frames().set_on_image_kept([this]() {
+      follow_latest_update_for_still_image();
+    });
   }
 
   // Runs on the runtime worker. An open map transaction or command group holds
@@ -1504,6 +1519,26 @@ class HeadlessFrontend final : public mln::RendererFrontend {
         return;
       notify_session = session_notices_.still_image;
     }
+    if (notify_session) notify_session();
+  }
+
+  // The map kept a still image past a full frame of its update, and asked for
+  // another frame: the image now waits for the map's latest state. Its frame
+  // needs its own demand, as only a demand draws for a still image, and frames
+  // of the updates before it show the camera the map has moved on from. Runs
+  // on the map's run loop, like the filter.
+  auto follow_latest_update_for_still_image() -> void {
+    auto generation = uint64_t{0};
+    auto notify_session = std::function<void()>{};
+    {
+      const std::scoped_lock lock(latest_update_mutex_);
+      if (still_image_generation_ == 0) return;
+      generation =
+        latest_update_generation_ + (held_update_ != nullptr ? 1 : 0);
+      still_image_generation_ = generation;
+      notify_session = session_notices_.still_image;
+    }
+    observer_->still_image_frames().set_request_generation(generation);
     if (notify_session) notify_session();
   }
 

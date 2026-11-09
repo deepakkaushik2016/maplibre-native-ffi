@@ -527,6 +527,35 @@ static void the_clamp_lifts_a_camera_out_of_the_ground(void) {
   close_plateau_view(&view);
 }
 
+// A clamped still image: a 1000 m plateau above the eye of a camera at 0 m. The
+// first frame tells the map the height, and the map draws again from the
+// ground, on the update the clamp published. One still image only, so a still
+// image that ends on the first frame, or waits for a frame nothing demands, is
+// a failure rather than a blank picture or a hang.
+static void a_clamped_still_image_draws_the_ground_it_lands_on(void) {
+  plateau_view view = {
+    .provider =
+      {.dem = mln_test_plateau_1000_png,
+       .dem_size = mln_test_plateau_1000_png_size},
+    .width = 256,
+    .height = 256,
+  };
+  open_plateau_view(&view, 14.5, 1.0);
+  const mln_map_terrain_options options = {
+    .size = sizeof(mln_map_terrain_options),
+    .fields = MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND,
+    .center_clamped_to_ground = true,
+  };
+  set_terrain_options(view.map, &options);
+
+  TEST_ASSERT_GREATER_THAN_size_t_MESSAGE(
+    (size_t)view.width * view.height / 2, render_ground_pixels(&view),
+    "the still image drew from under the ground"
+  );
+  TEST_ASSERT_DOUBLE_WITHIN(1.0, 1000.0, read_camera(view.map).center_altitude);
+  close_plateau_view(&view);
+}
+
 // Anchoring keeps the camera where it is, so a camera inside the ground stays
 // there and sees nothing. Only the clamp lifts it out.
 static void anchoring_leaves_a_camera_in_the_ground(void) {
@@ -882,6 +911,7 @@ MLN_TEST_GROUP {
   RUN_TEST(anchoring_without_terrain_leaves_the_camera);
   RUN_TEST(anchoring_keeps_the_eye_and_raises_the_zoom);
   RUN_TEST(the_clamp_lifts_a_camera_out_of_the_ground);
+  RUN_TEST(a_clamped_still_image_draws_the_ground_it_lands_on);
   RUN_TEST(anchoring_leaves_a_camera_in_the_ground);
   RUN_TEST(the_clamp_keeps_the_eye_above_the_ground_under_it);
   RUN_TEST(the_clamp_keeps_the_eye_above_a_sea_cliff);
