@@ -1527,19 +1527,28 @@ class HeadlessFrontend final : public mln::RendererFrontend {
   // needs its own demand, as only a demand draws for a still image, and frames
   // of the updates before it show the camera the map has moved on from. Runs
   // on the map's run loop, like the filter.
+  //
+  // A held update is stored as the next generation when its group or
+  // transaction ends, so the image waits for that one. Nothing discards a held
+  // update while the map lives: reset() runs from the map's destructor, after
+  // the release that cancels a pending image.
   auto follow_latest_update_for_still_image() -> void {
     auto generation = uint64_t{0};
+    auto held = false;
     auto notify_session = std::function<void()>{};
     {
       const std::scoped_lock lock(latest_update_mutex_);
       if (still_image_generation_ == 0) return;
-      generation =
-        latest_update_generation_ + (held_update_ != nullptr ? 1 : 0);
+      held = held_update_ != nullptr;
+      generation = latest_update_generation_ + (held ? 1 : 0);
       still_image_generation_ = generation;
       notify_session = session_notices_.still_image;
     }
     observer_->still_image_frames().set_request_generation(generation);
     if (notify_session) notify_session();
+    if (held) {
+      mln::testing::hit(mln::testing::SyncPoint::StillImageFollowedHeldUpdate);
+    }
   }
 
   [[nodiscard]] auto still_image_generation() const -> uint64_t {

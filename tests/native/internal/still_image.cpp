@@ -9,13 +9,18 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <cstdio>
 #include <memory>
+#include <string>
+#include <string_view>
 
 #include "internal/support/sync_points.hpp"
 #include "maplibre_native_c.h"
 #include "runtime/runtime.hpp"
 #include "support/frames.h"
 #include "support/map.h"
+#include "support/terrain.h"
+#include "support/resources.h"
 #include "support/test_support.h"
 #include "testing/sync_point.hpp"
 
@@ -113,6 +118,163 @@ void a_frame_of_an_older_update_does_not_complete_a_still_image() {
   TEST_ASSERT_EQUAL_UINT8(255, rgba[1]);
   TEST_ASSERT_EQUAL_UINT8(0, rgba[2]);
   TEST_ASSERT_EQUAL_UINT8(255, rgba[3]);
+
+  mln_test_render_fixture_destroy(&fixture);
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
+// A 1000 m plateau west of z12 column 2179, and 1600 m from there on.
+void serve_two_plateaus(
+  void*, const mln_resource_request_info* request, mln_resource_request handle
+) {
+  auto response = mln_resource_response{
+    .size = sizeof(mln_resource_response),
+    .status = MLN_RESOURCE_RESPONSE_STATUS_NO_CONTENT,
+  };
+  const auto url =
+    std::string_view{
+      reinterpret_cast<const char*>(request->requested_url.data),
+      request->requested_url.size
+    };
+  const auto tile = url.find("/dem/");
+  unsigned z = 0;
+  unsigned x = 0;
+  unsigned y = 0;
+  if (
+    tile != std::string_view::npos &&
+    std::sscanf(
+      std::string{url.substr(tile)}.c_str(), "/dem/%u/%u/%u", &z, &x, &y
+    ) == 3
+  ) {
+    const auto high = z <= 12 && (x << (12 - z)) >= 2179;
+    response.status = MLN_RESOURCE_RESPONSE_STATUS_OK;
+    response.bytes =
+      high ? mln_test_plateau_1600_png : mln_test_plateau_1000_png;
+    response.byte_count =
+      high ? mln_test_plateau_1600_png_size : mln_test_plateau_1000_png_size;
+  }
+  mln_test_request_answer(handle, &response);
+}
+
+constexpr char two_plateaus_style_json[] =
+  "{\"version\":8,\"center\":[11.39,47.27],\"zoom\":14.5,\"pitch\":60,"
+  "\"sources\":{\"dem\":{\"type\":\"raster-dem\",\"tiles\":"
+  "[\"custom://dem/{z}/{x}/{y}.png\"],\"encoding\":\"mapbox\","
+  "\"tileSize\":256,\"maxzoom\":12},\"ground\":{\"type\":\"geojson\","
+  "\"data\":{\"type\":\"Polygon\",\"coordinates\":[[[10,46],[13,46],"
+  "[13,48.5],[10,48.5],[10,46]]]}}},\"terrain\":{\"source\":\"dem\","
+  "\"exaggeration\":1},\"layers\":[{\"id\":\"bg\",\"type\":"
+  "\"background\",\"paint\":{\"background-color\":\"#ffffff\"}},{\"id\":"
+  "\"ground\",\"type\":\"fill\",\"source\":\"ground\",\"paint\":"
+  "{\"fill-color\":\"#00ff00\"}}]}";
+
+struct HitsContext {
+  const SyncPointScope* points;
+};
+
+bool followed_held_update(void* context) {
+  return static_cast<HitsContext*>(context)->points->hits(
+           SyncPoint::StillImageFollowedHeldUpdate
+         ) >= 1;
+}
+
+void move_camera(mln_map map, double longitude, std::uint32_t extra_fields) {
+  mln_camera_update update = {
+    .size = sizeof(mln_camera_update),
+    .camera = {
+      .size = sizeof(mln_camera_options),
+      .fields = MLN_CAMERA_OPTION_CENTER | extra_fields,
+      .center = {.latitude = 47.27, .longitude = longitude},
+      .center_altitude = 0.0,
+    },
+  };
+  MLN_TEST_AWAIT_OK(
+    mln_map_update_camera(map, &update, &completion.descriptor, nullptr)
+  );
+}
+
+// The clamp moves the camera during a still image's frame while a command group
+// holds the map's updates, so the image follows an update not stored yet. Ending
+// the group stores it as the generation the image waits for, and the image
+// completes, drawn from the ground. Before: the follow named a generation the
+// store never reaches, or one the session had already rendered, and the image
+// hung.
+void a_still_image_follows_an_update_a_command_group_holds() {
+  const mln_resource_provider provider = {
+    .size = sizeof(mln_resource_provider),
+    .callback = serve_two_plateaus,
+    .user_data = nullptr,
+  };
+  const auto runtime = mln_test_create_runtime();
+  MLN_TEST_OK(mln_test_set_resource_provider(runtime, &provider));
+  auto options = mln_test_map_options();
+  options.initial_extent =
+    mln_logical_extent{.width = 64, .height = 64, .scale_factor = 1.0};
+  options.map_mode = MLN_MAP_MODE_STATIC;
+  const auto map = mln_test_create_map_with_options(runtime, &options);
+  mln_test_load_style_and_wait(
+    map, mln_buffer_view{
+           two_plateaus_style_json, sizeof(two_plateaus_style_json) - 1
+         }
+  );
+  auto fixture = mln_test_render_fixture{};
+  TEST_ASSERT_TRUE(mln_test_render_fixture_create_offscreen(map, &fixture));
+  const mln_map_terrain_options clamp = {
+    .size = sizeof(mln_map_terrain_options),
+    .fields = MLN_MAP_TERRAIN_OPTION_CENTER_CLAMPED_TO_GROUND,
+    .center_clamped_to_ground = true,
+  };
+  MLN_TEST_AWAIT_OK(
+    mln_map_set_terrain_options(map, &clamp, &completion.descriptor, nullptr)
+  );
+
+  // Two stills load both places' tiles and leave the last height at 1600 m,
+  // so going back reports a new height and the tiles need no update to load.
+  MLN_TEST_OK(mln_test_render_still_image(&fixture, map));
+  move_camera(map, 11.60, 0);
+  MLN_TEST_OK(mln_test_render_still_image(&fixture, map));
+  move_camera(map, 11.39, MLN_CAMERA_OPTION_CENTER_ALTITUDE);
+
+  auto points = SyncPointScope{};
+  auto parked = std::make_shared<mln_test_gate>();
+  mln_test_gate_init(parked.get());
+  mln::core::lease_runtime(runtime)->executor.invoke([parked] {
+    mln_test_gate_park(parked.get());
+  });
+  TEST_ASSERT_TRUE_MESSAGE(
+    mln_test_gate_wait_entered(parked.get()), "the runtime worker never parked"
+  );
+  // In this order behind the parked worker: the request publishes its update,
+  // and the group opens before any of the frame's messages arrive.
+  auto still = mln_test_completion_default(0);
+  MLN_TEST_OK(mln_map_request_still_image(map, &still.descriptor, nullptr));
+  auto group = mln_test_completion_default(0);
+  MLN_TEST_OK(mln_map_begin_command_group(map, &group.descriptor, nullptr));
+  mln_test_gate_release(parked.get());
+
+  auto hits = HitsContext{&points};
+  MLN_TEST_OK(mln_test_render_step_until(
+    &fixture, followed_held_update, &hits, mln_test_deadline_default(),
+    "the still image to follow the held update"
+  ));
+  TEST_ASSERT_FALSE_MESSAGE(
+    mln_test_completion_poll(&still),
+    "the still image completed on a frame from before the clamp's move"
+  );
+  MLN_TEST_OK(mln_test_render_fixture_finish_operation(&fixture, &group));
+  mln_test_completion_destroy(&group);
+
+  MLN_TEST_AWAIT_OK(
+    mln_map_end_command_group(map, &completion.descriptor, nullptr)
+  );
+  MLN_TEST_OK(mln_test_render_pending_still_image(&fixture, &still));
+  mln_test_completion_destroy(&still);
+  std::uint8_t rgba[4] = {};
+  read_center_pixel(fixture, rgba);
+  TEST_ASSERT_EQUAL_UINT8(0, rgba[0]);
+  TEST_ASSERT_EQUAL_UINT8(255, rgba[1]);
+  TEST_ASSERT_EQUAL_UINT8(0, rgba[2]);
 
   mln_test_render_fixture_destroy(&fixture);
   mln_test_destroy_map(map);
@@ -291,5 +453,6 @@ void a_missing_image_reply_cannot_be_overtaken_by_its_map_update() {
 MLN_TEST_GROUP {
   RUN_TEST(a_missing_image_reply_cannot_be_overtaken_by_its_map_update);
   RUN_TEST(a_frame_of_an_older_update_does_not_complete_a_still_image);
+  RUN_TEST(a_still_image_follows_an_update_a_command_group_holds);
   RUN_TEST(a_request_behind_an_unfinished_demand_still_renders);
 }
