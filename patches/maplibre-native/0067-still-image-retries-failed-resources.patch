@@ -40,9 +40,9 @@ index bd029f1fc8..6b60d532dc 100644
      bool rendererFullyLoaded;
      std::unique_ptr<StillImageRequest> stillImageRequest;
 +    uint64_t stillImageRequestID = 0;
- 
-     double tileLodMinRadius = 3;
-     double tileLodScale = 1;
+     /// The clamp moved the centre during the frame a still image is waiting on: that frame drew
+     /// the camera before the move.
+     bool stillFrameBeforeClamp = false;
 diff --git a/src/mln/renderer/render_orchestrator.cpp b/src/mln/renderer/render_orchestrator.cpp
 index bbe2a7bc78..fa4bb84ddd 100644
 --- a/src/mln/renderer/render_orchestrator.cpp
