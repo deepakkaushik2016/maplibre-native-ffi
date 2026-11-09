@@ -11,9 +11,9 @@ diff --git a/src/mln/map/map.cpp b/src/mln/map/map.cpp
 index 10df900236..0187f9b96c 100644
 --- a/src/mln/map/map.cpp
 +++ b/src/mln/map/map.cpp
-@@ -79,6 +79,7 @@ void Map::renderStill(StillImageCallback callback) {
-     }
- 
+@@ -82,6 +82,7 @@ void Map::renderStill(StillImageCallback callback) {
+     impl->stillFrameBeforeClamp = false;
+     impl->stillClampRedraws = 0;
      impl->stillImageRequest = std::make_unique<StillImageRequest>(std::move(callback));
 +    ++impl->stillImageRequestID;
  
