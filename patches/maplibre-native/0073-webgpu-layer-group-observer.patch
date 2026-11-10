@@ -46,8 +46,8 @@ diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
 index f4f53e48f6..922a73b584 100644
 --- a/test/CMakeLists.txt
 +++ b/test/CMakeLists.txt
-@@ -54,6 +54,7 @@ add_library(
-     ${PROJECT_SOURCE_DIR}/test/renderer/terrain_mesh_cover.test.cpp
+@@ -55,6 +55,7 @@ add_library(
+     ${PROJECT_SOURCE_DIR}/test/renderer/terrain_drape_pool.test.cpp
      ${PROJECT_SOURCE_DIR}/test/renderer/terrain_source_cover.test.cpp
      $<$<BOOL:${MLN_WITH_WEBGPU}>:${PROJECT_SOURCE_DIR}/test/renderer/wgsl_preprocessor.test.cpp>
 +    $<$<BOOL:${MLN_WITH_WEBGPU}>:${PROJECT_SOURCE_DIR}/test/renderer/webgpu_layer_group.test.cpp>
