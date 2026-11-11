@@ -405,6 +405,7 @@ export interface NativeOperations {
     propertyName: string,
     completion: NativeCompletion,
   ): void;
+  mln_map_get_style_sky_json(map: bigint, completion: NativeCompletion): void;
   mln_map_get_style_source(
     map: bigint,
     sourceId: string,
@@ -664,6 +665,11 @@ export interface NativeOperations {
     map: bigint,
     propertyName: string,
     value: unknown,
+    completion: NativeCompletion | undefined,
+  ): void;
+  mln_map_set_style_sky_json(
+    map: bigint,
+    skyJson: unknown,
     completion: NativeCompletion | undefined,
   ): void;
   mln_map_set_style_source_volatile(

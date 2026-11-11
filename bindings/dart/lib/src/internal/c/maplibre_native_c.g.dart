@@ -3784,6 +3784,15 @@ external int mln_map_get_style_light_property(
 );
 
 @Native<
+  Int32 Function(mln_map, Pointer<mln_completion>, Pointer<mln_diagnostic>)
+>()
+external int mln_map_get_style_sky_json(
+  int map,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
   Int32 Function(
     mln_map,
     mln_buffer_view,
@@ -4585,6 +4594,21 @@ external int mln_map_set_style_light_property(
   int map,
   mln_buffer_view property_name,
   mln_buffer_view value,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(
+    mln_map,
+    mln_buffer_view,
+    Pointer<mln_completion>,
+    Pointer<mln_diagnostic>,
+  )
+>()
+external int mln_map_set_style_sky_json(
+  int map,
+  mln_buffer_view sky_json,
   Pointer<mln_completion> completion,
   Pointer<mln_diagnostic> out_diagnostic,
 );

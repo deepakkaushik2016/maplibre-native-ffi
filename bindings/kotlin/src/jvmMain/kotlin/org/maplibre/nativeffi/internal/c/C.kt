@@ -507,6 +507,8 @@ internal actual object C {
       JAVA_LONG,
       JAVA_LONG,
     )
+  private val mln_map_get_style_sky_json =
+    Ffm.downcall("mln_map_get_style_sky_json", JAVA_INT, JAVA_LONG, JAVA_LONG, JAVA_LONG)
   private val mln_map_get_style_source =
     Ffm.downcall(
       "mln_map_get_style_source",
@@ -908,6 +910,15 @@ internal actual object C {
       JAVA_INT,
       JAVA_LONG,
       mln_buffer_view,
+      mln_buffer_view,
+      JAVA_LONG,
+      JAVA_LONG,
+    )
+  private val mln_map_set_style_sky_json =
+    Ffm.downcall(
+      "mln_map_set_style_sky_json",
+      JAVA_INT,
+      JAVA_LONG,
       mln_buffer_view,
       JAVA_LONG,
       JAVA_LONG,
@@ -2238,6 +2249,9 @@ internal actual object C {
       outDiagnostic,
     ) as Int
 
+  actual fun mln_map_get_style_sky_json(map: Long, completion: Long, outDiagnostic: Long): Int =
+    mln_map_get_style_sky_json.invokeExact(map, completion, outDiagnostic) as Int
+
   actual fun mln_map_get_style_source(
     map: Long,
     sourceId: Long,
@@ -2844,6 +2858,19 @@ internal actual object C {
       map,
       Ffm.value(propertyName, mln_buffer_view),
       Ffm.value(value, mln_buffer_view),
+      completion,
+      outDiagnostic,
+    ) as Int
+
+  actual fun mln_map_set_style_sky_json(
+    map: Long,
+    skyJson: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_map_set_style_sky_json.invokeExact(
+      map,
+      Ffm.value(skyJson, mln_buffer_view),
       completion,
       outDiagnostic,
     ) as Int

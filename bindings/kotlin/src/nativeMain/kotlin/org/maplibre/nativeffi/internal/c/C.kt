@@ -925,6 +925,13 @@ internal actual object C {
       outDiagnostic.toCPointer(),
     )
 
+  actual fun mln_map_get_style_sky_json(map: Long, completion: Long, outDiagnostic: Long): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_map_get_style_sky_json(
+      map.toULong(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
   actual fun mln_map_get_style_source(
     map: Long,
     sourceId: Long,
@@ -1622,6 +1629,19 @@ internal actual object C {
       map.toULong(),
       propertyName.toCPointer<mln_buffer_view>()!!.pointed.readValue(),
       value.toCPointer<mln_buffer_view>()!!.pointed.readValue(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
+  actual fun mln_map_set_style_sky_json(
+    map: Long,
+    skyJson: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_map_set_style_sky_json(
+      map.toULong(),
+      skyJson.toCPointer<mln_buffer_view>()!!.pointed.readValue(),
       completion.toCPointer(),
       outDiagnostic.toCPointer(),
     )

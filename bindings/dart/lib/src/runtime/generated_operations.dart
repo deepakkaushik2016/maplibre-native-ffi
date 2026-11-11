@@ -4702,6 +4702,14 @@ extension type MapHandleDiscarding._(MapHandle _owner) {
       nativeDiagnostic,
     ),
   );
+  void setStyleSkyJson(Object? skyJson) => _discard(
+    (arena, completion) => raw.mln_map_set_style_sky_json(
+      _handle.raw,
+      _nativeJsonView(skyJson, arena),
+      completion,
+      nativeDiagnostic,
+    ),
+  );
   void setStyleSourceVolatile(String sourceId, bool isVolatile) => _discard(
     (arena, completion) => raw.mln_map_set_style_source_volatile(
       _handle.raw,
@@ -6207,6 +6215,24 @@ final class MapHandle implements Finalizable, _CallbackRootOwner {
     ),
   );
 
+  /// Reads the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+  /// map's style as JSON, which is `null` when the style has no sky.
+  ///
+  /// The object holds the members the sky sets. A value can differ in form from
+  /// the value that was set: a color set as `"#ff0000"` reads back as `["rgba",
+  /// 255, 0, 0, 1]`.
+  ///
+  /// See `mln_map_get_style_sky_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  Future<Object?> getStyleSkyJson() => _query(
+    _resultObjectOrNull,
+    (arena, completion) => raw.mln_map_get_style_sky_json(
+      _handle.raw,
+      completion,
+      nativeDiagnostic,
+    ),
+  );
+
   /// Reads a source of the map's style.
   ///
   /// A tile source with a `url` has an empty attribution until its TileJSON
@@ -7099,6 +7125,33 @@ final class MapHandle implements Finalizable, _CallbackRootOwner {
       _handle.raw,
       nativeStringView(propertyName, arena).value,
       _nativeJsonView(value, arena),
+      completion,
+      nativeDiagnostic,
+    ),
+  );
+
+  /// Replaces the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+  /// map's style, or removes it when `skyJson` is JSON `null`.
+  ///
+  /// The new sky replaces the old one whole: a member that `skyJson` leaves out
+  /// takes its default. As in a style document, a member whose value doesn't
+  /// convert keeps its default and logs a warning, an `LogEvent.parseStyle`
+  /// message that `setLogCallback()` receives, and the other members still
+  /// apply.
+  ///
+  /// See `mln_map_set_style_sky_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidArgument` when `skyJson` isn't valid JSON, or is neither
+  ///   an object nor `null`. The style keeps its sky.
+  /// - `Status.invalidState` while the style isn't loaded, as
+  ///   `MapHandle.setStyleUrl()` describes.
+  Future<CommandCompletion> setStyleSkyJson(Object? skyJson) => _command(
+    (arena, completion) => raw.mln_map_set_style_sky_json(
+      _handle.raw,
+      _nativeJsonView(skyJson, arena),
       completion,
       nativeDiagnostic,
     ),

@@ -765,6 +765,9 @@ internal actual object C {
       word(outDiagnostic),
     )
 
+  actual fun mln_map_get_style_sky_json(map: Long, completion: Long, outDiagnostic: Long): Int =
+    mln_kw_mln_map_get_style_sky_json(map, word(completion), word(outDiagnostic))
+
   actual fun mln_map_get_style_source(
     map: Long,
     sourceId: Long,
@@ -1353,6 +1356,14 @@ internal actual object C {
       word(completion),
       word(outDiagnostic),
     )
+
+  actual fun mln_map_set_style_sky_json(
+    map: Long,
+    skyJson: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_kw_mln_map_set_style_sky_json(map, word(skyJson), word(completion), word(outDiagnostic))
 
   actual fun mln_map_set_style_source_volatile(
     map: Long,
@@ -2770,6 +2781,11 @@ private fun mln_kw_mln_map_get_style_light_property(p0: Long, p1: Int, p2: Int, 
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_get_style_light_property(p0, p1, p2, p3)",
   )
 
+private fun mln_kw_mln_map_get_style_sky_json(p0: Long, p1: Int, p2: Int): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_get_style_sky_json(p0, p1, p2)",
+  )
+
 private fun mln_kw_mln_map_get_style_source(p0: Long, p1: Int, p2: Int, p3: Int): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_get_style_source(p0, p1, p2, p3)",
@@ -3173,6 +3189,11 @@ private fun mln_kw_mln_map_set_style_light_property(
 ): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_set_style_light_property(p0, p1, p2, p3, p4)",
+  )
+
+private fun mln_kw_mln_map_set_style_sky_json(p0: Long, p1: Int, p2: Int, p3: Int): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_map_set_style_sky_json(p0, p1, p2, p3)",
   )
 
 private fun mln_kw_mln_map_set_style_source_volatile(

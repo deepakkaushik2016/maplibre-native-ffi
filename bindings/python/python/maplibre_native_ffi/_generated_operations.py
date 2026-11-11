@@ -1344,6 +1344,19 @@ class _MapHandleOperations(GeneratedOperations):
         """
         return self._native.get_style_light_property(property_name)
 
+    def get_style_sky_json(self) -> Future[Any]:
+        """Reads the \\[sky\\](https://maplibre.org/maplibre-style-spec/sky/) of
+        the map's style as JSON, which is `null` when the style has no sky.
+
+        The object holds the members the sky sets. A value can differ in form
+        from the value that was set: a color set as `"#ff0000"` reads back as
+        `["rgba", 255, 0, 0, 1]`.
+
+        See `mln_map_get_style_sky_json` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+        """
+        return self._native.get_style_sky_json()
+
     def get_style_source(self, source_id: str) -> Future[StyleSourceInfo | None]:
         """Reads a source of the map's style.
 
@@ -2023,6 +2036,28 @@ class _MapHandleOperations(GeneratedOperations):
           `MapHandle.set_style_url()` describes.
         """
         return self._native.set_style_light_property(property_name, value)
+
+    def set_style_sky_json(self, sky_json: Any) -> Future[CommandCompletion]:
+        """Replaces the \\[sky\\](https://maplibre.org/maplibre-style-spec/sky/)
+        of the map's style, or removes it when `sky_json` is JSON `null`.
+
+        The new sky replaces the old one whole: a member that `sky_json`
+        leaves out takes its default. As in a style document, a member whose
+        value doesn't convert keeps its default and logs a warning, an
+        `LogEvent.PARSE_STYLE` message that `set_log_callback()` receives,
+        and the other members still apply.
+
+        See `mln_map_set_style_sky_json` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+
+        Errors:
+
+        - `Status.INVALID_ARGUMENT` when `sky_json` isn't valid JSON, or is
+          neither an object nor `null`. The style keeps its sky.
+        - `Status.INVALID_STATE` while the style isn't loaded, as
+          `MapHandle.set_style_url()` describes.
+        """
+        return self._native.set_style_sky_json(sky_json)
 
     def set_style_source_volatile(
         self, source_id: str, is_volatile: bool
@@ -4499,6 +4534,21 @@ class MapHandleDiscarding:
         [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
         """
         return self._native._discard_set_style_light_property(property_name, value)
+
+    def set_style_sky_json(self, sky_json: Any) -> None:
+        """Replaces the \\[sky\\](https://maplibre.org/maplibre-style-spec/sky/)
+        of the map's style, or removes it when `sky_json` is JSON `null`.
+
+        The new sky replaces the old one whole: a member that `sky_json`
+        leaves out takes its default. As in a style document, a member whose
+        value doesn't convert keeps its default and logs a warning, an
+        `LogEvent.PARSE_STYLE` message that `set_log_callback()` receives,
+        and the other members still apply.
+
+        See `mln_map_set_style_sky_json` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+        """
+        return self._native._discard_set_style_sky_json(sky_json)
 
     def set_style_source_volatile(self, source_id: str, is_volatile: bool) -> None:
         """Sets whether a source is volatile.

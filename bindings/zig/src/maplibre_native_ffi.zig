@@ -1180,6 +1180,19 @@ pub const Map = struct {
         return call.submit("mln_map_get_style_light_property", .handle, self, call.orNull(call.value(OwnedValue([]const u8), c.mln_buffer_view)), allocator, diagnostic, .{property_name});
     }
 
+    /// Reads the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+    /// map's style as JSON, which is `null` when the style has no sky.
+    ///
+    /// The object holds the members the sky sets. A value can differ in form from
+    /// the value that was set: a color set as `"#ff0000"` reads back as `["rgba",
+    /// 255, 0, 0, 1]`.
+    ///
+    /// See `mln_map_get_style_sky_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    pub fn getStyleSkyJson(self: Map, allocator: std.mem.Allocator, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(OwnedValue([]const u8)) {
+        return call.submit("mln_map_get_style_sky_json", .handle, self, call.value(OwnedValue([]const u8), c.mln_buffer_view), allocator, diagnostic, .{});
+    }
+
     /// Reads a source of the map's style.
     ///
     /// A tile source with a `url` has an empty attribution until its TileJSON
@@ -1764,6 +1777,27 @@ pub const Map = struct {
     ///   describes.
     pub fn setStyleLightProperty(self: Map, property_name: []const u8, value: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
         return call.submit("mln_map_set_style_light_property", .handle, self, call.command, null, diagnostic, .{ property_name, value });
+    }
+
+    /// Replaces the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+    /// map's style, or removes it when `sky_json` is JSON `null`.
+    ///
+    /// The new sky replaces the old one whole: a member that `sky_json` leaves out
+    /// takes its default. As in a style document, a member whose value doesn't
+    /// convert keeps its default and logs a warning, an `LogEvent.parse_style`
+    /// message that `setLogCallback()` receives, and the other members still apply.
+    ///
+    /// See `mln_map_set_style_sky_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    ///
+    /// Errors:
+    ///
+    /// - `error.InvalidArgument` when `sky_json` isn't valid JSON, or is neither an
+    ///   object nor `null`. The style keeps its sky.
+    /// - `error.InvalidState` while the style isn't loaded, as `Map.setStyleUrl()`
+    ///   describes.
+    pub fn setStyleSkyJson(self: Map, sky_json: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
+        return call.submit("mln_map_set_style_sky_json", .handle, self, call.command, null, diagnostic, .{sky_json});
     }
 
     /// Sets whether a source is volatile.
@@ -10432,6 +10466,11 @@ pub const MapDiscarding = struct {
     pub fn setStyleLightProperty(self: MapDiscarding, property_name: []const u8, value: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
         const map = self.receiver;
         return call.discard("mln_map_set_style_light_property", .handle, map, null, diagnostic, .{ property_name, value });
+    }
+
+    pub fn setStyleSkyJson(self: MapDiscarding, sky_json: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {
+        const map = self.receiver;
+        return call.discard("mln_map_set_style_sky_json", .handle, map, null, diagnostic, .{sky_json});
     }
 
     pub fn setStyleSourceVolatile(self: MapDiscarding, source_id: []const u8, is_volatile: bool, diagnostic: ?*diagnostics.Diagnostic) status.Error!void {

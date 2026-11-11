@@ -1,9 +1,10 @@
 ---
 title: Style
 description:
-  Load a style, and add and change its sources, layers, images, and terrain.
+  Load a style, and add and change its sources, layers, images, terrain, and
+  sky.
 # Scope: loading a style, and adding and changing its sources, layers, images,
-# and terrain. The style spec itself belongs in its own docs.
+# terrain, and sky. The style spec itself belongs in its own docs.
 ---
 
 import { Aside } from "@astrojs/starlight/components";
@@ -12,7 +13,7 @@ import Snippet from "../../../components/Snippet.astro";
 
 A style describes what a map shows: its sources supply data, and its layers draw
 that data in order. This guide shows how to load a style and change its sources,
-layers, images, and terrain. Sources and layers use the JSON of the
+layers, images, terrain, and sky. Sources and layers use the JSON of the
 [MapLibre style spec](https://maplibre.org/maplibre-style-spec/).
 
 ## Load a style
@@ -99,3 +100,12 @@ that range fails, and a style document with one loads without its terrain.
   the map shows nothing. See [Follow the
   terrain](/maplibre-native-ffi/guides/camera/#follow-the-terrain).
 </Aside>
+
+## Show a sky
+
+A style's [sky](https://maplibre.org/maplibre-style-spec/sky/) colors the sky
+and horizon behind pitched terrain, and the fog that fades distant terrain. Give
+the style a `sky` object, or set one with [](api:mln_map_set_style_sky_json).
+JSON `null` removes it, and [](api:mln_map_get_style_sky_json) reads it back. A
+member whose value doesn't convert keeps its default and logs a warning, as in a
+style document, while the other members still apply.

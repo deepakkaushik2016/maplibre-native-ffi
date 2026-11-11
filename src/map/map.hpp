@@ -459,6 +459,11 @@ auto map_set_style_terrain_json(MapObject& live, mln_buffer_view terrain_json)
   -> mln_status;
 // The style's terrain as a JSON object, or "null" without one.
 auto map_get_style_terrain_json(MapObject& live) -> std::string;
+// Sets the style's sky from its JSON object, or removes it for JSON null.
+auto map_set_style_sky_json(MapObject& live, mln_buffer_view sky_json)
+  -> mln_status;
+// The style's sky as a JSON object, or "null" without one.
+auto map_get_style_sky_json(MapObject& live) -> std::string;
 auto map_set_style_light_property(
   MapObject& live, mln_buffer_view property_name, mln_buffer_view value
 ) -> mln_status;

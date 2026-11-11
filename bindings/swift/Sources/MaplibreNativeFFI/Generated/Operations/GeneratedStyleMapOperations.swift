@@ -368,6 +368,25 @@ public extension MapHandle {
     }
   }
 
+  /// Reads the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+  /// map's style as JSON, which is `null` when the style has no sky.
+  ///
+  /// The object holds the members the sky sets. A value can differ in form from
+  /// the value that was set: a color set as `"#ff0000"` reads back as `["rgba",
+  /// 255, 0, 0, 1]`.
+  ///
+  /// See `mln_map_get_style_sky_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  func getStyleSkyJson() async throws -> String {
+    try await nativeStart(convert: { result in
+      try NativeCompletion.string(result)
+    }) { raw, _, completion, diagnostic in mln_map_get_style_sky_json(
+      raw,
+      completion,
+      diagnostic
+    ) }
+  }
+
   /// Reads a source of the map's style.
   ///
   /// A tile source with a `url` has an empty attribution until its TileJSON
@@ -1113,6 +1132,38 @@ public extension MapHandle {
     }
   }
 
+  /// Replaces the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+  /// map's style, or removes it when `skyJson` is JSON `null`.
+  ///
+  /// The new sky replaces the old one whole: a member that `skyJson` leaves out
+  /// takes its default. As in a style document, a member whose value doesn't
+  /// convert keeps its default and logs a warning, an `LogEvent.parseStyle`
+  /// message that `setLogCallback()` receives, and the other members still
+  /// apply.
+  ///
+  /// See `mln_map_set_style_sky_json` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidArgument` when `skyJson` isn't valid JSON, or is neither
+  ///   an object nor `null`. The style keeps its sky.
+  /// - `Status.invalidState` while the style isn't loaded, as
+  ///   `MapHandle.setStyleUrl()` describes.
+  @discardableResult
+  func setStyleSkyJson(_ bindingArg0: String) async throws
+    -> CommandCompletion
+  {
+    try await nativeCommand { raw, arena, completion, diagnostic in
+      mln_map_set_style_sky_json(
+        raw,
+        arena.view(bindingArg0),
+        completion,
+        diagnostic
+      )
+    }
+  }
+
   /// Sets whether a source is volatile.
   ///
   /// The map doesn't store the tiles of a volatile source in the persistent
@@ -1647,6 +1698,16 @@ public extension MapHandleDiscarding {
           diagnostic
         )
       }
+  }
+
+  func setStyleSkyJson(_ bindingArg0: String) throws {
+    try owner
+      .nativeInvoke { raw, arena, diagnostic in mln_map_set_style_sky_json(
+        raw,
+        arena.view(bindingArg0),
+        nil,
+        diagnostic
+      ) }
   }
 
   func setStyleSourceVolatile(

@@ -1142,6 +1142,42 @@ auto mln_map_get_global_state(
   });
 }
 
+auto mln_map_set_style_sky_json(
+  mln_map map, mln_buffer_view sky_json, const mln_completion* completion,
+  mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&]() -> mln_status {
+    if (!valid_non_empty_view(sky_json, "sky_json")) {
+      return MLN_STATUS_INVALID_ARGUMENT;
+    }
+    auto json = OwnedView{sky_json};
+    return submit_style_edit(
+      map,
+      [json = std::move(json)](mln::core::MapObject& live) -> mln_status {
+        return mln::core::map_set_style_sky_json(live, json.view());
+      },
+      completion
+    );
+  });
+}
+
+auto mln_map_get_style_sky_json(
+  mln_map map, const mln_completion* completion, mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&]() -> mln_status {
+    return mln::core::start_style_operation<&mln_map_get_style_sky_json>(
+      map,
+      [](
+        mln::core::MapObject& live, mln::core::StyleOperationResult& result
+      ) -> mln_status {
+        result.bytes = mln::core::map_get_style_sky_json(live);
+        return MLN_STATUS_OK;
+      },
+      completion
+    );
+  });
+}
+
 auto mln_map_set_style_light_property(
   mln_map map, mln_buffer_view property_name, mln_buffer_view value,
   const mln_completion* completion, mln_diagnostic* out_diagnostic

@@ -1752,6 +1752,37 @@ char* maplibre_native_ffi_map_get_style_light_property_finish(
 );
 
 /**
+ * maplibre_native_ffi_map_get_style_sky_json_async:
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Reads the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the map's
+ * style as JSON, which is `null` when the style has no sky.
+ *
+ * The object holds the members the sky sets. A value can differ in form from
+ * the value that was set: a color set as `"#ff0000"` reads back as `["rgba",
+ * 255, 0, 0, 1]`.
+ *
+ * See `mln_map_get_style_sky_json` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+ */
+void maplibre_native_ffi_map_get_style_sky_json_async(
+  MaplibreNativeFfiMap* self, GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_map_get_style_sky_json_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_map_get_style_sky_json_async` started.
+ *
+ * Returns: (transfer full): the text
+ */
+char* maplibre_native_ffi_map_get_style_sky_json_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+);
+
+/**
  * maplibre_native_ffi_map_get_style_source_async:
  * @source_id: the UTF-8 text
  * @callback: (scope async) (nullable): the callback to call when the call finishes
@@ -3321,6 +3352,52 @@ void maplibre_native_ffi_map_set_style_light_property_async(
  */
 MaplibreNativeFfiCommandCompletion*
 maplibre_native_ffi_map_set_style_light_property_finish(
+  MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
+);
+
+/**
+ * maplibre_native_ffi_map_set_style_sky_json_async:
+ * @sky_json: the UTF-8 text
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Replaces the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+ * map's style, or removes it when `sky_json` is JSON `null`.
+ *
+ * The new sky replaces the old one whole: a member that `sky_json` leaves out
+ * takes its default. As in a style document, a member whose value doesn't
+ * convert keeps its default and logs a warning, an
+ * `MAPLIBRE_NATIVE_FFI_LOG_EVENT_PARSE_STYLE` message that
+ * `maplibre_native_ffi_set_log_callback()` receives, and the other members
+ * still apply.
+ *
+ * See `mln_map_set_style_sky_json` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+ *
+ * It fails with these errors:
+ *
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_ARGUMENT` when `sky_json` isn't valid
+ *   JSON, or is neither an object nor `null`. The style keeps its sky.
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` while the style isn't loaded, as
+ *   `maplibre_native_ffi_map_set_style_url_async()` describes.
+ *
+ * Without `callback`, nothing reports whether the call succeeds.
+ */
+void maplibre_native_ffi_map_set_style_sky_json_async(
+  MaplibreNativeFfiMap* self, const char* sky_json,
+  GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_map_set_style_sky_json_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_map_set_style_sky_json_async` started.
+ *
+ * Returns: (transfer full): the command's completion, or %NULL with `error` set
+ */
+MaplibreNativeFfiCommandCompletion*
+maplibre_native_ffi_map_set_style_sky_json_finish(
   MaplibreNativeFfiMap* self, GAsyncResult* result, GError** error
 );
 

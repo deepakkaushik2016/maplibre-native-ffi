@@ -2799,6 +2799,11 @@ unsafe extern "C" {
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;
+    pub fn mln_map_get_style_sky_json(
+        map: mln_map,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
     pub fn mln_map_get_style_source(
         map: mln_map,
         source_id: mln_buffer_view,
@@ -3135,6 +3140,12 @@ unsafe extern "C" {
         map: mln_map,
         property_name: mln_buffer_view,
         value: mln_buffer_view,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
+    pub fn mln_map_set_style_sky_json(
+        map: mln_map,
+        sky_json: mln_buffer_view,
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;

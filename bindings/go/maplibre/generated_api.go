@@ -8212,6 +8212,22 @@ func (receiver *MapHandle) GetStyleLightProperty(propertyName string) (*Future[s
 	}, completionOrZero(completionOf(copyViewText)))
 }
 
+// GetStyleSkyJSON reads the
+// [sky](https://maplibre.org/maplibre-style-spec/sky/) of the map's style as
+// JSON, which is null when the style has no sky.
+//
+// The object holds the members the sky sets. A value can differ in form from
+// the value that was set: a color set as "#ff0000" reads back as ["rgba", 255,
+// 0, 0, 1].
+//
+// See mln_map_get_style_sky_json in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html
+func (receiver *MapHandle) GetStyleSkyJSON() (*Future[string], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_get_style_sky_json(C.mln_map(raw), completion, diagnostic))
+	}, completionOf(copyViewText))
+}
+
 // GetStyleSource reads a source of the map's style.
 //
 // A tile source with a url has an empty attribution until its TileJSON loads,
@@ -9045,6 +9061,29 @@ func (receiver *MapHandle) SetStyleLightJSON(lightJSON string) (*Future[CommandC
 func (receiver *MapHandle) SetStyleLightProperty(propertyName string, value string) (*Future[CommandCompletion], error) {
 	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_map_set_style_light_property(C.mln_map(raw), bindingView(propertyName, arena), bindingView(value, arena), completion, diagnostic))
+	}, completionCommand)
+}
+
+// SetStyleSkyJSON replaces the
+// [sky](https://maplibre.org/maplibre-style-spec/sky/) of the map's style, or
+// removes it when skyJSON is JSON null.
+//
+// The new sky replaces the old one whole: a member that skyJSON leaves out
+// takes its default. As in a style document, a member whose value doesn't
+// convert keeps its default and logs a warning, an LogEventParseStyle message
+// that SetLogCallback() receives, and the other members still apply.
+//
+// See mln_map_set_style_sky_json in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html
+//
+// Errors:
+//   - StatusInvalidArgument when skyJSON isn't valid JSON, or is neither an
+//     object nor null. The style keeps its sky.
+//   - StatusInvalidState while the style isn't loaded, as
+//     MapHandle.SetStyleURL() describes.
+func (receiver *MapHandle) SetStyleSkyJSON(skyJSON string) (*Future[CommandCompletion], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_set_style_sky_json(C.mln_map(raw), bindingView(skyJSON, arena), completion, diagnostic))
 	}, completionCommand)
 }
 
@@ -10905,6 +10944,13 @@ func (view MapHandleDiscarding) SetStyleLightProperty(propertyName string, value
 	receiver := view.owner
 	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_map_set_style_light_property(C.mln_map(raw), bindingView(propertyName, arena), bindingView(value, arena), completion, diagnostic))
+	})
+}
+
+func (view MapHandleDiscarding) SetStyleSkyJSON(skyJSON string) error {
+	receiver := view.owner
+	return callDiscard(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_map_set_style_sky_json(C.mln_map(raw), bindingView(skyJSON, arena), completion, diagnostic))
 	})
 }
 

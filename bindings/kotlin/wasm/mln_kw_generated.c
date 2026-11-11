@@ -753,6 +753,15 @@ int32_t mln_kw_mln_map_get_style_light_property(
   );
 }
 
+int32_t mln_kw_mln_map_get_style_sky_json(
+  int64_t map, uintptr_t completion, uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_map_get_style_sky_json(
+    (mln_map)map, (const mln_completion*)completion,
+    (mln_diagnostic*)out_diagnostic
+  );
+}
+
 int32_t mln_kw_mln_map_get_style_source(
   int64_t map, uintptr_t source_id, uintptr_t completion,
   uintptr_t out_diagnostic
@@ -1294,6 +1303,16 @@ int32_t mln_kw_mln_map_set_style_light_property(
   return (int32_t)mln_map_set_style_light_property(
     (mln_map)map, *(const mln_buffer_view*)(uintptr_t)property_name,
     *(const mln_buffer_view*)(uintptr_t)value,
+    (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
+  );
+}
+
+int32_t mln_kw_mln_map_set_style_sky_json(
+  int64_t map, uintptr_t sky_json, uintptr_t completion,
+  uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_map_set_style_sky_json(
+    (mln_map)map, *(const mln_buffer_view*)(uintptr_t)sky_json,
     (const mln_completion*)completion, (mln_diagnostic*)out_diagnostic
   );
 }

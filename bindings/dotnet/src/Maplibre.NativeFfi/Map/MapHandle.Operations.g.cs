@@ -1761,6 +1761,37 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     }
 
     /// <summary>
+    /// Reads the [sky](https://maplibre.org/maplibre-style-spec/sky/) of the
+    /// map's style as JSON, which is <c>null</c> when the style has no sky.
+    /// </summary>
+    /// <remarks>
+    /// <para>The object holds the members the sky sets. A value can differ in
+    /// form from the value that was set: a color set as <c>"#ff0000"</c> reads
+    /// back as <c>["rgba", 255, 0, 0, 1]</c>.</para>
+    /// <para>See <c>mln_map_get_style_sky_json</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html">C API reference</see>.</para>
+    /// </remarks>
+    public Task<string> GetStyleSkyJsonAsync()
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_map_get_style_sky_json(
+            Handle,
+            NativeCompletion.Start<string>(
+                &nativeCompletion,
+                static nativeResult =>
+                    NativeCompletion.Single<mln_buffer_view, string>(
+                        nativeResult,
+                        ValueStructs.CopyUtf8View
+                    ),
+                out var nativePending
+            ),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Reads a source of the map's style.
     /// </summary>
     /// <remarks>
@@ -3048,6 +3079,42 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     }
 
     /// <summary>
+    /// Replaces the [sky](https://maplibre.org/maplibre-style-spec/sky/) of the
+    /// map's style, or removes it when <c>skyJson</c> is JSON <c>null</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The new sky replaces the old one whole: a member that
+    /// <c>skyJson</c> leaves out takes its default. As in a style document, a
+    /// member whose value doesn't convert keeps its default and logs a warning,
+    /// an <c>LogEvent.ParseStyle</c> message that
+    /// <c>MaplibreNative.SetLogCallback()</c> receives, and the other members
+    /// still apply.</para>
+    /// <para>See <c>mln_map_set_style_sky_json</c> in the <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html">C API reference</see>.</para>
+    /// <para>Errors:</para>
+    /// <list type="bullet">
+    /// <item><description><c>Status.InvalidArgument</c> when <c>skyJson</c>
+    /// isn't valid JSON, or is neither an object nor <c>null</c>. The style
+    /// keeps its sky.</description></item>
+    /// <item><description><c>Status.InvalidState</c> while the style isn't
+    /// loaded, as <c>MapHandle.SetStyleUrlAsync()</c>
+    /// describes.</description></item>
+    /// </list>
+    /// </remarks>
+    public Task<CommandCompletion> SetStyleSkyJsonAsync(string skyJson)
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_map_set_style_sky_json(
+            Handle,
+            scope.Utf8(skyJson),
+            NativeCompletion.StartCommand(&nativeCompletion, out var nativePending),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Sets whether a source is volatile.
     /// </summary>
     /// <remarks>
@@ -4085,6 +4152,21 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
                     receiverHandle,
                     scope.Utf8(propertyName),
                     scope.Utf8(value),
+                    null,
+                    Diagnostic
+                )
+            );
+            scope.Accept();
+        }
+
+        public void SetStyleSkyJson(string skyJson)
+        {
+            var receiverHandle = owner.Handle;
+            using var scope = new NativeCallScope(owner);
+            Check(
+                NativeMethods.mln_map_set_style_sky_json(
+                    receiverHandle,
+                    scope.Utf8(skyJson),
                     null,
                     Diagnostic
                 )

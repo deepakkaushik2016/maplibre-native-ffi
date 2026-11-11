@@ -1117,6 +1117,41 @@ MLN_API mln_status mln_map_get_style_terrain_json(
 ) MLN_NOEXCEPT;
 
 /**
+ * Replaces the [sky](https://maplibre.org/maplibre-style-spec/sky/) of the
+ * map's style, or removes it when `sky_json` is JSON `null`.
+ *
+ * The new sky replaces the old one whole: a member that `sky_json` leaves out
+ * takes its default. As in a style document, a member whose value doesn't
+ * convert keeps its default and logs a warning, an
+ * MLN_LOG_EVENT_PARSE_STYLE message that mln_log_set_callback() receives, and
+ * the other members still apply.
+ *
+ * Completes with:
+ * - MLN_STATUS_INVALID_ARGUMENT when `sky_json` isn't valid JSON, or is
+ *   neither an object nor `null`. The style keeps its sky.
+ * - MLN_STATUS_INVALID_STATE while the style isn't loaded, as
+ *   mln_map_set_style_url() describes.
+ */
+MLN_BINDING("execution=command")
+MLN_API mln_status mln_map_set_style_sky_json(
+  mln_map map, mln_buffer_view sky_json MLN_BINDING("encoding=json"),
+  const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
+ * Reads the [sky](https://maplibre.org/maplibre-style-spec/sky/) of the map's
+ * style as JSON, which is `null` when the style has no sky.
+ *
+ * The object holds the members the sky sets. A value can differ in form from
+ * the value that was set: a color set as `"#ff0000"` reads back as
+ * `["rgba", 255, 0, 0, 1]`.
+ */
+MLN_BINDING("execution=query;result=mln_buffer_view;encoding=json")
+MLN_API mln_status mln_map_get_style_sky_json(
+  mln_map map, const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
  * Sets the default transition of the map's style.
  *
  * Completes with:

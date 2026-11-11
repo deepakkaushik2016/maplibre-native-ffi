@@ -404,6 +404,8 @@ internal expect object C {
     outDiagnostic: Long,
   ): Int
 
+  fun mln_map_get_style_sky_json(map: Long, completion: Long, outDiagnostic: Long): Int
+
   fun mln_map_get_style_source(
     map: Long,
     sourceId: Long,
@@ -724,6 +726,13 @@ internal expect object C {
     map: Long,
     propertyName: Long,
     value: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  fun mln_map_set_style_sky_json(
+    map: Long,
+    skyJson: Long,
     completion: Long,
     outDiagnostic: Long,
   ): Int

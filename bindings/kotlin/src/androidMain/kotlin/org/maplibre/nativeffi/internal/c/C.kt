@@ -575,6 +575,13 @@ internal actual object C {
   ): Int
 
   @JvmStatic
+  actual external fun mln_map_get_style_sky_json(
+    map: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
   actual external fun mln_map_get_style_source(
     map: Long,
     sourceId: Long,
@@ -1004,6 +1011,14 @@ internal actual object C {
     map: Long,
     propertyName: Long,
     value: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
+  actual external fun mln_map_set_style_sky_json(
+    map: Long,
+    skyJson: Long,
     completion: Long,
     outDiagnostic: Long,
   ): Int

@@ -1687,6 +1687,25 @@ impl MapHandle {
         )
     }
 
+    /// Reads the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of the
+    /// map's style as JSON, which is `null` when the style has no sky.
+    ///
+    /// The object holds the members the sky sets. A value can differ in form
+    /// from the value that was set: a color set as `"#ff0000"` reads back as
+    /// `["rgba", 255, 0, 0, 1]`.
+    ///
+    /// See `mln_map_get_style_sky_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    pub fn get_style_sky_json(&self) -> Result<NativeFuture<String>> {
+        let call = self.inner.call();
+        call.complete(
+            |map, completion, out_diagnostic| unsafe {
+                sys::mln_map_get_style_sky_json(map, completion, out_diagnostic)
+            },
+            completion::value::<sys::mln_buffer_view, _>,
+        )
+    }
+
     /// Reads a source of the map's style.
     ///
     /// A tile source with a `url` has an empty attribution until its TileJSON
@@ -2696,6 +2715,32 @@ impl MapHandle {
                 completion,
                 out_diagnostic,
             )
+        })
+    }
+
+    /// Replaces the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of
+    /// the map's style, or removes it when `sky_json` is JSON `null`.
+    ///
+    /// The new sky replaces the old one whole: a member that `sky_json` leaves
+    /// out takes its default. As in a style document, a member whose value
+    /// doesn't convert keeps its default and logs a warning, an
+    /// `LogEvent::ParseStyle` message that `set_log_callback()` receives, and
+    /// the other members still apply.
+    ///
+    /// See `mln_map_set_style_sky_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    ///
+    /// # Errors
+    ///
+    /// - `Status::InvalidArgument` when `sky_json` isn't valid JSON, or is
+    ///   neither an object nor `null`. The style keeps its sky.
+    /// - `Status::InvalidState` while the style isn't loaded, as
+    ///   `MapHandle::set_style_url()` describes.
+    pub fn set_style_sky_json(&self, sky_json: &str) -> Result<NativeFuture<CommandCompletion>> {
+        let mut call = self.inner.call();
+        let sky_json = call.input(&sky_json)?;
+        call.command(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_set_style_sky_json(map, sky_json, completion, out_diagnostic)
         })
     }
 
@@ -3914,6 +3959,25 @@ impl MapHandleDiscarding<'_> {
                 completion,
                 out_diagnostic,
             )
+        })
+    }
+
+    /// Replaces the \[sky\](https://maplibre.org/maplibre-style-spec/sky/) of
+    /// the map's style, or removes it when `sky_json` is JSON `null`.
+    ///
+    /// The new sky replaces the old one whole: a member that `sky_json` leaves
+    /// out takes its default. As in a style document, a member whose value
+    /// doesn't convert keeps its default and logs a warning, an
+    /// `LogEvent::ParseStyle` message that `set_log_callback()` receives, and
+    /// the other members still apply.
+    ///
+    /// See `mln_map_set_style_sky_json` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+    pub fn set_style_sky_json(&self, sky_json: &str) -> Result<()> {
+        let mut call = self.0.inner.call();
+        let sky_json = call.input(&sky_json)?;
+        call.discard(|map, completion, out_diagnostic| unsafe {
+            sys::mln_map_set_style_sky_json(map, sky_json, completion, out_diagnostic)
         })
     }
 

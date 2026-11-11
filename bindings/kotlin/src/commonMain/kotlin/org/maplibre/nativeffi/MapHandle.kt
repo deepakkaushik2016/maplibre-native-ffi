@@ -898,6 +898,21 @@ private constructor(
     }
 
   /**
+   * Reads the &#91;sky&#93;(https://maplibre.org/maplibre-style-spec/sky/) of the map's style as
+   * JSON, which is `null` when the style has no sky.
+   *
+   * The object holds the members the sky sets. A value can differ in form from the value that was
+   * set: a color set as `"#ff0000"` reads back as `["rgba", 255, 0, 0, 1]`.
+   *
+   * See `mln_map_get_style_sky_json` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+   */
+  public fun getStyleSkyJson(): Completion<String> =
+    nativeSubmit(this, binding, { result -> readViewString(CompletionBridge.value(result)) }) {
+      check(C.mln_map_get_style_sky_json(handle, completion, diagnostic))
+    }
+
+  /**
    * Reads a source of the map's style.
    *
    * A tile source with a `url` has an empty attribution until its TileJSON loads, which raises
@@ -1855,6 +1870,29 @@ private constructor(
     }
 
   /**
+   * Replaces the &#91;sky&#93;(https://maplibre.org/maplibre-style-spec/sky/) of the map's style,
+   * or removes it when `skyJson` is JSON `null`.
+   *
+   * The new sky replaces the old one whole: a member that `skyJson` leaves out takes its default.
+   * As in a style document, a member whose value doesn't convert keeps its default and logs a
+   * warning, an `LogEvent.PARSE_STYLE` message that `setLogCallback()` receives, and the other
+   * members still apply.
+   *
+   * See `mln_map_set_style_sky_json` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/style_8h.html).
+   *
+   * Errors:
+   *
+   * - `Status.INVALID_ARGUMENT` when `skyJson` isn't valid JSON, or is neither an object nor
+   *   `null`. The style keeps its sky.
+   * - `Status.INVALID_STATE` while the style isn't loaded, as `MapHandle.setStyleUrl()` describes.
+   */
+  public fun setStyleSkyJson(skyJson: String): Completion<CommandCompletion> =
+    nativeCommand(this, binding) {
+      check(C.mln_map_set_style_sky_json(handle, view(skyJson), completion, diagnostic))
+    }
+
+  /**
    * Sets whether a source is volatile.
    *
    * The map doesn't store the tiles of a volatile source in the persistent cache.
@@ -2655,6 +2693,12 @@ public class MapDiscarding private constructor(@get:JvmSynthetic internal val ow
           diagnostic,
         ),
       )
+    }
+
+  /** [MapHandle.setStyleSkyJson] without its completion. */
+  public fun setStyleSkyJson(skyJson: String): Unit =
+    nativeDiscard(owner, binding) {
+      check(C.mln_map_set_style_sky_json(handle, view(skyJson), completion, diagnostic))
     }
 
   /** [MapHandle.setStyleSourceVolatile] without its completion. */

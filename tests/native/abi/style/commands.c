@@ -589,6 +589,138 @@ static void the_style_terrain_round_trips_through_json(void) {
   mln_test_destroy_runtime(runtime);
 }
 
+static void read_sky(mln_map map, char* out, size_t capacity) {
+  mln_test_completion completion = mln_test_completion_buffer_view();
+  MLN_TEST_OK(mln_map_get_style_sky_json(map, &completion.descriptor, NULL));
+  bool found = false;
+  MLN_TEST_OK(mln_test_style_finish_text(&completion, out, capacity, &found));
+  TEST_ASSERT_TRUE(found);
+}
+
+#define EXPECT_SKY(expected, map)              \
+  do {                                         \
+    char sky[512];                             \
+    read_sky((map), sky, sizeof(sky));         \
+    TEST_ASSERT_EQUAL_STRING((expected), sky); \
+  } while (false)
+
+static const char sky_json[] =
+  "{\"sky-color\":\"#ff0000\",\"sky-horizon-blend\":0.25,"
+  "\"horizon-color\":\"#00ff00\",\"horizon-fog-blend\":0.5,"
+  "\"fog-color\":\"#0000ff\",\"fog-ground-blend\":0.75,"
+  "\"atmosphere-blend\":0.125,"
+  "\"fog-color-transition\":{\"duration\":300,\"delay\":0}}";
+
+// Colors read back in the engine's form, as a light property's do.
+static const char sky_read_back[] =
+  "{\"sky-color\":[\"rgba\",255.0,0.0,0.0,1.0],\"sky-horizon-blend\":0.25,"
+  "\"horizon-color\":[\"rgba\",0.0,255.0,0.0,1.0],"
+  "\"horizon-fog-blend\":0.5,\"fog-color\":[\"rgba\",0.0,0.0,255.0,1.0],"
+  "\"fog-color-transition\":{\"delay\":0,\"duration\":300},"
+  "\"fog-ground-blend\":0.75,\"atmosphere-blend\":0.125}";
+
+// The sky has no ID to miss, so every bad input is an INVALID_ARGUMENT, and
+// JSON null is how a caller removes it.
+static void the_style_sky_round_trips_through_json(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(map, mln_test_empty_style_json);
+  EXPECT_SKY("null", map);
+
+  MLN_TEST_AWAIT_OK(mln_map_set_style_sky_json(
+    map, mln_buffer_view_from_cstr(sky_json), &completion.descriptor, NULL
+  ));
+  EXPECT_SKY(sky_read_back, map);
+
+  MLN_TEST_EXPECT_COMMAND_REJECTED(
+    "sky_json",
+    mln_map_set_style_sky_json(
+      map, MLN_BUFFER_LITERAL(""), &completion.descriptor, MLN_TEST_DIAGNOSTIC
+    )
+  );
+  MLN_TEST_EXPECT_COMMAND_FAILED(
+    MLN_STATUS_INVALID_ARGUMENT, "style sky is not valid JSON",
+    mln_map_set_style_sky_json(
+      map, MLN_BUFFER_LITERAL("{\"sky-color\":"), &completion.descriptor, NULL
+    )
+  );
+  MLN_TEST_EXPECT_COMMAND_FAILED(
+    MLN_STATUS_INVALID_ARGUMENT, "style sky must be an object or null",
+    mln_map_set_style_sky_json(
+      map, MLN_BUFFER_LITERAL("[]"), &completion.descriptor, NULL
+    )
+  );
+  // A rejected sky leaves the one before it in place.
+  EXPECT_SKY(sky_read_back, map);
+
+  // A new sky replaces the old one whole, so members it leaves out go back to
+  // their defaults and read back as unset.
+  MLN_TEST_AWAIT_OK(mln_map_set_style_sky_json(
+    map, MLN_BUFFER_LITERAL("{\"fog-ground-blend\":1}"), &completion.descriptor,
+    NULL
+  ));
+  EXPECT_SKY("{\"fog-ground-blend\":1.0}", map);
+
+  MLN_TEST_AWAIT_OK(mln_map_set_style_sky_json(
+    map, MLN_BUFFER_LITERAL("null"), &completion.descriptor, NULL
+  ));
+  EXPECT_SKY("null", map);
+
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
+static atomic_int sky_warnings;
+
+static void count_sky_warning(
+  void* user_data, uint32_t severity, uint32_t event, int64_t code,
+  mln_buffer_view message_view
+) {
+  (void)user_data;
+  (void)code;
+  if (
+    severity == MLN_LOG_SEVERITY_WARNING &&
+    event == MLN_LOG_EVENT_PARSE_STYLE &&
+    strstr(message_view.data, "sky fog-ground-blend") != NULL
+  ) {
+    atomic_fetch_add(&sky_warnings, 1);
+  }
+}
+
+// As in a style document, a member whose value doesn't convert logs a warning
+// and keeps its default, and the rest of the sky still applies.
+static void a_bad_sky_member_keeps_its_default_and_logs_a_warning(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_map(runtime);
+  mln_test_load_style_and_wait(map, mln_test_empty_style_json);
+
+  atomic_store(&sky_warnings, 0);
+  const mln_log_handler handler = {
+    .size = sizeof(mln_log_handler),
+    .callback = count_sky_warning,
+  };
+  // Warnings log on the thread that logs them, so the count is final once the
+  // command completes.
+  MLN_TEST_OK(mln_log_set_async_severity_mask(0, NULL));
+  MLN_TEST_OK(mln_log_set_callback(&handler, NULL));
+  if (TEST_PROTECT()) {
+    MLN_TEST_AWAIT_OK(mln_map_set_style_sky_json(
+      map,
+      MLN_BUFFER_LITERAL(
+        "{\"sky-color\":\"#ff0000\",\"fog-ground-blend\":\"thick\"}"
+      ),
+      &completion.descriptor, NULL
+    ));
+    TEST_ASSERT_EQUAL_INT(1, atomic_load(&sky_warnings));
+    EXPECT_SKY("{\"sky-color\":[\"rgba\",255.0,0.0,0.0,1.0]}", map);
+  }
+  (void)mln_log_clear_callback(NULL);
+  (void)mln_log_set_async_severity_mask(MLN_LOG_SEVERITY_FLAG_DEFAULT, NULL);
+
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 // A 32 by 32 Terrarium PNG: a cone that rises from 0 m at its rim to 2048 m at
 // the tile's center, in 256 m steps.
 static const uint8_t dem_png[] = {
@@ -773,6 +905,8 @@ MLN_TEST_GROUP {
   RUN_TEST(style_transition_options_reject_unsafe_raw_input);
   RUN_TEST(the_style_light_round_trips_through_json);
   RUN_TEST(the_style_terrain_round_trips_through_json);
+  RUN_TEST(the_style_sky_round_trips_through_json);
+  RUN_TEST(a_bad_sky_member_keeps_its_default_and_logs_a_warning);
   RUN_TEST(a_style_documents_out_of_range_exaggeration_has_no_terrain);
   RUN_TEST(terrain_set_before_its_source_applies_once_the_source_arrives);
 }

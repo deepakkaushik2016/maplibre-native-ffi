@@ -57,6 +57,7 @@
 #include <mln/style/layer.hpp>
 #include <mln/style/light.hpp>
 #include <mln/style/rapidjson_conversion.hpp>
+#include <mln/style/sky.hpp>
 #include <mln/style/source.hpp>
 #include <mln/style/sources/custom_geometry_source.hpp>
 #include <mln/style/sources/custom_vector_source.hpp>
@@ -75,10 +76,12 @@
 #include <mln/tile/tile_operation.hpp>
 #include <mln/util/chrono.hpp>
 #include <mln/util/constants.hpp>
+#include <mln/util/event.hpp>
 #include <mln/util/feature.hpp>
 #include <mln/util/geo.hpp>
 #include <mln/util/image.hpp>
 #include <mln/util/immutable.hpp>
+#include <mln/util/logging.hpp>
 #include <mln/util/projection.hpp>
 #include <mln/util/range.hpp>
 #include <mln/util/size.hpp>
@@ -2154,6 +2157,76 @@ auto map_get_style_terrain_json(MapObject& live) -> std::string {
   return R"({"source":)" +
          serialize_json_value(mln::Value{terrain->getSource()}) +
          R"(,"exaggeration":)" + exaggeration + "}";
+}
+
+// Each member applies through Sky::setProperty, as the style parser applies a
+// document's sky: a member that doesn't convert logs a warning and keeps its
+// default, and the rest of the sky still applies.
+auto map_set_style_sky_json(MapObject& live, mln_buffer_view sky_json)
+  -> mln_status {
+  auto document = mln::JSDocument{};
+  if (!parse_json_document(sky_json, "style sky", document)) {
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  auto& style = map_native(live).getStyle();
+  if (document.IsNull()) {
+    style.setSky(nullptr);
+    return MLN_STATUS_OK;
+  }
+  if (!document.IsObject()) {
+    set_thread_error("style sky must be an object or null");
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+
+  auto sky = std::make_unique<mln::style::Sky>();
+  for (const auto& member : document.GetObject()) {
+    const auto name =
+      std::string{member.name.GetString(), member.name.GetStringLength()};
+    const auto error = sky->setProperty(
+      name, mln::style::conversion::Convertible{
+              static_cast<const mln::JSValue*>(&member.value)
+            }
+    );
+    if (error) {
+      mln::Log::Warning(
+        mln::Event::ParseStyle, "sky " + name + ": " + error->message
+      );
+    }
+  }
+  style.setSky(std::move(sky));
+  return MLN_STATUS_OK;
+}
+
+auto map_get_style_sky_json(MapObject& live) -> std::string {
+  const auto* sky = map_native(live).getStyle().getSky();
+  if (sky == nullptr) {
+    return "null";
+  }
+  // The style spec's order, each property followed by its transition.
+  static constexpr auto properties = std::array<std::string_view, 7>{
+    "sky-color", "sky-horizon-blend", "horizon-color",    "horizon-fog-blend",
+    "fog-color", "fog-ground-blend",  "atmosphere-blend",
+  };
+  auto json = std::string{"{"};
+  const auto append = [&](const std::string& name) {
+    const auto property = sky->getProperty(name);
+    if (property.getKind() == mln::style::StyleProperty::Kind::Undefined) {
+      return;
+    }
+    if (json.size() > 1) {
+      json += ',';
+    }
+    json += serialize_json_value(mln::Value{name});
+    json += ':';
+    json += serialize_json_value(property.getValue());
+  };
+  for (const auto property : properties) {
+    const auto name = std::string{property};
+    append(name);
+    append(name + "-transition");
+  }
+  json += '}';
+  return json;
 }
 
 auto map_set_style_light_property(
