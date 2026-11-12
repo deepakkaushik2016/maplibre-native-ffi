@@ -672,6 +672,22 @@ static void the_style_sky_round_trips_through_json(void) {
 
 static atomic_int sky_warnings;
 
+// Whether the bytes of view contain needle. A view is not NUL-terminated, and
+// memmem isn't portable, so this searches within its size.
+static bool view_contains(mln_buffer_view view, const char* needle) {
+  const size_t needle_size = strlen(needle);
+  if (view.data == NULL || view.size < needle_size) {
+    return false;
+  }
+  const char* bytes = view.data;
+  for (size_t i = 0; i + needle_size <= view.size; i++) {
+    if (memcmp(bytes + i, needle, needle_size) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static void count_sky_warning(
   void* user_data, uint32_t severity, uint32_t event, int64_t code,
   mln_buffer_view message_view
@@ -681,7 +697,7 @@ static void count_sky_warning(
   if (
     severity == MLN_LOG_SEVERITY_WARNING &&
     event == MLN_LOG_EVENT_PARSE_STYLE &&
-    strstr(message_view.data, "sky fog-ground-blend") != NULL
+    view_contains(message_view, "sky fog-ground-blend")
   ) {
     atomic_fetch_add(&sky_warnings, 1);
   }
