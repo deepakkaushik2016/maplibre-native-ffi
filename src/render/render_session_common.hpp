@@ -646,9 +646,9 @@ struct RenderTextureSlot {
 // The renderable resources a texture backend cycles through, one per slot. An
 // offscreen session allocates its slot's texture in its resource; a borrowed
 // ring builds each slot's resource over the caller's texture at the slot's
-// index. The selected slot's resource lives in the backend's own `resource`
-// member, which mbgl reads every frame; this parks the others and drops any
-// whose recorded size no longer matches the backend's.
+// index. The selected slot's resource is the backend renderable's own, which
+// mbgl reads every frame; this parks the others and drops any whose recorded
+// size no longer matches the backend's.
 class RenderableSlotRing {
  public:
   explicit RenderableSlotRing(std::size_t depth)
@@ -664,20 +664,21 @@ class RenderableSlotRing {
     if (!sizes_.empty()) sizes_[selected_] = size;
   }
 
-  auto select(
-    std::size_t slot, mln::Size size,
-    std::unique_ptr<mln::gfx::RenderableResource>& resource
-  ) -> bool {
+  // Each slot change puts another resource in the renderable, which gives it
+  // a new unique id: caches keyed on the id (a Metal drawable's last render
+  // pass, the clip-mask states) see another target, as they should.
+  auto select(std::size_t slot, mln::gfx::Renderable& renderable) -> bool {
     if (slot >= resources_.size()) return false;
+    const auto size = renderable.getSize();
     if (slot == selected_) {
-      if (resource != nullptr && sizes_[slot] != size) resource.reset();
+      if (renderable.hasResource() && sizes_[slot] != size) {
+        renderable.setResource(nullptr);
+      }
       return true;
     }
-    resources_[selected_] = std::move(resource);
-    if (resources_[slot] != nullptr && sizes_[slot] != size) {
-      resources_[slot].reset();
-    }
-    resource = std::move(resources_[slot]);
+    auto incoming = std::move(resources_[slot]);
+    if (incoming != nullptr && sizes_[slot] != size) incoming.reset();
+    resources_[selected_] = renderable.exchangeResource(std::move(incoming));
     selected_ = slot;
     return true;
   }

@@ -302,21 +302,23 @@ MetalTextureBackend::MetalTextureBackend(
 MetalTextureBackend::~MetalTextureBackend() {
   finish_frame();
   auto guard = mln::gfx::BackendScope{*this};
-  resource.reset();
+  setResource(nullptr);
   ring_.clear();
   depth_stencil_ = {};
   context.reset();
 }
 
 auto MetalTextureBackend::getDefaultRenderable() -> mln::gfx::Renderable& {
-  if (!resource) {
-    resource = std::make_unique<MetalTextureRenderableResource>(
-      // MetalTextureBackend always creates a Metal context.
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-      *this, static_cast<mln::mtl::Context&>(getContext()), getSize(),
-      borrowed_textures_.empty() ? nullptr
-                                 : borrowed_textures_[ring_.selected()],
-      owned_pixel_format_, io_surfaces_
+  if (!hasResource()) {
+    setResource(
+      std::make_unique<MetalTextureRenderableResource>(
+        // MetalTextureBackend always creates a Metal context.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+        *this, static_cast<mln::mtl::Context&>(getContext()), getSize(),
+        borrowed_textures_.empty() ? nullptr
+                                   : borrowed_textures_[ring_.selected()],
+        owned_pixel_format_, io_surfaces_
+      )
     );
     // Recorded with the resource it describes, so a slot that keeps an older
     // resource keeps the size that resource was built for.
@@ -504,13 +506,13 @@ auto MetalTextureBackend::take_command_buffer_failure()
 }
 
 void MetalTextureBackend::discard_unfinished_frame() {
-  if (resource) {
+  if (hasResource()) {
     getResource<MetalTextureRenderableResource>().discard_unfinished_frame();
   }
 }
 
 auto MetalTextureBackend::select_slot(std::size_t slot) -> bool {
-  return ring_.select(slot, getSize(), resource);
+  return ring_.select(slot, *this);
 }
 
 void MetalTextureBackend::set_ring_size(mln::Size new_size) {
@@ -544,7 +546,7 @@ void MetalTextureBackend::release_borrowed_textures() {
   // that the host may destroy.
   std::fill(borrowed_textures_.begin(), borrowed_textures_.end(), nullptr);
   auto guard = mln::gfx::BackendScope{*this};
-  resource.reset();
+  setResource(nullptr);
   ring_.reset(borrowed_textures_.size());
   depth_stencil_ = {};
 }
@@ -564,7 +566,7 @@ void MetalTextureBackend::set_borrowed_textures(
   // over its new texture when it is next selected.
   {
     auto guard = mln::gfx::BackendScope{*this};
-    resource.reset();
+    setResource(nullptr);
     ring_.reset(borrowed_textures_.size());
   }
 }

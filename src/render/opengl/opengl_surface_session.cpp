@@ -129,7 +129,7 @@ class OpenGLSurfaceBackend final : public mln::gl::RendererBackend,
   }
 
   void cleanup() {
-    resource.reset();
+    setResource(nullptr);
     context.reset();
   }
 
@@ -153,7 +153,7 @@ class OpenGLSurfaceBackend final : public mln::gl::RendererBackend,
       // Nothing can be made current, so no GL call is safe. Leak the renderable
       // resource and the mbgl context rather than run their teardown: their
       // queued deletes would land on whatever context is current instead.
-      static_cast<void>(resource.release());
+      static_cast<void>(exchangeResource(nullptr).release());
       static_cast<void>(context.release());
       throw;
     }

@@ -1207,7 +1207,7 @@ class OpenGLTextureBackend final : public mln::gl::RendererBackend,
 
   void destroy_backend() {
     auto cleanup = [this] {
-      resource.reset();
+      setResource(nullptr);
       ring_.clear();
 #if defined(MLN_FFI_EGL_EXPORTED_RINGS)
       // Made only while the context was current, so they exist only when it
@@ -1228,9 +1228,12 @@ class OpenGLTextureBackend final : public mln::gl::RendererBackend,
 
   auto getDefaultRenderable() -> mln::gfx::Renderable& override {
     const auto current_size = getSize();
-    if (!resource || resource_size_ != current_size) {
-      resource = std::make_unique<OpenGLTextureRenderableResource>(
-        getContext<mln::gl::Context>(), current_size, slot_texture(current_size)
+    if (!hasResource() || resource_size_ != current_size) {
+      setResource(
+        std::make_unique<OpenGLTextureRenderableResource>(
+          getContext<mln::gl::Context>(), current_size,
+          slot_texture(current_size)
+        )
       );
       resource_size_ = current_size;
       // Recorded with the resource it describes, so a slot that keeps an older
@@ -1299,7 +1302,7 @@ class OpenGLTextureBackend final : public mln::gl::RendererBackend,
 #endif
 
   auto select_slot(std::size_t slot) -> bool {
-    if (!ring_.select(slot, getSize(), resource)) return false;
+    if (!ring_.select(slot, *this)) return false;
     resource_size_ = ring_.selected_size();
     return true;
   }
@@ -1328,7 +1331,7 @@ class OpenGLTextureBackend final : public mln::gl::RendererBackend,
     // Nothing was built before the first render made the GL context.
     auto guard = std::optional<mln::gfx::BackendScope>{};
     if (context) guard.emplace(*this);
-    resource.reset();
+    setResource(nullptr);
     ring_.reset(borrowed_textures_.size());
     resource_size_ = {};
     if (context) getContext<mln::gl::Context>().performCleanup();

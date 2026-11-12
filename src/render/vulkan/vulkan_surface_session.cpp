@@ -423,7 +423,7 @@ class VulkanSurfaceBackend final : private mln::core::VulkanQueueAccess,
 
   ~VulkanSurfaceBackend() override {
     auto guard = mln::gfx::BackendScope{*this};
-    resource.reset();
+    setResource(nullptr);
     getThreadPool().runRenderJobs(true);
   }
 
@@ -431,11 +431,13 @@ class VulkanSurfaceBackend final : private mln::core::VulkanQueueAccess,
   using mln::core::VulkanQueueAccess::release_queue_access;
 
   auto getDefaultRenderable() -> mln::gfx::Renderable& override {
-    if (!resource) {
-      resource = std::make_unique<VulkanSurfaceRenderableResource>(
-        *this,
-        mln::core::vulkan_handle_from_abi<VkSurfaceKHR>(descriptor_.surface),
-        present_mode_
+    if (!hasResource()) {
+      setResource(
+        std::make_unique<VulkanSurfaceRenderableResource>(
+          *this,
+          mln::core::vulkan_handle_from_abi<VkSurfaceKHR>(descriptor_.surface),
+          present_mode_
+        )
       );
     }
     return *this;
@@ -443,7 +445,7 @@ class VulkanSurfaceBackend final : private mln::core::VulkanQueueAccess,
 
   void resize(mln::Size size) {
     mln::vulkan::Renderable::setSize(size);
-    if (resource) {
+    if (hasResource()) {
       getResource<VulkanSurfaceRenderableResource>().resize(size);
       adopt_swapchain_extent();
     }
@@ -453,7 +455,7 @@ class VulkanSurfaceBackend final : private mln::core::VulkanQueueAccess,
     mln_vulkan_non_dispatchable_handle surface
   ) const -> bool {
     // Nothing has been built yet, so there is nothing to be incompatible with.
-    if (!resource) {
+    if (!hasResource()) {
       return true;
     }
     return getResource<VulkanSurfaceRenderableResource>().matches_surface(
@@ -464,7 +466,7 @@ class VulkanSurfaceBackend final : private mln::core::VulkanQueueAccess,
   void set_surface(mln_vulkan_non_dispatchable_handle surface, mln::Size size) {
     // Nothing has been built yet, so the lazy path already takes the new
     // surface: the wrapper is created against descriptor_ on first use.
-    if (!resource) {
+    if (!hasResource()) {
       descriptor_.surface = surface;
       mln::vulkan::Renderable::setSize(size);
       return;

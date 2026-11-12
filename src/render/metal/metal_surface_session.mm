@@ -278,7 +278,7 @@ class MetalSurfaceBackend final : public mln::mtl::RendererBackend,
 
   ~MetalSurfaceBackend() override {
     auto guard = mln::gfx::BackendScope{*this};
-    resource.reset();
+    setResource(nullptr);
     context.reset();
   }
 

@@ -434,7 +434,7 @@ VulkanTextureBackend::~VulkanTextureBackend() {
   if (producer_sync_kind_ == MLN_GPU_SYNC_D3D12_FENCE)
     close_d3d12_fence(shared_timeline_);
   auto guard = mln::gfx::BackendScope{*this};
-  resource.reset();
+  setResource(nullptr);
   getThreadPool().runRenderJobs(true);
 }
 
@@ -452,8 +452,8 @@ void VulkanTextureBackend::initSharedDevice() {
 }
 
 auto VulkanTextureBackend::getDefaultRenderable() -> mln::gfx::Renderable& {
-  if (!resource) {
-    resource = std::make_unique<VulkanTextureRenderableResource>(*this);
+  if (!hasResource()) {
+    setResource(std::make_unique<VulkanTextureRenderableResource>(*this));
   }
   return *this;
 }
@@ -473,7 +473,7 @@ void VulkanTextureBackend::set_borrowed_target(
   // selected. The render pass stays: mbgl keys its pipeline cache on the pass,
   // so a new pass would compile every pipeline again on each replacement,
   // which a host makes on every resize.
-  if (resource) {
+  if (hasResource()) {
     getResource<VulkanTextureRenderableResource>().drop_slots();
   }
   selection_pending_ = true;
@@ -484,7 +484,7 @@ void VulkanTextureBackend::release_borrowed_target() {
   // of the images.
   if (context) graphicsQueue.waitIdle(dispatcher);
   borrowed_images_.clear();
-  if (resource) {
+  if (hasResource()) {
     getResource<VulkanTextureRenderableResource>().drop_slots();
   }
   selection_pending_ = true;
@@ -970,7 +970,7 @@ void VulkanTextureBackend::prepareRenderResources() {
   if (allocator == nullptr) {
     initAllocator();
   }
-  if (!resource) {
+  if (!hasResource()) {
     initSwapchain();
   }
   if (selection_pending_) {
