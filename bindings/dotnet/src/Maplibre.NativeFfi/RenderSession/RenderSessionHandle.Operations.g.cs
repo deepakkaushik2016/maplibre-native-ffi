@@ -658,7 +658,10 @@ public sealed unsafe partial class RenderSessionHandle
     /// <c>found</c> is false where
     /// <c>RenderSessionHandle.QueryPixelForLatLngAsync()</c> would deliver no
     /// value. With no coordinates, it delivers an empty array. Each coordinate
-    /// needs a latitude within [-90, 90] and a finite longitude.</para>
+    /// needs a latitude within [-90, 90] and a finite longitude: one that
+    /// hasn't fails the whole submission with <c>Status.InvalidArgument</c>,
+    /// and the diagnostic names its index. Leave such coordinates out of the
+    /// array.</para>
     /// <para>See <c>mln_render_session_query_pixels_for_lat_lngs</c> in the
     /// <see
     /// href="https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html">C API reference</see>.</para>

@@ -389,7 +389,9 @@ MLN_API mln_status mln_render_session_query_pixel_for_lat_lng(
  * coordinate, in the order of `coordinates`. A result's `found` is false where
  * mln_render_session_query_pixel_for_lat_lng() would deliver no value. With no
  * coordinates, it delivers an empty array. Each coordinate needs a latitude
- * within [-90, 90] and a finite longitude.
+ * within [-90, 90] and a finite longitude: one that hasn't fails the whole
+ * submission with MLN_STATUS_INVALID_ARGUMENT, and the diagnostic names its
+ * index. Leave such coordinates out of the array.
  *
  * Completes with:
  * - MLN_STATUS_INVALID_STATE when the session hasn't rendered a frame since it

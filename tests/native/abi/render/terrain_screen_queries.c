@@ -2,6 +2,7 @@
 // last frame drew.
 
 #include <math.h>
+#include <stdint.h>
 
 #include "support/map.h"
 #include "support/resources.h"
@@ -485,6 +486,12 @@ typedef struct pixels_call {
   bool null_completion;
 } pixels_call;
 
+static void first_latitude_nan(void* call) {
+  ((pixels_call*)call)->coordinates[0].latitude = (double)NAN;
+}
+static void a_count_no_vector_holds(void* call) {
+  ((pixels_call*)call)->count = SIZE_MAX;
+}
 static void second_latitude_past_the_pole(void* call) {
   ((pixels_call*)call)->coordinates[1].latitude = 90.5;
 }
@@ -523,10 +530,14 @@ static void malformed_batches_are_rejected_at_submission(void) {
   ridge_map view = {0};
   open_ridge_map(&view, 60.0);
   static const mln_test_validation_case cases[] = {
+    {"a NaN first latitude", first_latitude_nan, MLN_STATUS_INVALID_ARGUMENT,
+     "coordinates[0]: latitude"},
+    {"a count no vector holds", a_count_no_vector_holds,
+     MLN_STATUS_INVALID_ARGUMENT, "coordinate_count"},
     {"a latitude past the pole", second_latitude_past_the_pole,
-     MLN_STATUS_INVALID_ARGUMENT, "latitude"},
+     MLN_STATUS_INVALID_ARGUMENT, "coordinates[1]: latitude"},
     {"a NaN longitude", second_longitude_nan, MLN_STATUS_INVALID_ARGUMENT,
-     "longitude"},
+     "coordinates[1]"},
     {"a longitude past the antimeridian",
      second_longitude_past_the_antimeridian, MLN_STATUS_OK, NULL},
     {"no coordinates for a count", null_coordinates_with_a_count,

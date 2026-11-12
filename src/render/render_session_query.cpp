@@ -674,13 +674,22 @@ auto render_session_query_pixels_for_lat_lngs_start(
     );
     return MLN_STATUS_INVALID_ARGUMENT;
   }
-  auto copied = std::vector<mln_lat_lng>{};
-  copied.reserve(coordinate_count);
+  // A count no vector can hold is rejected before reading any coordinate.
+  if (coordinate_count > std::vector<mln_lat_lng>{}.max_size()) {
+    set_thread_error("coordinate_count is too large");
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
   for (std::size_t index = 0; index < coordinate_count; ++index) {
     const auto status = validate_lat_lng(coordinates[index]);
-    if (status != MLN_STATUS_OK) return status;
-    copied.push_back(coordinates[index]);
+    if (status != MLN_STATUS_OK) {
+      const auto message = "coordinates[" + std::to_string(index) +
+                           "]: " + thread_last_error_message();
+      set_thread_error(message.c_str());
+      return status;
+    }
   }
+  auto copied =
+    std::vector<mln_lat_lng>(coordinates, coordinates + coordinate_count);
   return enqueue_driver_result_operation(
     session,
     [copied =

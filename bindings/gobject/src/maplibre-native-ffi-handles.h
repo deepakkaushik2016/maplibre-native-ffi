@@ -4641,7 +4641,10 @@ maplibre_native_ffi_render_session_query_pixel_for_lat_lng_finish(
  * each coordinate, in the order of `coordinates`. A result's `found` is false
  * where `maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async()`
  * would deliver no value. With no coordinates, it delivers an empty array. Each
- * coordinate needs a latitude within \[-90, 90\] and a finite longitude.
+ * coordinate needs a latitude within \[-90, 90\] and a finite longitude: one
+ * that hasn't fails the whole submission with
+ * `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_ARGUMENT`, and the diagnostic names its
+ * index. Leave such coordinates out of the array.
  *
  * See `mln_render_session_query_pixels_for_lat_lngs` in the
  * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).

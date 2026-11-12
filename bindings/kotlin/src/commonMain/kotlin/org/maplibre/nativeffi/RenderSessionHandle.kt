@@ -509,7 +509,9 @@ private constructor(
    * The completion delivers one `TerrainScreenPointResult` for each coordinate, in the order of
    * `coordinates`. A result's `found` is false where `RenderSessionHandle.queryPixelForLatLng()`
    * would deliver no value. With no coordinates, it delivers an empty array. Each coordinate needs
-   * a latitude within &#91;-90, 90&#93; and a finite longitude.
+   * a latitude within &#91;-90, 90&#93; and a finite longitude: one that hasn't fails the whole
+   * submission with `Status.INVALID_ARGUMENT`, and the diagnostic names its index. Leave such
+   * coordinates out of the array.
    *
    * See `mln_render_session_query_pixels_for_lat_lngs` in the
    * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
