@@ -185,10 +185,14 @@ runs:
     # connection instead of failing over, and `mise bootstrap`'s libclang-dev
     # download sits in this action for tens of minutes. Demote Azure and bound idle fetches before any apt-get.
     # ARM runners use ports.ubuntu.com instead.
+    # The runner image's package index can name versions the mirrors have
+    # since dropped, so refresh it before `mise bootstrap` installs from apt.
     - name: Bound apt downloads on Linux
       if: ${{ runner.os == 'Linux' }}
       shell: bash
-      run: bash "${GITHUB_ACTION_PATH}/bound-apt.sh"
+      run: |
+        bash "${GITHUB_ACTION_PATH}/bound-apt.sh"
+        sudo apt-get update
 
     - name: Use Linux software graphics drivers
       if: ${{ runner.os == 'Linux' && inputs.software-gpu != '' }}
