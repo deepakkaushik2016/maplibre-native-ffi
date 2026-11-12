@@ -22,8 +22,8 @@ diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
 index 34c8087..5167a53 100644
 --- a/test/CMakeLists.txt
 +++ b/test/CMakeLists.txt
-@@ -88,6 +88,7 @@ add_library(
-     ${PROJECT_SOURCE_DIR}/test/text/shaping.test.cpp
+@@ -123,6 +123,7 @@ add_library(
+     ${PROJECT_SOURCE_DIR}/test/text/symbol_projection.test.cpp
      ${PROJECT_SOURCE_DIR}/test/text/tagged_string.test.cpp
      ${PROJECT_SOURCE_DIR}/test/tile/custom_geometry_tile.test.cpp
 +    ${PROJECT_SOURCE_DIR}/test/tile/custom_vector_tile.test.cpp
