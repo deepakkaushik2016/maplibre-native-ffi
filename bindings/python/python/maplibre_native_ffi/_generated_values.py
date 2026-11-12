@@ -5380,6 +5380,31 @@ class TerrainScreenPoint:
 
 
 @dataclass(frozen=True, slots=True)
+class TerrainScreenPointResult:
+    """Where the terrain draws one coordinate of
+    `RenderSessionHandle.query_pixels_for_lat_lngs()`, if it draws it.
+
+    See `mln_terrain_screen_point_result` in the
+    [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    """
+
+    found: bool
+    """Whether the terrain draws the coordinate, as
+    `RenderSessionHandle.query_pixel_for_lat_lng()` delivers a value for it.
+    When false, `pixel` is zeroed.
+    """
+
+    pixel: TerrainScreenPoint
+    """Where the terrain draws the coordinate, when `found` is true."""
+
+    @classmethod
+    def _from_native(cls, raw):
+        return cls(
+            found=raw["found"], pixel=TerrainScreenPoint._from_native(raw["pixel"])
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class TextureImageInfo:
     """The layout of the pixels that `RenderSessionHandle.read_texture()` reads.
 

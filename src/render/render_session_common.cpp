@@ -2950,6 +2950,29 @@ auto render_session_query_lat_lng_for_pixel(
   return MLN_STATUS_OK;
 }
 
+namespace {
+// Where the renderer draws `coordinate` on the ground, or nothing.
+auto terrain_pixel_for_lat_lng(
+  const mln::Renderer& renderer, mln_lat_lng coordinate
+) -> std::optional<mln_terrain_screen_point> {
+  const auto pixel = renderer.queryTerrainPixel(
+    mln::LatLng{coordinate.latitude, coordinate.longitude}
+  );
+  // A huge exaggeration can lift the ground past what the engine's float
+  // holds, and a point at infinity is drawn nowhere. As for the elevation
+  // query, a pixel that isn't finite is no value.
+  if (
+    !pixel || !std::isfinite(pixel->point.x) || !std::isfinite(pixel->point.y)
+  ) {
+    return std::nullopt;
+  }
+  return mln_terrain_screen_point{
+    .point = {.x = pixel->point.x, .y = pixel->point.y},
+    .occluded = pixel->occluded
+  };
+}
+}  // namespace
+
 auto render_session_query_pixel_for_lat_lng(
   mln_render_session session, mln_lat_lng coordinate,
   std::optional<mln_terrain_screen_point>& out_result
@@ -2969,18 +2992,37 @@ auto render_session_query_pixel_for_lat_lng(
 
   auto current = ScopedCurrentScheduler{live->scheduler};
   auto guard = mln::gfx::BackendScope{*backend};
-  const auto pixel = live->renderer->queryTerrainPixel(
-    mln::LatLng{coordinate.latitude, coordinate.longitude}
-  );
-  out_result.reset();
-  // A huge exaggeration can lift the ground past what the engine's float
-  // holds, and a point at infinity is drawn nowhere. As for the elevation
-  // query, a pixel that isn't finite is no value.
-  if (pixel && std::isfinite(pixel->point.x) && std::isfinite(pixel->point.y)) {
-    out_result = mln_terrain_screen_point{
-      .point = {.x = pixel->point.x, .y = pixel->point.y},
-      .occluded = pixel->occluded
-    };
+  out_result = terrain_pixel_for_lat_lng(*live->renderer, coordinate);
+  return MLN_STATUS_OK;
+}
+
+auto render_session_query_pixels_for_lat_lngs(
+  mln_render_session session, std::span<const mln_lat_lng> coordinates,
+  std::vector<mln_terrain_screen_point_result>& out_result
+) -> mln_status {
+  mln_render_session_object* live = nullptr;
+  const auto status = validate_live_attached_render_session(session, live);
+  if (status != MLN_STATUS_OK) {
+    return status;
+  }
+  mln::gfx::RendererBackend* backend = nullptr;
+  if (
+    const auto backend_status = validate_renderer_backend(live, backend);
+    backend_status != MLN_STATUS_OK
+  ) {
+    return backend_status;
+  }
+
+  auto current = ScopedCurrentScheduler{live->scheduler};
+  auto guard = mln::gfx::BackendScope{*backend};
+  out_result.clear();
+  out_result.reserve(coordinates.size());
+  for (const auto coordinate : coordinates) {
+    const auto pixel = terrain_pixel_for_lat_lng(*live->renderer, coordinate);
+    out_result.push_back(
+      pixel ? mln_terrain_screen_point_result{.found = true, .pixel = *pixel}
+            : mln_terrain_screen_point_result{}
+    );
   }
   return MLN_STATUS_OK;
 }

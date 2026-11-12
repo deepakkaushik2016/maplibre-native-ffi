@@ -536,6 +536,50 @@ impl RenderSessionHandle {
         )
     }
 
+    /// Finds where the terrain draws each of several points on the ground.
+    ///
+    /// The query answers each coordinate as
+    /// `RenderSessionHandle::query_pixel_for_lat_lng()` does, in one pass over
+    /// the last frame that the session rendered, so every answer comes from the
+    /// same frame. Submit it from any thread. It runs with the session's
+    /// graphics work, so with `RenderDriverKind::CallerGraphicsThread` it
+    /// completes once you service that work.
+    ///
+    /// The completion delivers one `TerrainScreenPointResult` for each
+    /// coordinate, in the order of `coordinates`. A result's `found` is false
+    /// where `RenderSessionHandle::query_pixel_for_lat_lng()` would deliver no
+    /// value. With no coordinates, it delivers an empty array. Each coordinate
+    /// needs a latitude within \[-90, 90\] and a finite longitude.
+    ///
+    /// See `mln_render_session_query_pixels_for_lat_lngs` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    ///
+    /// # Errors
+    ///
+    /// - `Status::InvalidState` when the session hasn't rendered a frame since
+    ///   it attached or changed its scale factor. The query fails then, rather
+    ///   than delivering results, because there is no frame to read.
+    pub fn query_pixels_for_lat_lngs(
+        &self,
+        coordinates: &[LatLng],
+    ) -> Result<NativeFuture<Vec<TerrainScreenPointResult>>> {
+        let mut call = self.inner.call();
+        let coordinate_count = convert::count(coordinates.len())?;
+        let coordinates = call.array(coordinates)?;
+        call.complete(
+            |session, completion, out_diagnostic| unsafe {
+                sys::mln_render_session_query_pixels_for_lat_lngs(
+                    session,
+                    coordinates,
+                    coordinate_count,
+                    completion,
+                    out_diagnostic,
+                )
+            },
+            completion::list::<sys::mln_terrain_screen_point_result, _>,
+        )
+    }
+
     /// Finds the features that the session drew in an area of the screen.
     ///
     /// The query reads the last frame that the session rendered. A feature that

@@ -106,6 +106,7 @@ from ._generated_values import (
     TerrainElevation,
     TerrainLatLng,
     TerrainScreenPoint,
+    TerrainScreenPointResult,
     TextureReadbackResult,
     VulkanBorrowedTextureDescriptor,
     VulkanBorrowedTextureReplacement,
@@ -2712,6 +2713,43 @@ class _RenderSessionHandleOperations(GeneratedOperations):
         return map_future(
             self._native.query_pixel_for_lat_lng(coordinate),
             lambda value: _maybe(TerrainScreenPoint._from_native, value),
+        )
+
+    def query_pixels_for_lat_lngs(
+        self, coordinates: Sequence[LatLng]
+    ) -> Future[tuple[TerrainScreenPointResult, ...]]:
+        """Finds where the terrain draws each of several points on the ground.
+
+        The query answers each coordinate as
+        `RenderSessionHandle.query_pixel_for_lat_lng()` does, in one pass
+        over the last frame that the session rendered, so every answer comes
+        from the same frame. Submit it from any thread. It runs with the
+        session's graphics work, so with
+        `RenderDriverKind.CALLER_GRAPHICS_THREAD` it completes once you
+        service that work.
+
+        The completion delivers one `TerrainScreenPointResult` for each
+        coordinate, in the order of `coordinates`. A result's `found` is
+        false where `RenderSessionHandle.query_pixel_for_lat_lng()` would
+        deliver no value. With no coordinates, it delivers an empty array.
+        Each coordinate needs a latitude within \\[-90, 90\\] and a finite
+        longitude.
+
+        See `mln_render_session_query_pixels_for_lat_lngs` in the
+        [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+
+        Errors:
+
+        - `Status.INVALID_STATE` when the session hasn't rendered a frame
+          since it attached or changed its scale factor. The query fails
+          then, rather than delivering results, because there is no frame to
+          read.
+        """
+        return map_future(
+            self._native.query_pixels_for_lat_lngs(coordinates),
+            lambda value: tuple(
+                TerrainScreenPointResult._from_native(item) for item in value
+            ),
         )
 
     def query_rendered_features(

@@ -228,6 +228,47 @@ public extension RenderSessionHandle {
     }
   }
 
+  /// Finds where the terrain draws each of several points on the ground.
+  ///
+  /// The query answers each coordinate as
+  /// `RenderSessionHandle.queryPixelForLatLng()` does, in one pass over the
+  /// last frame that the session rendered, so every answer comes from the same
+  /// frame. Submit it from any thread. It runs with the session's graphics
+  /// work, so with `RenderDriverKind.callerGraphicsThread` it completes once
+  /// you service that work.
+  ///
+  /// The completion delivers one `TerrainScreenPointResult` for each
+  /// coordinate, in the order of `coordinates`. A result's `found` is false
+  /// where `RenderSessionHandle.queryPixelForLatLng()` would deliver no value.
+  /// With no coordinates, it delivers an empty array. Each coordinate needs a
+  /// latitude within \[-90, 90\] and a finite longitude.
+  ///
+  /// See `mln_render_session_query_pixels_for_lat_lngs` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidState` when the session hasn't rendered a frame since it
+  ///   attached or changed its scale factor. The query fails then, rather than
+  ///   delivering results, because there is no frame to read.
+  func queryPixelsForLatLngs(coordinates bindingArg0: [LatLng]) async throws
+    -> [TerrainScreenPointResult]
+  {
+    try await nativeStart(convert: { result in try NativeCompletion.values(
+      result,
+      as: mln_terrain_screen_point_result.self
+    ).map { TerrainScreenPointResult(raw: $0) }
+    }) { raw, arena, completion, diagnostic in
+      try mln_render_session_query_pixels_for_lat_lngs(
+        raw,
+        arena.array(bindingArg0.map { $0.nativeValue() }),
+        NativeInputArena.count(bindingArg0.count),
+        completion,
+        diagnostic
+      )
+    }
+  }
+
   /// Finds the features that the session drew in an area of the screen.
   ///
   /// The query reads the last frame that the session rendered. A feature that

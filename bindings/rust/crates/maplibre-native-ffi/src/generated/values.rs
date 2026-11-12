@@ -6565,6 +6565,29 @@ impl FromNative<sys::mln_terrain_screen_point> for TerrainScreenPoint {
     }
 }
 
+/// Where the terrain draws one coordinate of
+/// `RenderSessionHandle::query_pixels_for_lat_lngs()`, if it draws it.
+///
+/// See `mln_terrain_screen_point_result` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct TerrainScreenPointResult {
+    /// Whether the terrain draws the coordinate, as
+    /// `RenderSessionHandle::query_pixel_for_lat_lng()` delivers a value for
+    /// it. When false, `pixel` is zeroed.
+    pub found: bool,
+    /// Where the terrain draws the coordinate, when `found` is true.
+    pub pixel: TerrainScreenPoint,
+}
+impl FromNative<sys::mln_terrain_screen_point_result> for TerrainScreenPointResult {
+    unsafe fn from_native(raw: sys::mln_terrain_screen_point_result) -> Result<Self> {
+        Ok(Self {
+            found: raw.found,
+            pixel: unsafe { from_native(raw.pixel) }?,
+        })
+    }
+}
+
 /// The layout of the pixels that `RenderSessionHandle::read_texture()` reads.
 ///
 /// See `mln_texture_image_info` in the

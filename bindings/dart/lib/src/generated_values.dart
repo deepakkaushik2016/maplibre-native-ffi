@@ -5921,6 +5921,32 @@ final class TerrainScreenPoint extends _Value {
       _describe('TerrainScreenPoint', const ['point', 'occluded']);
 }
 
+/// Where the terrain draws one coordinate of
+/// `RenderSessionHandle.queryPixelsForLatLngs()`, if it draws it.
+///
+/// See `mln_terrain_screen_point_result` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+final class TerrainScreenPointResult extends _Value {
+  const TerrainScreenPointResult({
+    this.found = false,
+    this.pixel = const TerrainScreenPoint(),
+  });
+
+  /// Whether the terrain draws the coordinate, as
+  /// `RenderSessionHandle.queryPixelForLatLng()` delivers a value for it. When
+  /// false, `pixel` is zeroed.
+  final bool found;
+
+  /// Where the terrain draws the coordinate, when `found` is true.
+  final TerrainScreenPoint pixel;
+
+  @override
+  List<Object?> get _members => [found, pixel];
+  @override
+  String toString() =>
+      _describe('TerrainScreenPointResult', const ['found', 'pixel']);
+}
+
 /// A rectangle of the screen, from its `min` corner to its `max` corner.
 ///
 /// See `mln_screen_box` in the

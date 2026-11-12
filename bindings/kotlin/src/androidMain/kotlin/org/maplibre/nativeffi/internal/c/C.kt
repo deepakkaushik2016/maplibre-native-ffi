@@ -1244,6 +1244,15 @@ internal actual object C {
   ): Int
 
   @JvmStatic
+  actual external fun mln_render_session_query_pixels_for_lat_lngs(
+    session: Long,
+    coordinates: Long,
+    coordinateCount: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int
+
+  @JvmStatic
   actual external fun mln_render_session_query_rendered_features(
     session: Long,
     geometry: Long,

@@ -7418,6 +7418,23 @@ public data class TerrainScreenPoint(
 )
 
 /**
+ * Where the terrain draws one coordinate of `RenderSessionHandle.queryPixelsForLatLngs()`, if it
+ * draws it.
+ *
+ * See `mln_terrain_screen_point_result` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+public data class TerrainScreenPointResult(
+  /**
+   * Whether the terrain draws the coordinate, as `RenderSessionHandle.queryPixelForLatLng()`
+   * delivers a value for it. When false, `pixel` is zeroed.
+   */
+  public val found: Boolean,
+  /** Where the terrain draws the coordinate, when `found` is true. */
+  public val pixel: TerrainScreenPoint,
+)
+
+/**
  * A rectangle of the screen, from its `min` corner to its `max` corner.
  *
  * See `mln_screen_box` in the

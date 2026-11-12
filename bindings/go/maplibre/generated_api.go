@@ -6117,6 +6117,28 @@ func copyTerrainScreenPoint(raw C.mln_terrain_screen_point) TerrainScreenPoint {
 	return result
 }
 
+// TerrainScreenPointResult corresponds to mln_terrain_screen_point_result.
+// Where the terrain draws one coordinate of
+// RenderSessionHandle.QueryPixelsForLatLngs(), if it draws it.
+//
+// See mln_terrain_screen_point_result in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+type TerrainScreenPointResult struct {
+	// Whether the terrain draws the coordinate, as
+	// RenderSessionHandle.QueryPixelForLatLng() delivers a value for it. When
+	// false, pixel is zeroed.
+	Found bool
+	// Where the terrain draws the coordinate, when found is true.
+	Pixel TerrainScreenPoint
+}
+
+func copyTerrainScreenPointResult(raw C.mln_terrain_screen_point_result) TerrainScreenPointResult {
+	var result TerrainScreenPointResult
+	result.Found = bool(raw.found)
+	result.Pixel = copyTerrainScreenPoint(raw.pixel)
+	return result
+}
+
 // TextureImageInfo corresponds to mln_texture_image_info. The layout of the
 // pixels that RenderSessionHandle.ReadTexture() reads.
 //
@@ -9689,6 +9711,34 @@ func (receiver *RenderSessionHandle) QueryPixelForLatLng(coordinate LatLng) (*Fu
 	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_render_session_query_pixel_for_lat_lng(C.mln_render_session(raw), nativeLatLng(coordinate, arena), completion, diagnostic))
 	}, completionNullable(completionOf(copyTerrainScreenPoint)))
+}
+
+// QueryPixelsForLatLngs finds where the terrain draws each of several points on
+// the ground.
+//
+// The query answers each coordinate as
+// RenderSessionHandle.QueryPixelForLatLng() does, in one pass over the last
+// frame that the session rendered, so every answer comes from the same frame.
+// Submit it from any thread. It runs with the session's graphics work, so with
+// RenderDriverKindCallerGraphicsThread it completes once you service that work.
+//
+// The completion delivers one TerrainScreenPointResult for each coordinate, in
+// the order of coordinates. A result's found is false where
+// RenderSessionHandle.QueryPixelForLatLng() would deliver no value. With no
+// coordinates, it delivers an empty array. Each coordinate needs a latitude
+// within [-90, 90] and a finite longitude.
+//
+// See mln_render_session_query_pixels_for_lat_lngs in the C API reference:
+// https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html
+//
+// Errors:
+//   - StatusInvalidState when the session hasn't rendered a frame since it
+//     attached or changed its scale factor. The query fails then, rather than
+//     delivering results, because there is no frame to read.
+func (receiver *RenderSessionHandle) QueryPixelsForLatLngs(coordinates []LatLng) (*Future[[]TerrainScreenPointResult], error) {
+	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
+		return int32(C.mln_render_session_query_pixels_for_lat_lngs(C.mln_render_session(raw), bindingArray(coordinates, arena, nativeLatLng), bindingCount[C.size_t](len(coordinates)), completion, diagnostic))
+	}, completionListOf(copyTerrainScreenPointResult))
 }
 
 // QueryRenderedFeatures finds the features that the session drew in an area of

@@ -281,3 +281,26 @@ public struct TerrainScreenPoint: Equatable, Hashable, Sendable {
     occluded = raw.occluded
   }
 }
+
+/// Where the terrain draws one coordinate of
+/// `RenderSessionHandle.queryPixelsForLatLngs()`, if it draws it.
+///
+/// See `mln_terrain_screen_point_result` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+public struct TerrainScreenPointResult: Equatable, Hashable, Sendable {
+  /// Whether the terrain draws the coordinate, as
+  /// `RenderSessionHandle.queryPixelForLatLng()` delivers a value for it. When
+  /// false, `pixel` is zeroed.
+  public var found: Bool
+  /// Where the terrain draws the coordinate, when `found` is true.
+  public var pixel: TerrainScreenPoint
+  public init(found: Bool = false, pixel: TerrainScreenPoint = .init()) {
+    self.found = found
+    self.pixel = pixel
+  }
+
+  init(raw: mln_terrain_screen_point_result) {
+    found = raw.found
+    pixel = TerrainScreenPoint(raw: raw.pixel)
+  }
+}

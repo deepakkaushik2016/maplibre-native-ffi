@@ -99,6 +99,7 @@ import type {
   TerrainElevation,
   TerrainLatLng,
   TerrainScreenPoint,
+  TerrainScreenPointResult,
   TextureReadbackResult,
   VulkanBorrowedTextureDescriptor,
   VulkanBorrowedTextureReplacement,
@@ -5385,6 +5386,43 @@ export class RenderSessionHandle extends Owner {
       native.mln_render_session_query_pixel_for_lat_lng(
         this.id,
         coordinate,
+        completion,
+      ),
+    );
+  }
+
+  /**
+   * Finds where the terrain draws each of several points on the ground.
+   *
+   * The query answers each coordinate as
+   * `RenderSessionHandle.queryPixelForLatLng()` does, in one pass over the last
+   * frame that the session rendered, so every answer comes from the same frame.
+   * Submit it from any thread. It runs with the session's graphics work, so
+   * with `RenderDriverKind.callerGraphicsThread` it completes once you service
+   * that work.
+   *
+   * The completion delivers one `TerrainScreenPointResult` for each coordinate,
+   * in the order of `coordinates`. A result's `found` is false where
+   * `RenderSessionHandle.queryPixelForLatLng()` would deliver no value. With no
+   * coordinates, it delivers an empty array. Each coordinate needs a latitude
+   * within &#91;-90, 90&#93; and a finite longitude.
+   *
+   * See `mln_render_session_query_pixels_for_lat_lngs` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+   *
+   * Errors:
+   *
+   * - `Status.invalidState` when the session hasn't rendered a frame since it
+   *   attached or changed its scale factor. The query fails then, rather than
+   *   delivering results, because there is no frame to read.
+   */
+  queryPixelsForLatLngs(
+    coordinates: readonly LatLng[],
+  ): Promise<readonly TerrainScreenPointResult[]> {
+    return query<readonly TerrainScreenPointResult[]>((completion) =>
+      native.mln_render_session_query_pixels_for_lat_lngs(
+        this.id,
+        coordinates,
         completion,
       ),
     );

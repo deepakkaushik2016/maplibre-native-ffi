@@ -2181,6 +2181,13 @@ TerrainScreenPoint _readTerrainScreenPoint(
   occluded: source.occluded,
 );
 
+TerrainScreenPointResult _readTerrainScreenPointResult(
+  raw.mln_terrain_screen_point_result source,
+) => TerrainScreenPointResult(
+  found: source.found,
+  pixel: _readTerrainScreenPoint(source.pixel),
+);
+
 Pointer<raw.mln_screen_box> _writeScreenBox(
   ScreenBox value,
   Allocator arena, {
@@ -3444,6 +3451,12 @@ final _resultTerrainScreenPoint = _CompletionValue(
   sizeOf<raw.mln_terrain_screen_point>(),
   (element) =>
       _readTerrainScreenPoint(element.cast<raw.mln_terrain_screen_point>().ref),
+);
+final _resultTerrainScreenPointResult = _CompletionValue(
+  sizeOf<raw.mln_terrain_screen_point_result>(),
+  (element) => _readTerrainScreenPointResult(
+    element.cast<raw.mln_terrain_screen_point_result>().ref,
+  ),
 );
 final _resultTextureReadbackResult = _CompletionValue(
   sizeOf<raw.mln_texture_readback_result>(),
@@ -8199,6 +8212,47 @@ final class RenderSessionHandle implements Finalizable {
           nativeDiagnostic,
         ),
       );
+
+  /// Finds where the terrain draws each of several points on the ground.
+  ///
+  /// The query answers each coordinate as
+  /// `RenderSessionHandle.queryPixelForLatLng()` does, in one pass over the
+  /// last frame that the session rendered, so every answer comes from the same
+  /// frame. Submit it from any thread. It runs with the session's graphics
+  /// work, so with `RenderDriverKind.callerGraphicsThread` it completes once
+  /// you service that work.
+  ///
+  /// The completion delivers one `TerrainScreenPointResult` for each
+  /// coordinate, in the order of `coordinates`. A result's `found` is false
+  /// where `RenderSessionHandle.queryPixelForLatLng()` would deliver no value.
+  /// With no coordinates, it delivers an empty array. Each coordinate needs a
+  /// latitude within \[-90, 90\] and a finite longitude.
+  ///
+  /// See `mln_render_session_query_pixels_for_lat_lngs` in the
+  /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+  ///
+  /// Errors:
+  ///
+  /// - `Status.invalidState` when the session hasn't rendered a frame since it
+  ///   attached or changed its scale factor. The query fails then, rather than
+  ///   delivering results, because there is no frame to read.
+  Future<List<TerrainScreenPointResult>> queryPixelsForLatLngs(
+    List<LatLng> coordinates,
+  ) => _queryList(_resultTerrainScreenPointResult, (arena, completion) {
+    final nativecoordinates = arena<raw.mln_lat_lng>(
+      coordinates.isEmpty ? 1 : coordinates.length,
+    );
+    for (var index = 0; index < coordinates.length; index++) {
+      _writeLatLng(coordinates[index], arena, into: nativecoordinates + index);
+    }
+    return raw.mln_render_session_query_pixels_for_lat_lngs(
+      _handle.raw,
+      nativecoordinates,
+      coordinates.length,
+      completion,
+      nativeDiagnostic,
+    );
+  });
 
   /// Finds the features that the session drew in an area of the screen.
   ///

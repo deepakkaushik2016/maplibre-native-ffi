@@ -645,4 +645,54 @@ auto render_session_query_pixel_for_lat_lng_start(
   );
 }
 
+// Delivers the answer for each coordinate of a batch, in its order.
+auto complete_pixels_for_lat_lngs(
+  const std::shared_ptr<Completion>& completion, mln_status status,
+  std::string diagnostic, std::any result
+) -> void {
+  using Results = std::vector<mln_terrain_screen_point_result>;
+  auto* pixels = std::any_cast<Results>(&result);
+  if (status != MLN_STATUS_OK || pixels == nullptr) {
+    complete_query_failure(completion, status, std::move(diagnostic));
+    return;
+  }
+  completion->resolve([pixels =
+                         std::move(*pixels)](const CompletionSink& descriptor) {
+    CompletionValue<&mln_render_session_query_pixels_for_lat_lngs>::deliver(
+      descriptor, pixels
+    );
+  });
+}
+
+auto render_session_query_pixels_for_lat_lngs_start(
+  mln_render_session session, const mln_lat_lng* coordinates,
+  std::size_t coordinate_count, const mln_completion* completion
+) -> mln_status {
+  if (coordinate_count != 0 && coordinates == nullptr) {
+    set_thread_error(
+      "coordinates must not be null when coordinate_count is nonzero"
+    );
+    return MLN_STATUS_INVALID_ARGUMENT;
+  }
+  auto copied = std::vector<mln_lat_lng>{};
+  copied.reserve(coordinate_count);
+  for (std::size_t index = 0; index < coordinate_count; ++index) {
+    const auto status = validate_lat_lng(coordinates[index]);
+    if (status != MLN_STATUS_OK) return status;
+    copied.push_back(coordinates[index]);
+  }
+  return enqueue_driver_result_operation(
+    session,
+    [copied =
+       std::move(copied)](mln_render_session_object& target, std::any& result) {
+      auto pixels = std::vector<mln_terrain_screen_point_result>{};
+      const auto status =
+        render_session_query_pixels_for_lat_lngs(target.self, copied, pixels);
+      if (status == MLN_STATUS_OK) result = std::move(pixels);
+      return status;
+    },
+    completion, complete_pixels_for_lat_lngs
+  );
+}
+
 }  // namespace mln::core

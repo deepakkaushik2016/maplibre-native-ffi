@@ -1992,6 +1992,21 @@ internal actual object C {
       outDiagnostic.toCPointer(),
     )
 
+  actual fun mln_render_session_query_pixels_for_lat_lngs(
+    session: Long,
+    coordinates: Long,
+    coordinateCount: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    org.maplibre.nativeffi.internal.cinterop.mln_render_session_query_pixels_for_lat_lngs(
+      session.toULong(),
+      coordinates.toCPointer(),
+      coordinateCount.convert(),
+      completion.toCPointer(),
+      outDiagnostic.toCPointer(),
+    )
+
   actual fun mln_render_session_query_rendered_features(
     session: Long,
     geometry: Long,

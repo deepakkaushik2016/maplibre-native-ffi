@@ -4622,6 +4622,55 @@ maplibre_native_ffi_render_session_query_pixel_for_lat_lng_finish(
 );
 
 /**
+ * maplibre_native_ffi_render_session_query_pixels_for_lat_lngs_async:
+ * @coordinates: (array length=coordinate_count): the items
+ * @callback: (scope async) (nullable): the callback to call when the call finishes
+ * @user_data: the data to pass to `callback`
+ *
+ * Finds where the terrain draws each of several points on the ground.
+ *
+ * The query answers each coordinate as
+ * `maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async()` does, in
+ * one pass over the last frame that the session rendered, so every answer comes
+ * from the same frame. Submit it from any thread. It runs with the session's
+ * graphics work, so with
+ * `MAPLIBRE_NATIVE_FFI_RENDER_DRIVER_CALLER_GRAPHICS_THREAD` it completes once
+ * you service that work.
+ *
+ * The completion delivers one `MaplibreNativeFfiTerrainScreenPointResult` for
+ * each coordinate, in the order of `coordinates`. A result's `found` is false
+ * where `maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async()`
+ * would deliver no value. With no coordinates, it delivers an empty array. Each
+ * coordinate needs a latitude within \[-90, 90\] and a finite longitude.
+ *
+ * See `mln_render_session_query_pixels_for_lat_lngs` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ *
+ * It fails with these errors:
+ *
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` when the session hasn't rendered
+ *   a frame since it attached or changed its scale factor. The query fails
+ *   then, rather than delivering results, because there is no frame to read.
+ */
+void maplibre_native_ffi_render_session_query_pixels_for_lat_lngs_async(
+  MaplibreNativeFfiRenderSession* self,
+  const MaplibreNativeFfiLatLng* coordinates, gsize coordinate_count,
+  GAsyncReadyCallback callback, gpointer user_data
+);
+
+/**
+ * maplibre_native_ffi_render_session_query_pixels_for_lat_lngs_finish:
+ * @result: the result that the callback received
+ *
+ * Finishes a call that `maplibre_native_ffi_render_session_query_pixels_for_lat_lngs_async` started.
+ *
+ * Returns: (transfer container) (element-type MaplibreNativeFfiTerrainScreenPointResult): the items
+ */
+GPtrArray* maplibre_native_ffi_render_session_query_pixels_for_lat_lngs_finish(
+  MaplibreNativeFfiRenderSession* self, GAsyncResult* result, GError** error
+);
+
+/**
  * maplibre_native_ffi_render_session_query_rendered_features_async:
  * @options: (nullable): the value, or %NULL
  * @callback: (scope async) (nullable): the callback to call when the call finishes

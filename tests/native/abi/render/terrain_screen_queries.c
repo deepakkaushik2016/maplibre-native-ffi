@@ -125,6 +125,40 @@ static mln_status query_pixel(
   );
 }
 
+// Submits a batch pixel query of `count` coordinates and finishes it. On
+// success `*out_count` is the number of results delivered, and `out` holds them
+// when there is one for each coordinate.
+static mln_status query_pixels(
+  const mln_test_render_fixture* fixture, const mln_lat_lng* coordinates,
+  size_t count, mln_terrain_screen_point_result* out, size_t* out_count
+) {
+  *out_count = 0;
+  mln_test_completion completion =
+    mln_test_completion_default(count * sizeof(*out));
+  const mln_status submitted = mln_render_session_query_pixels_for_lat_lngs(
+    fixture->session, coordinates, count, &completion.descriptor,
+    MLN_TEST_DIAGNOSTIC
+  );
+  if (submitted != MLN_STATUS_OK) {
+    completion.descriptor.release_user_data(completion.descriptor.user_data);
+    mln_test_completion_destroy(&completion);
+    return submitted;
+  }
+  mln_status status =
+    mln_test_render_fixture_finish_operation(fixture, &completion);
+  if (status == MLN_STATUS_OK) {
+    *out_count = mln_test_completion_value_count(&completion);
+    if (
+      *out_count == count && count != 0 &&
+      !mln_test_completion_copy_value(&completion, out, count * sizeof(*out))
+    ) {
+      status = MLN_STATUS_NATIVE_ERROR;
+    }
+  }
+  mln_test_completion_destroy(&completion);
+  return status;
+}
+
 static mln_status query_elevation(
   const mln_test_render_fixture* fixture, mln_lat_lng point, double* out,
   bool* out_found
@@ -366,6 +400,155 @@ static void a_session_that_never_rendered_has_no_renderer(void) {
   close_ridge_map(&view);
 }
 
+// A batch answers each coordinate as its own query does, in order, from the
+// same frame: ground in plain view, ground hidden behind the crest, ground that
+// no loaded DEM tile covers, and the first coordinate again.
+static void a_batch_answers_each_coordinate_as_its_own_query(void) {
+  ridge_map view = {0};
+  open_ridge_map(&view, 75.0);
+  MLN_TEST_OK(mln_test_render_still_image(&view.fixture, view.map));
+  const mln_lat_lng coordinates[] = {
+    {.latitude = crest_latitude - 1.0 * kilometer, .longitude = longitude},
+    {.latitude = crest_latitude + 3.0 * kilometer, .longitude = longitude},
+    {.latitude = -33.86, .longitude = -168.79},
+    {.latitude = crest_latitude - 1.0 * kilometer, .longitude = longitude},
+  };
+  enum { count = sizeof(coordinates) / sizeof(coordinates[0]) };
+  mln_terrain_screen_point_result results[count] = {0};
+  size_t delivered = 0;
+  MLN_TEST_OK(
+    query_pixels(&view.fixture, coordinates, count, results, &delivered)
+  );
+  TEST_ASSERT_EQUAL_size_t(count, delivered);
+  for (size_t index = 0; index < count; ++index) {
+    mln_terrain_screen_point single = {0};
+    bool found = false;
+    MLN_TEST_OK(
+      query_pixel(&view.fixture, coordinates[index], &single, &found)
+    );
+    TEST_ASSERT_EQUAL(found, results[index].found);
+    if (!found) {
+      TEST_ASSERT_EQUAL_DOUBLE(0.0, results[index].pixel.point.x);
+      TEST_ASSERT_EQUAL_DOUBLE(0.0, results[index].pixel.point.y);
+      TEST_ASSERT_FALSE(results[index].pixel.occluded);
+      continue;
+    }
+    TEST_ASSERT_EQUAL_DOUBLE(single.point.x, results[index].pixel.point.x);
+    TEST_ASSERT_EQUAL_DOUBLE(single.point.y, results[index].pixel.point.y);
+    TEST_ASSERT_EQUAL(single.occluded, results[index].pixel.occluded);
+  }
+  TEST_ASSERT_TRUE(results[0].found);
+  TEST_ASSERT_FALSE(results[0].pixel.occluded);
+  TEST_ASSERT_TRUE(results[1].found);
+  TEST_ASSERT_TRUE_MESSAGE(
+    results[1].pixel.occluded, "the crest hides nothing"
+  );
+  TEST_ASSERT_FALSE(results[2].found);
+  close_ridge_map(&view);
+}
+
+// No coordinates are an empty answer, which may come without an array.
+static void an_empty_batch_delivers_no_results(void) {
+  ridge_map view = {0};
+  open_ridge_map(&view, 60.0);
+  MLN_TEST_OK(mln_test_render_still_image(&view.fixture, view.map));
+  mln_terrain_screen_point_result result = {0};
+  size_t delivered = 1;
+  MLN_TEST_OK(query_pixels(&view.fixture, NULL, 0, &result, &delivered));
+  TEST_ASSERT_EQUAL_size_t(0, delivered);
+  close_ridge_map(&view);
+}
+
+// Before its first frame a session has no frame to read, so the batch fails as
+// the single query does, also when it holds no coordinates.
+static void a_batch_before_the_first_frame_fails(void) {
+  ridge_map view = {0};
+  open_ridge_map(&view, 60.0);
+  const mln_lat_lng crest = {
+    .latitude = crest_latitude, .longitude = longitude
+  };
+  mln_terrain_screen_point_result result = {0};
+  size_t delivered = 0;
+  MLN_TEST_INVALID_STATE(
+    query_pixels(&view.fixture, &crest, 1, &result, &delivered)
+  );
+  MLN_TEST_INVALID_STATE(
+    query_pixels(&view.fixture, NULL, 0, &result, &delivered)
+  );
+  close_ridge_map(&view);
+}
+
+typedef struct pixels_call {
+  mln_lat_lng coordinates[2];
+  size_t count;
+  bool null_coordinates;
+  bool null_completion;
+} pixels_call;
+
+static void second_latitude_past_the_pole(void* call) {
+  ((pixels_call*)call)->coordinates[1].latitude = 90.5;
+}
+static void second_longitude_nan(void* call) {
+  ((pixels_call*)call)->coordinates[1].longitude = (double)NAN;
+}
+static void second_longitude_past_the_antimeridian(void* call) {
+  ((pixels_call*)call)->coordinates[1].longitude = 191.39;
+}
+static void null_coordinates_with_a_count(void* call) {
+  ((pixels_call*)call)->null_coordinates = true;
+}
+static void null_coordinates_without_a_count(void* call) {
+  ((pixels_call*)call)->null_coordinates = true;
+  ((pixels_call*)call)->count = 0;
+}
+static void pixels_without_completion(void* call) {
+  ((pixels_call*)call)->null_completion = true;
+}
+
+static mln_status submit_pixels(
+  void* context, const void* descriptor, mln_diagnostic* diagnostic
+) {
+  const mln_render_session session = *(const mln_render_session*)context;
+  const pixels_call* call = descriptor;
+  mln_completion completion = mln_test_discard_completion();
+  return mln_render_session_query_pixels_for_lat_lngs(
+    session, call->null_coordinates ? NULL : call->coordinates, call->count,
+    call->null_completion ? NULL : &completion, diagnostic
+  );
+}
+
+// Each coordinate of a batch follows the single query's rules, and the batch
+// rejects a missing array that claims coordinates.
+static void malformed_batches_are_rejected_at_submission(void) {
+  ridge_map view = {0};
+  open_ridge_map(&view, 60.0);
+  static const mln_test_validation_case cases[] = {
+    {"a latitude past the pole", second_latitude_past_the_pole,
+     MLN_STATUS_INVALID_ARGUMENT, "latitude"},
+    {"a NaN longitude", second_longitude_nan, MLN_STATUS_INVALID_ARGUMENT,
+     "longitude"},
+    {"a longitude past the antimeridian",
+     second_longitude_past_the_antimeridian, MLN_STATUS_OK, NULL},
+    {"no coordinates for a count", null_coordinates_with_a_count,
+     MLN_STATUS_INVALID_ARGUMENT, "coordinates"},
+    {"no coordinates for no count", null_coordinates_without_a_count,
+     MLN_STATUS_OK, NULL},
+    {"no completion", pixels_without_completion, MLN_STATUS_INVALID_ARGUMENT,
+     "completion"},
+  };
+  const pixels_call defaults = {
+    .coordinates =
+      {{.latitude = crest_latitude, .longitude = longitude},
+       {.latitude = crest_latitude, .longitude = longitude}},
+    .count = 2,
+  };
+  mln_test_run_validation_table(
+    cases, sizeof(cases) / sizeof(cases[0]), &defaults, sizeof(defaults),
+    submit_pixels, &view.fixture.session
+  );
+  close_ridge_map(&view);
+}
+
 typedef struct pixel_call {
   mln_lat_lng coordinate;
   bool null_completion;
@@ -464,4 +647,8 @@ MLN_TEST_GROUP {
   RUN_TEST(without_terrain_the_answers_are_at_sea_level);
   RUN_TEST(a_session_that_never_rendered_has_no_renderer);
   RUN_TEST(malformed_queries_are_rejected_at_submission);
+  RUN_TEST(a_batch_answers_each_coordinate_as_its_own_query);
+  RUN_TEST(an_empty_batch_delivers_no_results);
+  RUN_TEST(a_batch_before_the_first_frame_fails);
+  RUN_TEST(malformed_batches_are_rejected_at_submission);
 }

@@ -274,6 +274,13 @@ struct CompletionResult<&mln_render_session_query_pixel_for_lat_lng> {
   static constexpr bool nullable = true;
 };
 template <>
+struct CompletionResult<&mln_render_session_query_pixels_for_lat_lngs> {
+  static constexpr bool has_value = true;
+  using type = mln_terrain_screen_point_result;
+  static constexpr bool array = true;
+  static constexpr bool nullable = false;
+};
+template <>
 struct CompletionResult<&mln_render_session_query_rendered_features> {
   static constexpr bool has_value = true;
   using type = mln_rendered_feature;

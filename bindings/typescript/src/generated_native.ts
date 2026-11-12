@@ -781,6 +781,11 @@ export interface NativeOperations {
     coordinate: LatLng,
     completion: NativeCompletion,
   ): void;
+  mln_render_session_query_pixels_for_lat_lngs(
+    session: bigint,
+    coordinates: readonly LatLng[],
+    completion: NativeCompletion,
+  ): void;
   mln_render_session_query_rendered_features(
     session: bigint,
     geometry: RenderedQueryGeometry,

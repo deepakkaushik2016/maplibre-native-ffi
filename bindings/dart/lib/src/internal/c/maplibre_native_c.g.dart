@@ -1841,6 +1841,12 @@ final class mln_terrain_screen_point extends Struct {
   external bool occluded;
 }
 
+final class mln_terrain_screen_point_result extends Struct {
+  @Bool()
+  external bool found;
+  external mln_terrain_screen_point pixel;
+}
+
 final class mln_texture_image_info extends Struct {
   @Uint32()
   external int width;
@@ -5021,6 +5027,23 @@ external int mln_render_session_query_lat_lng_for_pixel(
 external int mln_render_session_query_pixel_for_lat_lng(
   int session,
   mln_lat_lng coordinate,
+  Pointer<mln_completion> completion,
+  Pointer<mln_diagnostic> out_diagnostic,
+);
+
+@Native<
+  Int32 Function(
+    mln_render_session,
+    Pointer<mln_lat_lng>,
+    Size,
+    Pointer<mln_completion>,
+    Pointer<mln_diagnostic>,
+  )
+>()
+external int mln_render_session_query_pixels_for_lat_lngs(
+  int session,
+  Pointer<mln_lat_lng> coordinates,
+  int coordinate_count,
   Pointer<mln_completion> completion,
   Pointer<mln_diagnostic> out_diagnostic,
 );

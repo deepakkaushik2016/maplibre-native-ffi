@@ -1605,6 +1605,17 @@ int32_t mln_kw_mln_render_session_query_pixel_for_lat_lng(
   );
 }
 
+int32_t mln_kw_mln_render_session_query_pixels_for_lat_lngs(
+  int64_t session, uintptr_t coordinates, uint32_t coordinate_count,
+  uintptr_t completion, uintptr_t out_diagnostic
+) {
+  return (int32_t)mln_render_session_query_pixels_for_lat_lngs(
+    (mln_render_session)session, (const mln_lat_lng*)coordinates,
+    (size_t)coordinate_count, (const mln_completion*)completion,
+    (mln_diagnostic*)out_diagnostic
+  );
+}
+
 int32_t mln_kw_mln_render_session_query_rendered_features(
   int64_t session, uintptr_t geometry, uintptr_t options, uintptr_t completion,
   uintptr_t out_diagnostic

@@ -1626,6 +1626,21 @@ internal actual object C {
       word(outDiagnostic),
     )
 
+  actual fun mln_render_session_query_pixels_for_lat_lngs(
+    session: Long,
+    coordinates: Long,
+    coordinateCount: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_kw_mln_render_session_query_pixels_for_lat_lngs(
+      session,
+      word(coordinates),
+      word(coordinateCount),
+      word(completion),
+      word(outDiagnostic),
+    )
+
   actual fun mln_render_session_query_rendered_features(
     session: Long,
     geometry: Long,
@@ -3400,6 +3415,17 @@ private fun mln_kw_mln_render_session_query_pixel_for_lat_lng(
 ): Int =
   js(
     "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_render_session_query_pixel_for_lat_lng(p0, p1, p2, p3)",
+  )
+
+private fun mln_kw_mln_render_session_query_pixels_for_lat_lngs(
+  p0: Long,
+  p1: Int,
+  p2: Int,
+  p3: Int,
+  p4: Int,
+): Int =
+  js(
+    "globalThis[Symbol.for('org.maplibre.nativeffi.c')]._mln_kw_mln_render_session_query_pixels_for_lat_lngs(p0, p1, p2, p3, p4)",
   )
 
 private fun mln_kw_mln_render_session_query_rendered_features(

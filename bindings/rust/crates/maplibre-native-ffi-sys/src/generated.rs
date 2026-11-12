@@ -1922,6 +1922,12 @@ pub struct mln_terrain_screen_point {
 }
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
+pub struct mln_terrain_screen_point_result {
+    pub found: bool,
+    pub pixel: mln_terrain_screen_point,
+}
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct mln_texture_image_info {
     pub width: u32,
     pub height: u32,
@@ -3319,6 +3325,13 @@ unsafe extern "C" {
     pub fn mln_render_session_query_pixel_for_lat_lng(
         session: mln_render_session,
         coordinate: mln_lat_lng,
+        completion: *const mln_completion,
+        out_diagnostic: *mut mln_diagnostic,
+    ) -> mln_status;
+    pub fn mln_render_session_query_pixels_for_lat_lngs(
+        session: mln_render_session,
+        coordinates: *const mln_lat_lng,
+        coordinate_count: usize,
         completion: *const mln_completion,
         out_diagnostic: *mut mln_diagnostic,
     ) -> mln_status;

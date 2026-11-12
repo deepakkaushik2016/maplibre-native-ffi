@@ -2446,6 +2446,33 @@ pub const RenderSession = struct {
         return call.submit("mln_render_session_query_pixel_for_lat_lng", .handle, self, call.orNull(call.value(TerrainScreenPoint, c.mln_terrain_screen_point)), null, diagnostic, .{coordinate});
     }
 
+    /// Finds where the terrain draws each of several points on the ground.
+    ///
+    /// The query answers each coordinate as `RenderSession.queryPixelForLatLng()`
+    /// does, in one pass over the last frame that the session rendered, so every
+    /// answer comes from the same frame. Submit it from any thread. It runs with
+    /// the session's graphics work, so with
+    /// `RenderDriverKind.caller_graphics_thread` it completes once you service that
+    /// work.
+    ///
+    /// The completion delivers one `TerrainScreenPointResult` for each coordinate,
+    /// in the order of `coordinates`. A result's `found` is false where
+    /// `RenderSession.queryPixelForLatLng()` would deliver no value. With no
+    /// coordinates, it delivers an empty array. Each coordinate needs a latitude
+    /// within \[-90, 90\] and a finite longitude.
+    ///
+    /// See `mln_render_session_query_pixels_for_lat_lngs` in the
+    /// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+    ///
+    /// Errors:
+    ///
+    /// - `error.InvalidState` when the session hasn't rendered a frame since it
+    ///   attached or changed its scale factor. The query fails then, rather than
+    ///   delivering results, because there is no frame to read.
+    pub fn queryPixelsForLatLngs(self: RenderSession, allocator: std.mem.Allocator, coordinates: []const LatLng, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(OwnedValue([]const TerrainScreenPointResult)) {
+        return call.submit("mln_render_session_query_pixels_for_lat_lngs", .handle, self, call.slice(TerrainScreenPointResult, c.mln_terrain_screen_point_result), allocator, diagnostic, .{ coordinates, coordinates.len });
+    }
+
     /// Finds the features that the session drew in an area of the screen.
     ///
     /// The query reads the last frame that the session rendered. A feature that
@@ -9199,6 +9226,26 @@ pub const TerrainScreenPoint = struct {
         return .{
             .point = ScreenPoint.fromNative(raw.point),
             .occluded = raw.occluded,
+        };
+    }
+};
+
+/// Where the terrain draws one coordinate of
+/// `RenderSession.queryPixelsForLatLngs()`, if it draws it.
+///
+/// See `mln_terrain_screen_point_result` in the
+/// [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+pub const TerrainScreenPointResult = struct {
+    /// Whether the terrain draws the coordinate, as
+    /// `RenderSession.queryPixelForLatLng()` delivers a value for it. When
+    /// false, `pixel` is zeroed.
+    found: bool = false,
+    /// Where the terrain draws the coordinate, when `found` is true.
+    pixel: TerrainScreenPoint = .{},
+    pub fn fromNative(raw: c.mln_terrain_screen_point_result) TerrainScreenPointResult {
+        return .{
+            .found = raw.found,
+            .pixel = TerrainScreenPoint.fromNative(raw.pixel),
         };
     }
 };

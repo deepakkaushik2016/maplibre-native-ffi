@@ -94,3 +94,15 @@ auto mln_render_session_query_pixel_for_lat_lng(
     );
   });
 }
+
+auto mln_render_session_query_pixels_for_lat_lngs(
+  mln_render_session session, const mln_lat_lng* coordinates,
+  size_t coordinate_count, const mln_completion* completion,
+  mln_diagnostic* out_diagnostic
+) noexcept -> mln_status {
+  return mln::c_api::status_boundary(out_diagnostic, [&]() -> mln_status {
+    return mln::core::render_session_query_pixels_for_lat_lngs_start(
+      session, coordinates, coordinate_count, completion
+    );
+  });
+}

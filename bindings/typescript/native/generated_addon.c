@@ -5857,6 +5857,52 @@ done:
   return mln_ts_end(call);
 }
 
+static napi_value mln_ts_export_mln_render_session_query_pixels_for_lat_lngs(
+  napi_env env, napi_callback_info info
+) {
+  mln_ts_call call_state;
+  mln_ts_call* call = &call_state;
+  mln_render_session arg_session = 0;
+  size_t count_coordinates = 0;
+  mln_lat_lng* arg_coordinates = NULL;
+  mln_completion arg_completion;
+  const mln_completion* present_completion = NULL;
+  mln_diagnostic diagnostic;
+  mln_status status;
+  if (!mln_ts_begin(call, env, info, 3)) return NULL;
+  {
+    uint64_t number = 0;
+    if (!mln_ts_read_u64(call, call->argv[0], &number, "session")) goto done;
+    arg_session = (mln_render_session)number;
+  }
+  {
+    mln_lat_lng* items = NULL;
+    size_t count = 0;
+    if (!mln_ts_write_list_lat_lng(
+          call, call->argv[1], UINT32_MAX, &items, &count, "coordinates"
+        ))
+      goto done;
+    arg_coordinates = items;
+    count_coordinates = (size_t)count;
+  }
+  if (!mln_ts_read_completion(
+        call, call->argv[2], false,
+        mln_ts_decode_terrain_screen_point_result_list, &arg_completion,
+        &present_completion
+      ))
+    goto done;
+  diagnostic.size = sizeof diagnostic;
+  diagnostic.message[0] = '\0';
+  status = mln_render_session_query_pixels_for_lat_lngs(
+    arg_session, arg_coordinates, (size_t)count_coordinates, present_completion,
+    &diagnostic
+  );
+  if (status == MLN_STATUS_OK) mln_ts_accept(call);
+  if (!mln_ts_check(call, status, &diagnostic)) goto done;
+done:
+  return mln_ts_end(call);
+}
+
 static napi_value mln_ts_export_mln_render_session_query_rendered_features(
   napi_env env, napi_callback_info info
 ) {
@@ -8340,6 +8386,8 @@ static const mln_ts_export exports[] = {
    mln_ts_export_mln_render_session_query_lat_lng_for_pixel},
   {"mln_render_session_query_pixel_for_lat_lng",
    mln_ts_export_mln_render_session_query_pixel_for_lat_lng},
+  {"mln_render_session_query_pixels_for_lat_lngs",
+   mln_ts_export_mln_render_session_query_pixels_for_lat_lngs},
   {"mln_render_session_query_rendered_features",
    mln_ts_export_mln_render_session_query_rendered_features},
   {"mln_render_session_query_source_features",

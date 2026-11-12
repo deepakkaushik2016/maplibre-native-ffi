@@ -499,6 +499,56 @@ private constructor(
     }
 
   /**
+   * Finds where the terrain draws each of several points on the ground.
+   *
+   * The query answers each coordinate as `RenderSessionHandle.queryPixelForLatLng()` does, in one
+   * pass over the last frame that the session rendered, so every answer comes from the same frame.
+   * Submit it from any thread. It runs with the session's graphics work, so with
+   * `RenderDriverKind.CALLER_GRAPHICS_THREAD` it completes once you service that work.
+   *
+   * The completion delivers one `TerrainScreenPointResult` for each coordinate, in the order of
+   * `coordinates`. A result's `found` is false where `RenderSessionHandle.queryPixelForLatLng()`
+   * would deliver no value. With no coordinates, it delivers an empty array. Each coordinate needs
+   * a latitude within &#91;-90, 90&#93; and a finite longitude.
+   *
+   * See `mln_render_session_query_pixels_for_lat_lngs` in the
+   * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+   *
+   * Errors:
+   *
+   * - `Status.INVALID_STATE` when the session hasn't rendered a frame since it attached or changed
+   *   its scale factor. The query fails then, rather than delivering results, because there is no
+   *   frame to read.
+   */
+  public fun queryPixelsForLatLngs(
+    coordinates: List<LatLng>,
+  ): Completion<List<TerrainScreenPointResult>> =
+    nativeSubmit(
+      this,
+      binding,
+      { result ->
+        readStrided(
+          CompletionBridge.valuePointer(result),
+          CompletionBridge.valueCount(result),
+          CompletionBridge.valueSize(result),
+          w(32, 32, 24),
+        ) {
+          readTerrainScreenPointResult(it)
+        }
+      },
+    ) {
+      check(
+        C.mln_render_session_query_pixels_for_lat_lngs(
+          handle,
+          array(coordinates, 16, w(8, 8, 4)) { at, item -> putLatLng(at, item) },
+          coordinates.size.toLong(),
+          completion,
+          diagnostic,
+        ),
+      )
+    }
+
+  /**
    * Finds the features that the session drew in an area of the screen.
    *
    * The query reads the last frame that the session rendered. A feature that several layers draw

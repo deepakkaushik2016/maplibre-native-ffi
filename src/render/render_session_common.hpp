@@ -1431,6 +1431,10 @@ auto render_session_query_pixel_for_lat_lng(
   mln_render_session session, mln_lat_lng coordinate,
   std::optional<mln_terrain_screen_point>& out_result
 ) -> mln_status;
+auto render_session_query_pixels_for_lat_lngs(
+  mln_render_session session, std::span<const mln_lat_lng> coordinates,
+  std::vector<mln_terrain_screen_point_result>& out_result
+) -> mln_status;
 
 auto render_session_query_rendered_features_start(
   mln_render_session session, const mln_rendered_query_geometry* geometry,
@@ -1466,6 +1470,10 @@ auto render_session_query_lat_lng_for_pixel_start(
 auto render_session_query_pixel_for_lat_lng_start(
   mln_render_session session, mln_lat_lng coordinate,
   const mln_completion* completion
+) -> mln_status;
+auto render_session_query_pixels_for_lat_lngs_start(
+  mln_render_session session, const mln_lat_lng* coordinates,
+  std::size_t coordinate_count, const mln_completion* completion
 ) -> mln_status;
 
 auto render_session_get_capabilities(

@@ -1087,6 +1087,16 @@ internal actual object C {
       JAVA_LONG,
       JAVA_LONG,
     )
+  private val mln_render_session_query_pixels_for_lat_lngs =
+    Ffm.downcall(
+      "mln_render_session_query_pixels_for_lat_lngs",
+      JAVA_INT,
+      JAVA_LONG,
+      JAVA_LONG,
+      JAVA_LONG,
+      JAVA_LONG,
+      JAVA_LONG,
+    )
   private val mln_render_session_query_rendered_features =
     Ffm.downcall(
       "mln_render_session_query_rendered_features",
@@ -3130,6 +3140,21 @@ internal actual object C {
     mln_render_session_query_pixel_for_lat_lng.invokeExact(
       session,
       Ffm.value(coordinate, mln_lat_lng),
+      completion,
+      outDiagnostic,
+    ) as Int
+
+  actual fun mln_render_session_query_pixels_for_lat_lngs(
+    session: Long,
+    coordinates: Long,
+    coordinateCount: Long,
+    completion: Long,
+    outDiagnostic: Long,
+  ): Int =
+    mln_render_session_query_pixels_for_lat_lngs.invokeExact(
+      session,
+      coordinates,
+      coordinateCount,
       completion,
       outDiagnostic,
     ) as Int

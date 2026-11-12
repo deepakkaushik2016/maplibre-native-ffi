@@ -898,6 +898,14 @@ maplibre_native_ffi_terrain_screen_point_from_native(
 G_GNUC_INTERNAL void maplibre_native_ffi_terrain_screen_point_read(
   MaplibreNativeFfiTerrainScreenPoint* out, const mln_terrain_screen_point* in
 );
+G_GNUC_INTERNAL MaplibreNativeFfiTerrainScreenPointResult*
+maplibre_native_ffi_terrain_screen_point_result_from_native(
+  const mln_terrain_screen_point_result* in
+);
+G_GNUC_INTERNAL void maplibre_native_ffi_terrain_screen_point_result_read(
+  MaplibreNativeFfiTerrainScreenPointResult* out,
+  const mln_terrain_screen_point_result* in
+);
 G_GNUC_INTERNAL MaplibreNativeFfiTextureImageInfo*
 maplibre_native_ffi_texture_image_info_from_native(
   const mln_texture_image_info* in

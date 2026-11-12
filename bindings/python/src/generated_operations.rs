@@ -1644,6 +1644,19 @@ fn generated_copy_mln_terrain_screen_point(
     Ok(dict.into_any().unbind())
 }
 
+fn generated_copy_mln_terrain_screen_point_result(
+    py: Python<'_>,
+    value: &sys::mln_terrain_screen_point_result,
+) -> PyResult<Py<PyAny>> {
+    let dict = PyDict::new(py);
+    dict.set_item("found", generated_value(py, value.found)?)?;
+    dict.set_item(
+        "pixel",
+        generated_copy_mln_terrain_screen_point(py, &value.pixel)?,
+    )?;
+    Ok(dict.into_any().unbind())
+}
+
 fn generated_copy_mln_texture_image_info(
     py: Python<'_>,
     value: &sys::mln_texture_image_info,
@@ -8348,6 +8361,42 @@ impl RenderSessionHandle {
                     sys::mln_render_session_query_pixel_for_lat_lng(
                         handle,
                         coordinate_value,
+                        completion,
+                        diagnostic,
+                    )
+                },
+                convert,
+            )
+        }
+    }
+    #[pyo3(signature = (coordinates))]
+    fn query_pixels_for_lat_lngs(
+        &self,
+        py: Python<'_>,
+        coordinates: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let mut call = GeneratedCall::new(py);
+        let storage = &mut call.storage;
+        let coordinates_values = generated_items(coordinates, |item| {
+            generated_input_mln_lat_lng(&item, storage)
+        })?;
+        let handle = self.input();
+        let convert = |py: Python<'_>, result: &sys::mln_completion_result| {
+            let list = PyList::empty(py);
+            for value in
+                generated_completion_values::<sys::mln_terrain_screen_point_result>(result)?
+            {
+                list.append(generated_copy_mln_terrain_screen_point_result(py, &value)?)?;
+            }
+            Ok(list.into_any().unbind())
+        };
+        unsafe {
+            call.complete(
+                |completion, diagnostic| {
+                    sys::mln_render_session_query_pixels_for_lat_lngs(
+                        handle,
+                        coordinates_values.as_ptr(),
+                        coordinates_values.len(),
                         completion,
                         diagnostic,
                     )

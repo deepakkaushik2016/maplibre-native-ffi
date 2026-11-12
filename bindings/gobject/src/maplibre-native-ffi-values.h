@@ -1588,6 +1588,25 @@ typedef struct {
 } MaplibreNativeFfiTerrainScreenPoint;
 
 /**
+ * MaplibreNativeFfiTerrainScreenPointResult:
+ * @found: Whether the terrain draws the coordinate, as
+ *   `maplibre_native_ffi_render_session_query_pixel_for_lat_lng_async()`
+ *   delivers a value for it. When false, `pixel` is zeroed.
+ * @pixel: Where the terrain draws the coordinate, when `found` is true.
+ *
+ * Where the terrain draws one coordinate of
+ * `maplibre_native_ffi_render_session_query_pixels_for_lat_lngs_async()`, if it
+ * draws it.
+ *
+ * See `mln_terrain_screen_point_result` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+typedef struct {
+  gboolean found;
+  MaplibreNativeFfiTerrainScreenPoint pixel;
+} MaplibreNativeFfiTerrainScreenPointResult;
+
+/**
  * MaplibreNativeFfiTextureImageInfo:
  * @width: width
  * @height: height
@@ -15719,6 +15738,39 @@ void maplibre_native_ffi_terrain_screen_point_free(
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(
   MaplibreNativeFfiTerrainScreenPoint,
   maplibre_native_ffi_terrain_screen_point_free
+)
+
+GType maplibre_native_ffi_terrain_screen_point_result_get_type(
+  void
+) G_GNUC_CONST;
+#define MAPLIBRE_NATIVE_FFI_TYPE_TERRAIN_SCREEN_POINT_RESULT \
+  (maplibre_native_ffi_terrain_screen_point_result_get_type())
+
+/**
+ * maplibre_native_ffi_terrain_screen_point_result_copy:
+ *
+ * Copies the value.
+ *
+ * Returns: (transfer full): the copy
+ */
+MaplibreNativeFfiTerrainScreenPointResult*
+maplibre_native_ffi_terrain_screen_point_result_copy(
+  const MaplibreNativeFfiTerrainScreenPointResult* self
+);
+
+/**
+ * maplibre_native_ffi_terrain_screen_point_result_free:
+ * @self: (transfer full) (nullable): the value
+ *
+ * Frees the value.
+ */
+void maplibre_native_ffi_terrain_screen_point_result_free(
+  MaplibreNativeFfiTerrainScreenPointResult* self
+);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(
+  MaplibreNativeFfiTerrainScreenPointResult,
+  maplibre_native_ffi_terrain_screen_point_result_free
 )
 
 GType maplibre_native_ffi_texture_image_info_get_type(void) G_GNUC_CONST;

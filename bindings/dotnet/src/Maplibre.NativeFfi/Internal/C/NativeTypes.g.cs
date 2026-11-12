@@ -1500,6 +1500,12 @@ internal unsafe struct mln_terrain_screen_point
     public byte occluded;
 }
 
+internal unsafe struct mln_terrain_screen_point_result
+{
+    public byte found;
+    public mln_terrain_screen_point pixel;
+}
+
 internal unsafe struct mln_texture_image_info
 {
     public uint width;

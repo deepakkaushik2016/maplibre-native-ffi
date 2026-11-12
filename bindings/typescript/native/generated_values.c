@@ -419,6 +419,31 @@ napi_value mln_ts_decode_terrain_screen_point_optional(
   );
 }
 
+napi_value mln_ts_decode_terrain_screen_point_result_list(
+  napi_env env, const mln_completion_result* result
+) {
+  size_t stride = result->value_size;
+  if (
+    result->value_count > 0 && stride < sizeof(mln_terrain_screen_point_result)
+  ) {
+    napi_throw_range_error(env, NULL, "native completion stride is too small");
+    return NULL;
+  }
+  napi_value array = mln_ts_array(env, result->value_count);
+  if (array == NULL) return NULL;
+  for (size_t index = 0; index < result->value_count; index++) {
+    const char* value = (const char*)result->value + index * stride;
+    if (!mln_ts_set_index(
+          env, array, (uint32_t)index,
+          mln_ts_read_terrain_screen_point_result(
+            env, &(*(const mln_terrain_screen_point_result*)value), stride
+          )
+        ))
+      return NULL;
+  }
+  return array;
+}
+
 napi_value mln_ts_decode_texture_readback_result(
   napi_env env, const mln_completion_result* result
 ) {
@@ -3096,6 +3121,24 @@ napi_value mln_ts_read_terrain_screen_point(
       ))
     return NULL;
   if (!mln_ts_set(env, result, "occluded", mln_ts_bool(env, source->occluded)))
+    return NULL;
+  return result;
+}
+
+napi_value mln_ts_read_terrain_screen_point_result(
+  napi_env env, const mln_terrain_screen_point_result* source, size_t size
+) {
+  (void)size;
+  napi_value result = mln_ts_object(env);
+  if (result == NULL) return NULL;
+  if (!mln_ts_set(env, result, "found", mln_ts_bool(env, source->found)))
+    return NULL;
+  if (!mln_ts_set(
+        env, result, "pixel",
+        mln_ts_read_terrain_screen_point(
+          env, &(source->pixel), sizeof(source->pixel)
+        )
+      ))
     return NULL;
   return result;
 }

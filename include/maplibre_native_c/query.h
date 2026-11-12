@@ -166,6 +166,21 @@ typedef struct mln_terrain_screen_point {
 } mln_terrain_screen_point;
 
 /**
+ * Where the terrain draws one coordinate of
+ * mln_render_session_query_pixels_for_lat_lngs(), if it draws it.
+ */
+typedef struct mln_terrain_screen_point_result {
+  /**
+   * Whether the terrain draws the coordinate, as
+   * mln_render_session_query_pixel_for_lat_lng() delivers a value for it. When
+   * false, `pixel` is zeroed.
+   */
+  bool found;
+  /** Where the terrain draws the coordinate, when `found` is true. */
+  mln_terrain_screen_point pixel;
+} mln_terrain_screen_point_result;
+
+/**
  * Finds the features that the session drew in an area of the screen.
  *
  * The query reads the last frame that the session rendered. A feature that
@@ -358,6 +373,37 @@ MLN_BINDING("execution=query;result=mln_terrain_screen_point;nullable=true")
 MLN_API mln_status mln_render_session_query_pixel_for_lat_lng(
   mln_render_session session, mln_lat_lng coordinate,
   const mln_completion* completion, mln_diagnostic* out_diagnostic
+) MLN_NOEXCEPT;
+
+/**
+ * Finds where the terrain draws each of several points on the ground.
+ *
+ * The query answers each coordinate as
+ * mln_render_session_query_pixel_for_lat_lng() does, in one pass over the last
+ * frame that the session rendered, so every answer comes from the same frame.
+ * Submit it from any thread. It runs with the session's graphics work, so with
+ * MLN_RENDER_DRIVER_CALLER_GRAPHICS_THREAD it completes once you service that
+ * work.
+ *
+ * The completion delivers one mln_terrain_screen_point_result for each
+ * coordinate, in the order of `coordinates`. A result's `found` is false where
+ * mln_render_session_query_pixel_for_lat_lng() would deliver no value. With no
+ * coordinates, it delivers an empty array. Each coordinate needs a latitude
+ * within [-90, 90] and a finite longitude.
+ *
+ * Completes with:
+ * - MLN_STATUS_INVALID_STATE when the session hasn't rendered a frame since it
+ *   attached or changed its scale factor. The query fails then, rather than
+ *   delivering results, because there is no frame to read.
+ */
+MLN_BINDING(
+  "execution=query;result=mln_terrain_screen_point_result;shape=array"
+)
+MLN_API mln_status mln_render_session_query_pixels_for_lat_lngs(
+  mln_render_session session,
+  const mln_lat_lng* coordinates MLN_BINDING("length=coordinate_count"),
+  size_t coordinate_count, const mln_completion* completion,
+  mln_diagnostic* out_diagnostic
 ) MLN_NOEXCEPT;
 
 #ifdef __cplusplus

@@ -4199,6 +4199,26 @@ export interface TerrainScreenPoint {
 }
 
 /**
+ * Where the terrain draws one coordinate of
+ * `RenderSessionHandle.queryPixelsForLatLngs()`, if it draws it.
+ *
+ * See `mln_terrain_screen_point_result` in the
+ * [C API reference](https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html).
+ */
+export interface TerrainScreenPointResult {
+  /**
+   * Whether the terrain draws the coordinate, as
+   * `RenderSessionHandle.queryPixelForLatLng()` delivers a value for it. When
+   * false, `pixel` is zeroed.
+   */
+  readonly found: boolean;
+  /**
+   * Where the terrain draws the coordinate, when `found` is true.
+   */
+  readonly pixel: TerrainScreenPoint;
+}
+
+/**
  * The layout of the pixels that `RenderSessionHandle.readTexture()` reads.
  *
  * See `mln_texture_image_info` in the

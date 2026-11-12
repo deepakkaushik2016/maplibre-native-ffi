@@ -1819,6 +1819,18 @@ static jint mln_render_session_query_pixel_for_lat_lng_jni(
   );
 }
 
+static jint mln_render_session_query_pixels_for_lat_lngs_jni(
+  JNIEnv* env, jclass type, jlong session, jlong coordinates,
+  jlong coordinate_count, jlong completion, jlong out_diagnostic
+) {
+  return (jint)mln_render_session_query_pixels_for_lat_lngs(
+    (mln_render_session)session,
+    MLN_JNI_POINTER(const mln_lat_lng*, coordinates), (size_t)coordinate_count,
+    MLN_JNI_POINTER(const mln_completion*, completion),
+    MLN_JNI_POINTER(mln_diagnostic*, out_diagnostic)
+  );
+}
+
 static jint mln_render_session_query_rendered_features_jni(
   JNIEnv* env, jclass type, jlong session, jlong geometry, jlong options,
   jlong completion, jlong out_diagnostic
@@ -2774,6 +2786,8 @@ const JNINativeMethod mln_jni_methods[] = {
    (void*)mln_render_session_query_lat_lng_for_pixel_jni},
   {"mln_render_session_query_pixel_for_lat_lng", "(JJJJ)I",
    (void*)mln_render_session_query_pixel_for_lat_lng_jni},
+  {"mln_render_session_query_pixels_for_lat_lngs", "(JJJJJ)I",
+   (void*)mln_render_session_query_pixels_for_lat_lngs_jni},
   {"mln_render_session_query_rendered_features", "(JJJJJ)I",
    (void*)mln_render_session_query_rendered_features_jni},
   {"mln_render_session_query_source_features", "(JJJJJ)I",
@@ -3189,6 +3203,8 @@ const JNINativeMethod mln_jni_critical_methods[] = {
    (void*)mln_render_session_query_lat_lng_for_pixel_jni},
   {"mln_render_session_query_pixel_for_lat_lng", "(JJJJ)I",
    (void*)mln_render_session_query_pixel_for_lat_lng_jni},
+  {"mln_render_session_query_pixels_for_lat_lngs", "(JJJJJ)I",
+   (void*)mln_render_session_query_pixels_for_lat_lngs_jni},
   {"mln_render_session_query_rendered_features", "(JJJJJ)I",
    (void*)mln_render_session_query_rendered_features_jni},
   {"mln_render_session_query_source_features", "(JJJJJ)I",

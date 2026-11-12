@@ -21682,6 +21682,45 @@ maplibre_native_ffi_terrain_screen_point_from_native(
 }
 
 G_DEFINE_BOXED_TYPE(
+  MaplibreNativeFfiTerrainScreenPointResult,
+  maplibre_native_ffi_terrain_screen_point_result,
+  maplibre_native_ffi_terrain_screen_point_result_copy,
+  maplibre_native_ffi_terrain_screen_point_result_free
+)
+
+MaplibreNativeFfiTerrainScreenPointResult*
+maplibre_native_ffi_terrain_screen_point_result_copy(
+  const MaplibreNativeFfiTerrainScreenPointResult* self
+) {
+  g_return_val_if_fail(self != NULL, NULL);
+  return g_memdup2(self, sizeof *self);
+}
+
+void maplibre_native_ffi_terrain_screen_point_result_free(
+  MaplibreNativeFfiTerrainScreenPointResult* self
+) {
+  g_free(self);
+}
+
+void maplibre_native_ffi_terrain_screen_point_result_read(
+  MaplibreNativeFfiTerrainScreenPointResult* out,
+  const mln_terrain_screen_point_result* in
+) {
+  out->found = (in->found) ? TRUE : FALSE;
+  maplibre_native_ffi_terrain_screen_point_read(&out->pixel, &in->pixel);
+}
+
+MaplibreNativeFfiTerrainScreenPointResult*
+maplibre_native_ffi_terrain_screen_point_result_from_native(
+  const mln_terrain_screen_point_result* in
+) {
+  MaplibreNativeFfiTerrainScreenPointResult* self =
+    g_new0(MaplibreNativeFfiTerrainScreenPointResult, 1);
+  maplibre_native_ffi_terrain_screen_point_result_read(self, in);
+  return self;
+}
+
+G_DEFINE_BOXED_TYPE(
   MaplibreNativeFfiTextureImageInfo, maplibre_native_ffi_texture_image_info,
   maplibre_native_ffi_texture_image_info_copy,
   maplibre_native_ffi_texture_image_info_free

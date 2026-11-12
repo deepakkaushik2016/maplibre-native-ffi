@@ -643,6 +643,59 @@ public sealed unsafe partial class RenderSessionHandle
     }
 
     /// <summary>
+    /// Finds where the terrain draws each of several points on the ground.
+    /// </summary>
+    /// <remarks>
+    /// <para>The query answers each coordinate as
+    /// <c>RenderSessionHandle.QueryPixelForLatLngAsync()</c> does, in one pass
+    /// over the last frame that the session rendered, so every answer comes
+    /// from the same frame. Submit it from any thread. It runs with the
+    /// session's graphics work, so with
+    /// <c>RenderDriverKind.CallerGraphicsThread</c> it completes once you
+    /// service that work.</para>
+    /// <para>The completion delivers one <c>TerrainScreenPointResult</c> for
+    /// each coordinate, in the order of <c>coordinates</c>. A result's
+    /// <c>found</c> is false where
+    /// <c>RenderSessionHandle.QueryPixelForLatLngAsync()</c> would deliver no
+    /// value. With no coordinates, it delivers an empty array. Each coordinate
+    /// needs a latitude within [-90, 90] and a finite longitude.</para>
+    /// <para>See <c>mln_render_session_query_pixels_for_lat_lngs</c> in the
+    /// <see
+    /// href="https://maplibre.org/maplibre-native-ffi/reference/c/query_8h.html">C API reference</see>.</para>
+    /// <para>Errors:</para>
+    /// <list type="bullet">
+    /// <item><description><c>Status.InvalidState</c> when the session hasn't
+    /// rendered a frame since it attached or changed its scale factor. The
+    /// query fails then, rather than delivering results, because there is no
+    /// frame to read.</description></item>
+    /// </list>
+    /// </remarks>
+    public Task<TerrainScreenPointResult[]> QueryPixelsForLatLngsAsync(LatLng[] coordinates)
+    {
+        using var scope = new NativeCallScope(this);
+        mln_completion nativeCompletion;
+        var nativeStatus = NativeMethods.mln_render_session_query_pixels_for_lat_lngs(
+            Handle,
+            scope.Array<mln_lat_lng, LatLng>(
+                coordinates,
+                static (item, scope) => NativeLatLng(item)
+            ),
+            checked((nuint)coordinates.Length),
+            NativeCompletion.Start<TerrainScreenPointResult[]>(
+                &nativeCompletion,
+                static nativeResult =>
+                    NativeCompletion.Array<
+                        mln_terrain_screen_point_result,
+                        TerrainScreenPointResult
+                    >(nativeResult, CopyTerrainScreenPointResult),
+                out var nativePending
+            ),
+            Diagnostic
+        );
+        return scope.Accepted(nativePending.Submitted(nativeStatus));
+    }
+
+    /// <summary>
     /// Finds the features that the session drew in an area of the screen.
     /// </summary>
     /// <remarks>

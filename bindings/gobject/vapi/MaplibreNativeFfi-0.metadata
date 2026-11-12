@@ -50,6 +50,7 @@ StyleExpressionType struct
 TerrainElevation struct
 TerrainLatLng struct
 TerrainScreenPoint struct
+TerrainScreenPointResult struct
 TextureImageInfo struct
 TileId struct
 UnitBezier struct

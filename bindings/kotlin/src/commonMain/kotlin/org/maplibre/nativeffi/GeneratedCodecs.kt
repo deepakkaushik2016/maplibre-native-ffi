@@ -1807,6 +1807,13 @@ internal fun readTerrainScreenPoint(source: Long): TerrainScreenPoint =
   TerrainScreenPoint(point = readScreenPoint(source), occluded = readBool(source + 16))
 
 @JvmSynthetic
+internal fun readTerrainScreenPointResult(source: Long): TerrainScreenPointResult =
+  TerrainScreenPointResult(
+    found = readBool(source),
+    pixel = readTerrainScreenPoint(source + w(8, 8, 4)),
+  )
+
+@JvmSynthetic
 internal fun readRenderedFeature(source: Long): RenderedFeature =
   RenderedFeature(
     feature = readViewString(source),
