@@ -2272,9 +2272,9 @@ public sealed unsafe partial class MapHandle : IDisposable, IAsyncDisposable, IN
     /// <list type="bullet">
     /// <item><description><c>Status.NotFound</c> when the style has no source
     /// named <c>sourceId</c>.</description></item>
-    /// <item><description><c>Status.InvalidState</c> when a layer still uses
-    /// the source, or while the style isn't loaded, as
-    /// <c>MapHandle.SetStyleUrlAsync()</c> describes.</description></item>
+    /// <item><description><c>Status.InvalidState</c> when a layer or the
+    /// style's terrain still uses the source, or while the style isn't loaded,
+    /// as <c>MapHandle.SetStyleUrlAsync()</c> describes.</description></item>
     /// </list>
     /// </remarks>
     public Task<CommandCompletion> RemoveStyleSourceAsync(string sourceId)

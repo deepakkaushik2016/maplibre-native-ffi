@@ -2052,8 +2052,9 @@ impl MapHandle {
     /// # Errors
     ///
     /// - `Status::NotFound` when the style has no source named `source_id`.
-    /// - `Status::InvalidState` when a layer still uses the source, or while
-    ///   the style isn't loaded, as `MapHandle::set_style_url()` describes.
+    /// - `Status::InvalidState` when a layer or the style's terrain still uses
+    ///   the source, or while the style isn't loaded, as
+    ///   `MapHandle::set_style_url()` describes.
     pub fn remove_style_source(&self, source_id: &str) -> Result<NativeFuture<CommandCompletion>> {
         let mut call = self.inner.call();
         let source_id = call.input(&source_id)?;

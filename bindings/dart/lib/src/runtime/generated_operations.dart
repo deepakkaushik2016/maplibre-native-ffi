@@ -6542,8 +6542,9 @@ final class MapHandle implements Finalizable, _CallbackRootOwner {
   /// Errors:
   ///
   /// - `Status.notFound` when the style has no source named `sourceId`.
-  /// - `Status.invalidState` when a layer still uses the source, or while the
-  ///   style isn't loaded, as `MapHandle.setStyleUrl()` describes.
+  /// - `Status.invalidState` when a layer or the style's terrain still uses the
+  ///   source, or while the style isn't loaded, as `MapHandle.setStyleUrl()`
+  ///   describes.
   Future<CommandCompletion> removeStyleSource(String sourceId) => _command(
     (arena, completion) => raw.mln_map_remove_style_source(
       _handle.raw,

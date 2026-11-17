@@ -1200,15 +1200,25 @@ auto map_remove_style_source(MapObject& live, mln_buffer_view source_id)
 
   auto removed = style.removeSource(id);
   if (!removed) {
-    // The source exists, so the engine refused it only because a layer's
-    // source ID matches, the same test as this search.
+    // The source exists, so the engine refused it because something uses it:
+    // the terrain, or a layer whose source ID matches. Name the user when one
+    // of those tests finds it.
+    if (const auto* terrain = style.getTerrain();
+        terrain != nullptr && terrain->getSource() == id) {
+      set_source_error(id, "is used by the terrain");
+      return MLN_STATUS_INVALID_STATE;
+    }
     const auto layers = style.getLayers();
     const auto user = std::ranges::find_if(
       layers, [&id](const mln::style::Layer* layer) -> bool {
         return layer->getSourceID() == id;
       }
     );
-    set_source_error(id, "is used by layer " + quote_id((*user)->getID()));
+    if (user == layers.end()) {
+      set_source_error(id, "is in use");
+    } else {
+      set_source_error(id, "is used by layer " + quote_id((*user)->getID()));
+    }
     return MLN_STATUS_INVALID_STATE;
   }
   // The detached source is dropped before the release runs, so the style no

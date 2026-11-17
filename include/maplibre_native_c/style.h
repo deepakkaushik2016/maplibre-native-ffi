@@ -519,8 +519,9 @@ MLN_API mln_status mln_map_add_style_source_json(
  *
  * Completes with:
  * - MLN_STATUS_NOT_FOUND when the style has no source named `source_id`.
- * - MLN_STATUS_INVALID_STATE when a layer still uses the source, or while the
- *   style isn't loaded, as mln_map_set_style_url() describes.
+ * - MLN_STATUS_INVALID_STATE when a layer or the style's terrain still uses the
+ *   source, or while the style isn't loaded, as mln_map_set_style_url()
+ *   describes.
  */
 MLN_BINDING("execution=command")
 MLN_API mln_status mln_map_remove_style_source(

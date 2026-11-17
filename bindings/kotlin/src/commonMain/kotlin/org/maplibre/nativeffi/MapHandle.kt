@@ -1250,8 +1250,8 @@ private constructor(
    * Errors:
    *
    * - `Status.NOT_FOUND` when the style has no source named `sourceId`.
-   * - `Status.INVALID_STATE` when a layer still uses the source, or while the style isn't loaded,
-   *   as `MapHandle.setStyleUrl()` describes.
+   * - `Status.INVALID_STATE` when a layer or the style's terrain still uses the source, or while
+   *   the style isn't loaded, as `MapHandle.setStyleUrl()` describes.
    */
   public fun removeStyleSource(sourceId: String): Completion<CommandCompletion> =
     nativeCommand(this, binding) {

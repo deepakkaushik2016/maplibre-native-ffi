@@ -2330,8 +2330,8 @@ maplibre_native_ffi_map_remove_style_layer_finish(
  *
  * - `MAPLIBRE_NATIVE_FFI_ERROR_NOT_FOUND` when the style has no source named
  *   `source_id`.
- * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` when a layer still uses the
- *   source, or while the style isn't loaded, as
+ * - `MAPLIBRE_NATIVE_FFI_ERROR_INVALID_STATE` when a layer or the style's
+ *   terrain still uses the source, or while the style isn't loaded, as
  *   `maplibre_native_ffi_map_set_style_url_async()` describes.
  *
  * Without `callback`, nothing reports whether the call succeeds.

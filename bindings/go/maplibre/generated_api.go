@@ -8653,8 +8653,9 @@ func (receiver *MapHandle) RemoveStyleLayer(layerID string) (*Future[CommandComp
 //
 // Errors:
 //   - StatusNotFound when the style has no source named sourceID.
-//   - StatusInvalidState when a layer still uses the source, or while the style
-//     isn't loaded, as MapHandle.SetStyleURL() describes.
+//   - StatusInvalidState when a layer or the style's terrain still uses the
+//     source, or while the style isn't loaded, as MapHandle.SetStyleURL()
+//     describes.
 func (receiver *MapHandle) RemoveStyleSource(sourceID string) (*Future[CommandCompletion], error) {
 	return bindingStart(bindingOwned(receiver.owner()), func(arena *bindingArena, raw uint64, completion *C.mln_completion, diagnostic *C.mln_diagnostic) int32 {
 		return int32(C.mln_map_remove_style_source(C.mln_map(raw), bindingView(sourceID, arena), completion, diagnostic))

@@ -2806,8 +2806,9 @@ export class MapHandle extends Owner {
    * Errors:
    *
    * - `Status.notFound` when the style has no source named `sourceId`.
-   * - `Status.invalidState` when a layer still uses the source, or while the
-   *   style isn't loaded, as `MapHandle.setStyleUrl()` describes.
+   * - `Status.invalidState` when a layer or the style's terrain still uses the
+   *   source, or while the style isn't loaded, as `MapHandle.setStyleUrl()`
+   *   describes.
    */
   removeStyleSource(sourceId: string): Promise<CommandCompletion> {
     return command((completion) =>

@@ -1392,8 +1392,8 @@ pub const Map = struct {
     /// Errors:
     ///
     /// - `error.NotFound` when the style has no source named `source_id`.
-    /// - `error.InvalidState` when a layer still uses the source, or while the
-    ///   style isn't loaded, as `Map.setStyleUrl()` describes.
+    /// - `error.InvalidState` when a layer or the style's terrain still uses the
+    ///   source, or while the style isn't loaded, as `Map.setStyleUrl()` describes.
     pub fn removeStyleSource(self: Map, source_id: []const u8, diagnostic: ?*diagnostics.Diagnostic) status.Error!completion.Future(completion.CommandCompletion) {
         return call.submit("mln_map_remove_style_source", .handle, self, call.command, null, diagnostic, .{source_id});
     }

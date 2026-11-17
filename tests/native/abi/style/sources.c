@@ -470,6 +470,38 @@ static void read_corners(mln_map map, const char* id, mln_lat_lng out[4]) {
 
 static const mln_lat_lng corners[4] = {{1, 2}, {1, 3}, {0, 3}, {0, 2}};
 
+// As in MapLibre GL JS, the terrain holds on to its DEM source: removing it
+// fails until the terrain goes.
+static void the_terrains_source_removal_fails_and_leaves_the_source(void) {
+  mln_runtime runtime = mln_test_create_runtime();
+  mln_map map = mln_test_create_styled_map(runtime);
+  const mln_buffer_view dem = MLN_BUFFER_LITERAL("dem");
+  add_source_json(
+    map, "dem",
+    "{\"type\":\"raster-dem\",\"tiles\":[\"fixture://dem/{z}/{x}/{y}.png\"]}"
+  );
+  MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(
+    map, MLN_BUFFER_LITERAL("{\"source\":\"dem\"}"), &completion.descriptor,
+    NULL
+  ));
+
+  MLN_TEST_EXPECT_COMMAND_FAILED(
+    MLN_STATUS_INVALID_STATE, "source \"dem\" is used by the terrain",
+    mln_map_remove_style_source(map, dem, &completion.descriptor, NULL)
+  );
+  TEST_ASSERT_TRUE(source_exists(map, "dem"));
+
+  MLN_TEST_AWAIT_OK(mln_map_set_style_terrain_json(
+    map, MLN_BUFFER_LITERAL("null"), &completion.descriptor, NULL
+  ));
+  MLN_TEST_AWAIT_OK(
+    mln_map_remove_style_source(map, dem, &completion.descriptor, NULL)
+  );
+  TEST_ASSERT_FALSE(source_exists(map, "dem"));
+  mln_test_destroy_map(map);
+  mln_test_destroy_runtime(runtime);
+}
+
 static void image_sources_take_corners_images_and_urls(void) {
   mln_runtime runtime = mln_test_create_runtime();
   mln_map map = mln_test_create_styled_map(runtime);
@@ -580,5 +612,6 @@ MLN_TEST_GROUP {
   RUN_TEST(sources_list_in_style_order_with_their_info);
   RUN_TEST(style_source_volatility_round_trips);
   RUN_TEST(an_in_use_source_removal_fails_and_leaves_the_source);
+  RUN_TEST(the_terrains_source_removal_fails_and_leaves_the_source);
   RUN_TEST(image_sources_take_corners_images_and_urls);
 }

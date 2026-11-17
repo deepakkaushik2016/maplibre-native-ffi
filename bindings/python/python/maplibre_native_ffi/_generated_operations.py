@@ -1588,8 +1588,9 @@ class _MapHandleOperations(GeneratedOperations):
         Errors:
 
         - `Status.NOT_FOUND` when the style has no source named `source_id`.
-        - `Status.INVALID_STATE` when a layer still uses the source, or while
-          the style isn't loaded, as `MapHandle.set_style_url()` describes.
+        - `Status.INVALID_STATE` when a layer or the style's terrain still
+          uses the source, or while the style isn't loaded, as
+          `MapHandle.set_style_url()` describes.
         """
         return self._native.remove_style_source(source_id)
 
