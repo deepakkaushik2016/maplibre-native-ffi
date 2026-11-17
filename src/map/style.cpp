@@ -1203,8 +1203,10 @@ auto map_remove_style_source(MapObject& live, mln_buffer_view source_id)
     // The source exists, so the engine refused it because something uses it:
     // the terrain, or a layer whose source ID matches. Name the user when one
     // of those tests finds it.
-    if (const auto* terrain = style.getTerrain();
-        terrain != nullptr && terrain->getSource() == id) {
+    if (
+      const auto* terrain = style.getTerrain();
+      terrain != nullptr && terrain->getSource() == id
+    ) {
       set_source_error(id, "is used by the terrain");
       return MLN_STATUS_INVALID_STATE;
     }
